@@ -1,0 +1,153 @@
+{
+    "height": 40,
+    "spacing": 4,
+    "modules-left": [
+        "niri/workspaces",
+        "custom/media",
+    ],
+  "modules-center": [
+      "group/time"
+  ],
+    "modules-right": [
+        "tray",
+        "group/hardware",
+        "pulseaudio",
+        "niri/language",
+        "group/net",
+        "battery",
+        "backlight"
+    ],
+    
+
+  "group/time": {
+    "modules": ["clock", "clock#simple"],
+    "orientation": "horizontal",
+  },
+  "clock#simple": {
+    "format": "{:%H:%M}",
+    "tooltip": false,
+    "interval": 1,
+  },
+  "clock": {
+    "format": "{:L%a %d, %b %Y}",
+    "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>",
+    "format-alt": "{:%d-%m-%Y}",
+  },
+    "pulseaudio": {
+        "format": "<span color=\"#a55e5b\">{icon}</span>  {volume}%",
+        "format-muted": "<span color =\"#a55e5b\"> </span>Muted",
+        "format-source": " {volume}%",
+        "format-source-muted": "",
+        "format-icons": {
+            "headphone": "",
+            "hands-free": "",
+            "headset": " ",
+            "phone": "",
+            "portable": "",
+            "car": "",
+            "default": ["", "", ""]
+        },
+        "on-click": "pavucontrol"
+    },
+
+    "niri/language": {
+        "format": "<span color=\"#a55e5b\"></span>  {}",
+        "format-en": "<span color=\"#E8705F\">US</span>",
+        "format-ru": "<span color=\"#66A0C8\">RU</span>",
+        "format-kk": "<span color=\"#DFB431\">KZ</span>"
+    },
+
+    "battery": {
+        "interval": 1,
+        "states": {
+            "warning": 30,
+            "critical": 20
+        },
+        "format": "{capacity}% {icon}",
+        "format-charging": "{capacity}% 󰂄",
+        "format-plugged": "{capacity}% 󰂄",
+        "format-alt": "{time} {icon}",
+        "format-icons": ["", "", "", "", ""]
+    },
+
+    "backlight": {
+        "format": "{percent}% {icon}",
+        "format-icons": ["", "", "", "", "", "", "", "", ""]
+    },
+
+    "tray": {
+        "icon-size": 18,
+        "spacing": 10
+    },
+
+    "group/net": {
+        "orientation": "horizontal",
+        "modules": [
+            "network",
+            "bluetooth"
+        ]
+    },
+    "network": {
+        "format-wifi": " {essid}",
+        "format-ethernet": "",
+        "tooltip-format": "{ifname} via {gwaddr} \nSignal: {signalStrength}%",
+        "format-disconnected": "⚠ Disconnected",
+        "on-click": "kitty nmtui"
+    },
+    "bluetooth": {
+        "format": "<span color=\"#a55e5b\">󰂯</span>",
+        "format-connected": "󰂱",
+        "format-off": "󰂲",
+        "on-click": "blueman-manager"
+    },
+
+    "group/hardware": {
+        "orientation": "horizontal",
+        "drawer": {
+            "transition-duration": 300,
+            "transition-left-to-right": true
+        },
+        "modules": [
+            "temperature",
+            "cpu",
+            "memory",
+            "disk"
+        ]
+    },
+    "cpu": {
+        "format": " {usage}%",
+        "tooltip": true,
+        "on-click": "alacritty btop"
+    },
+    "memory": {
+        "format": "󰾆 {used:0.1f}G",
+        "on-click": "alacritty btop"
+    },
+    "temperature": {
+        // "thermal-zone": 2, // Раскомментируйте и измените, если нужно
+        "hwmon-path": "/sys/class/hwmon/hwmon2/temp1_input", // Найдите свой путь!
+        "critical-threshold": 80,
+        "format": "{icon} {temperatureC}°C",
+        "format-icons": ["", "", ""],
+        "on-click": "alacritty btop"
+    },
+    "disk": {
+        "interval": 30,
+        "format": "󰋊 {percentage_used}%",
+        "path": "/",
+        "tooltip-format": "{used} out of {total} on {path} ({percentage_free}% free)",
+        "on-click": "alacritty btop"
+    },
+    "custom/media": {
+        "format": " {text}",
+        // "return-type": "json",
+        "interval": 1,
+        "max-length": 40,
+        "escape": true,
+        "exec": "$HOME/.config/waybar/customs/spotify-track.sh", // Script in resources folder
+        // "exec": "$HOME/.config/waybar/mediaplayer.py --player spotify 2> /dev/null" // Filter player based on name
+        "on-click": "playerctl -p spotify previous", 
+        "on-click-right": "playerctl -p spotify next", 
+        "on-click-middle": "playerctl -p spotify play-pause"
+    },
+}

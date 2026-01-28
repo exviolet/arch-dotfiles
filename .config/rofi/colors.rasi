@@ -1,0 +1,17 @@
+* {
+    b-color: #000000FF;
+    fg-color: #FFFFFFFF;
+    fgp-color: #888888FF;
+    hl-color:#FFFCF0FF;
+    hlt-color: #000000FF;
+    alt-color: #111111FF;
+    wbg-color: #000000CC;
+    w-border-color: #dc3c22FF;
+
+    background:     #1E2127FF;
+    background-alt: #282B31FF;
+    foreground:     #DCD7BAFF;
+    selected:       #61AFEFFF;
+    active:         #98C379FF;
+    urgent:         #E06C75FF;
+}
