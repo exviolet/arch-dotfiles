@@ -177,3 +177,6 @@ alias cls='clear'
 #yazi 
 bindkey -s '^Y' 'yazi\n'
 export PATH="$PATH:/home/ex1te/.local/bin"
+
+# OpenClaw Completion
+source <(openclaw completion --shell zsh)

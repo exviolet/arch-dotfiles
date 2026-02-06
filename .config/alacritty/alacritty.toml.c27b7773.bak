@@ -1,0 +1,43 @@
+[colors.normal]
+black = "#000000"
+red = "#ff085e"
+green = "#ffb534"
+yellow = "#ffd11a"
+blue = "#4247be"
+magenta = "#ce5d97" 
+cyan = "#ff085e"
+white = "#ffffff"
+
+[colors.bright] 
+black = "#b2babb"
+red = "#ff5395"
+green = "#ffbd4a"
+yellow = "#ffe658"
+blue = "#575bc5" 
+magenta = "#d36fa2"
+cyan = "#ff5395"
+white = "#ffffff"
+
+[window]
+padding.x = 20
+padding.y = 20 
+
+decorations = "Buttonless"
+opacity = 0.5
+blur = true
+
+[font]
+normal = { family = "FiraCodeNerdFont", style = "Retina"}
+
+[cursor.style]
+blinking = "Always"
+
+[bell] 
+animation = "EaseOutExpo"
+duration = 0
+
+[cursor]
+smooth_motion = true
+smooth_motion_factor = 1.0
+smooth_motion_spring = 0.3
+block_replace_shape = "Block"

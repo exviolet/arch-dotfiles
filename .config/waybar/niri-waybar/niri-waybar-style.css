@@ -1,12 +1,12 @@
 @import url("../themes/kanagawa.css");
 
 * {
-    font-family: "FiraCodeNerdFontPropo", FontAwesome, sans-serif;
-    font-size: 14px;
-    font-weight: bold;
-    border: none;
-    border-radius: 0;
-    min-height: 0;
+  font-family: "FiraCodeNerdFontPropo", FontAwesome, sans-serif;
+  font-size: 14px;
+  font-weight: bold;
+  border: none;
+  border-radius: 0;
+  min-height: 0;
 }
 
 window#waybar {
@@ -27,8 +27,8 @@ button {
 }
 
 button:hover {
-    background-color: @foreground;
-    box-shadow: inset 0 -3px @foreground;
+  background-color: @foreground;
+  box-shadow: inset 0 -3px @foreground;
 }
 
 #workspaces {
@@ -42,7 +42,6 @@ button:hover {
   border-radius: 10px;
   color: inherit;
   background-color: transparent;
-  transition: 0.5s ease-out;
 }
 
 #workspaces button:hover {
@@ -77,15 +76,14 @@ button:hover {
   border-radius: 0 10px 10px 0;
 }
 
-
 #custom-media {
-    color: @spotify;
-    font-size: 16px;
-    min-width: 100px;
+  color: @spotify;
+  font-size: 16px;
+  min-width: 100px;
 }
 
 #custom-media.custom-vlc {
-    background-color: #ffa000;
+  background-color: #ffa000;
 }
 
 #time {
@@ -109,14 +107,14 @@ button:hover {
 }
 
 #tray {
-    padding-right: 8px;
+  padding-right: 8px;
 }
 #tray > .passive {
-    -gtk-icon-effect: dim;
+  -gtk-icon-effect: dim;
 }
 #tray > .needs-attention {
-    -gtk-icon-effect: highlight;
-    background-color: #eb4d4b;
+  -gtk-icon-effect: highlight;
+  background-color: #eb4d4b;
 }
 
 #memory.critical,
@@ -138,7 +136,7 @@ button:hover {
 #backlight,
 #language {
   padding: 6px 12px;
-  margin: 0 1px; 
+  margin: 0 1px;
   font-weight: 700;
   color: @foreground;
   background-color: @background;
@@ -163,7 +161,7 @@ button:hover {
 #pulseaudio.muted,
 #bluetooth.disabled,
 #bluetooth.off {
-  color: @foreground-dark; 
+  color: @foreground-dark;
 }
 
 tooltip {
@@ -178,10 +176,10 @@ tooltip label {
 }
 
 .drawer {
-    padding: 0px 5px;
-    margin: 3px 0px;
+  padding: 0px 5px;
+  margin: 3px 0px;
 }
 
 .drawer:hover {
-    background-color: #4a4646;
+  background-color: #4a4646;
 }

@@ -1,7 +1,9 @@
-@import "./colors.rasi"
+/* search.rasi */
+@import "colors.rasi"
+
 
 * {
-    font: "Figtree 12";
+    font: "IBM Plex Sans 12";
     g-spacing: 10px;
     g-margin: 0;
     b-radius: 0px;
@@ -11,13 +13,8 @@
 }
 
 configuration {
-    modi: "drun,run,window,emoji";
-    show-icons: true;
-    display-drun: "";
-    display-run: " ";
-    display-window: " ";
-	drun-display-format:        "{name} [<span weight='light' size='small'><i>({generic})</i></span>]";
-	window-format:              "{w} · {c} · {t}";
+    font: "IBM Plex Sans 12";
+    show-icons: false;
 }
 
 listview {
