@@ -15,6 +15,7 @@
 configuration {
     font: "IBM Plex Sans 12";
     show-icons: false;
+    matching: "fuzzy";
 }
 
 listview {
