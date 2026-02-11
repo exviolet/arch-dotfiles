@@ -1,4 +1,4 @@
-@import "./colors.rasi"
+@import "colors.rasi"
 
 * {
     font: "Figtree 12";
@@ -11,31 +11,14 @@
 }
 
 configuration {
-    modi: "drun,run,window,emoji";
-    show-icons: true;
-    display-drun: "";
-    display-run: " ";
-    display-window: " ";
-	drun-display-format:        "{name} [<span weight='light' size='small'><i>({generic})</i></span>]";
-	window-format:              "{w} · {c} · {t}";
-
+    show-icons: false;
     calc {
         terse: true;
         calc-command: "notify-send {result}";
-        hint-result: "";
-        hint-welcome: "";
+        hint-result: "Res: ";
+        hint-welcome: "Calc";
         transparency: "real";
     }
-}
-
-listview {
-    columns: 1;
-    lines: 7;
-    fixed-height: true;
-    fixed-columns: true;
-    cycle: false;
-    scrollbar: false;
-    border: 0px solid;
 }
 
 window {
@@ -48,8 +31,11 @@ window {
     padding: @w-padding;
 }
 
-prompt {
-    text-color: @fg-color;
+mainbox {
+    spacing: @g-spacing;
+    margin: @g-margin;
+    padding: @g-padding;
+    children: ["message", "inputbar", "listview"];
 }
 
 inputbar {
@@ -57,17 +43,35 @@ inputbar {
     spacing: @g-spacing;
 }
 
+prompt {
+    text-color: @fg-color;
+}
+
 entry {
-    placeholder: "Search Apps";
+    placeholder: "Calculate...";
     text-color: @fg-color;
     placeholder-color: @fgp-color;
 }
 
-mainbox {
-    spacing: @g-spacing;
-    margin: @g-margin;
+message {
+    border: 0px solid;
+    background-color: transparent;
     padding: @g-padding;
-    children: ["inputbar", "listview", "message"];
+}
+
+textbox {
+    text-color: @fg-color;
+    background-color: transparent;
+}
+
+listview {
+    columns: 1;
+    lines: 5;
+    fixed-height: true;
+    fixed-columns: true;
+    cycle: false;
+    scrollbar: false;
+    border: 0px solid;
 }
 
 element {
@@ -82,26 +86,21 @@ element {
 }
 
 element normal.normal {
-	background-color: transparent;
-	text-color: @fg-color;
+    background-color: transparent;
+    text-color: @fg-color;
 }
 
 element alternate.normal {
-	background-color: @alt-color;
-	text-color: @fg-color;
+    background-color: @alt-color;
+    text-color: @fg-color;
 }
 
 element selected.active {
-	background-color: @hl-color;
-	text-color: @hlt-color;
+    background-color: @hl-color;
+    text-color: @hlt-color;
 }
 
 element selected.normal {
-	background-color: @hl-color;
-	text-color: @hlt-color;
-}
-
-message {
-    background-color: red;
-    border: 0px solid;
+    background-color: @hl-color;
+    text-color: @hlt-color;
 }

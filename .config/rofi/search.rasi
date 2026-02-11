@@ -19,7 +19,7 @@ configuration {
 
 listview {
     columns: 1;
-    lines: 7;
+    lines: 10;
     fixed-height: true;
     fixed-columns: true;
     cycle: false;
@@ -47,7 +47,6 @@ inputbar {
 }
 
 entry {
-    placeholder: "Search Apps";
     text-color: @fg-color;
     placeholder-color: @fgp-color;
 }

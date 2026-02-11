@@ -3,10 +3,10 @@
 CONFIG="$HOME/.config/rofi/search.rasi"
 
 LINKS=(
-    "🌐 Google|https://google.com"
     "🌐 Perplexity|https://www.perplexity.ai"
+    "🌏 Яндекс Перевод|https://translate.yandex.com"
     "🐧 Arch Wiki|https://wiki.archlinux.org"
-    "🌐 GitHub|https://github.com"
+    "🐙 GitHub|https://github.com"
     "📁 TasKanLine Client|$HOME/Projects//Personal/Web/TasKanLine/client" 
     "📁 TasKanLine Server|$HOME/Projects//Personal/Web/TasKanLine/taskanline-server"
 )
@@ -40,6 +40,7 @@ else
         "aw! "*) URL="https://wiki.archlinux.org/index.php?search=${QUERY#aw! }" ;;
         "au! "*) URL="https://aur.archlinux.org/packages?O=0&K=${QUERY#au! }" ;;
         "gh! "*) URL="https://www.github.com/search?q=${QUERY#gh! }" ;;
+        "yt! "*) URL="https://translate.yandex.com/?source_lang=en&target_lang=ru&text=${QUERY#yt! }" ;;
         *)       URL="https://www.perplexity.ai/search?q=$QUERY" ;;
     esac
 

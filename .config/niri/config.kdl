@@ -389,6 +389,7 @@ binds {
     Super+Alt+L hotkey-overlay-title="Lock the Screen: hyprlock" { spawn "hyprlock"; }
     Mod+Shift+T hotkey-overlay-title="Lock the Screen: Telegram" { spawn "Telegram"; }
     Mod+Shift+O { spawn "bash" "-c" "$HOME/.config/rofi/scripts/wallpapermenu.sh"; }
+    Mod+Shift+C { spawn "sh" "-c" "rofi -show calc"; }
     Mod+Shift+W { spawn "wlogout"; }
 
     // You can also use a shell. Do this if you need pipes, multiple commands, etc.
