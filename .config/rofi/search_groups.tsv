@@ -1,0 +1,17 @@
+# Format: prefix<TAB>sub<TAB>emoji<TAB>name<TAB>url_template<TAB>base_url
+# url_template: %s is replaced with urlencode(query)
+# base_url: opens when there is no query
+g	s	🔍	Search	https://www.google.com/search?q=%s	https://www.google.com
+g	m	🗺️	Maps	https://www.google.com/maps/search/%s	https://www.google.com/maps
+g	d	📂	Drive	https://drive.google.com/drive/search?q=%s	https://drive.google.com
+g	t	🌐	Translate	https://translate.google.com/?sl=auto&tl=ru&text=%s	https://translate.google.com
+g	ml	📧	Gmail	https://mail.google.com/mail/u/0/#search/%s	https://mail.google.com
+y	s	🔍	Search	https://www.youtube.com/results?search_query=%s	https://www.youtube.com
+y	m	🎵	Music	https://music.youtube.com/search?q=%s	https://music.youtube.com
+aw	s	🐧	Arch Wiki	https://wiki.archlinux.org/index.php?search=%s	https://wiki.archlinux.org
+au	s	📦	AUR	https://aur.archlinux.org/packages?O=0&K=%s	https://aur.archlinux.org
+gh	s	🐙	GitHub	https://www.github.com/search?q=%s	https://github.com
+yt	s	🌏	Яндекс Перевод	https://translate.yandex.com/?source_lang=en&target_lang=ru&text=%s	https://translate.yandex.com
+r	s	🗿	Reddit	https://www.reddit.com/search/?q=%s	https://www.reddit.com
+r	u	👤	Reddit User Search	https://www.reddit.com/user/%s	https://www.reddit.com/user
+g	f	🌐	Google Fonts	https://fonts.google.com/icons?icon.query=%s	https://fonts.google.com/icons

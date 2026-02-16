@@ -16,6 +16,10 @@ configuration {
     font: "IBM Plex Sans 12";
     show-icons: false;
     matching: "fuzzy";
+    kb-row-down: "Down,Control+j";
+    kb-row-up: "Up,Control+k";
+    kb-accept-entry: "Return,KP_Enter";
+    kb-remove-to-eol: "Control+Shift+K";
 }
 
 listview {

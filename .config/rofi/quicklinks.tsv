@@ -1,8 +1,13 @@
 # Format: emoji<TAB>name<TAB>type<TAB>action
-🌐	Perplexity	url	https://www.perplexity.ai
+👾	Perplexity	url	https://www.perplexity.ai
 🌏	Яндекс Перевод	url	https://translate.yandex.com
 🐧	Arch Wiki	url	https://wiki.archlinux.org
 🐙	GitHub	url	https://github.com
 📁	TasKanLine Client	path	$HOME/Projects/Personal/Web/TasKanLine/client
 📁	TasKanLine Server	path	$HOME/Projects/Personal/Web/TasKanLine/taskanline-server
 🧹	Clear Clipboard	cmd	wl-copy -c
+🔗	Sereja Blog	url	https://sereja.tech/blog
+🦊	GitLab	url	https://gitlab.com
+🔗	Nerd-Icons	url	https://www.nerdfonts.com/cheat-sheet
+🔗	Nerd-Fonts	url	https://www.nerdfonts.com/font-downloads
+🌐	Google	url	https://google.com

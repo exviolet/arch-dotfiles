@@ -2,6 +2,7 @@
 
 CONFIG="$HOME/.config/rofi/search.rasi"
 QUICKLINKS_FILE="$HOME/.config/rofi/quicklinks.tsv"
+SEARCH_GROUPS_FILE="$HOME/.config/rofi/search_groups.tsv"
 CACHE_DIR="$HOME/.cache/rofi"
 HISTORY_FILE="$CACHE_DIR/quicklinks_history.tsv"
 STATS_FILE="$CACHE_DIR/quicklinks_stats.tsv"
@@ -17,6 +18,12 @@ declare -a LINK_ACTIONS=()
 declare -A LINK_INDEX_BY_LABEL=()
 declare -A STAT_FREQ_BY_NAME=()
 declare -A STAT_LAST_BY_NAME=()
+declare -A SEARCH_GROUP_EMOJI=()
+declare -A SEARCH_GROUP_NAME=()
+declare -A SEARCH_GROUP_URL_TEMPLATE=()
+declare -A SEARCH_GROUP_BASE_URL=()
+declare -A SEARCH_GROUP_SUBS=()
+declare -A SEARCH_GROUP_COUNT=()
 
 notify_error() {
     local message="$1"
@@ -39,6 +46,10 @@ notify_success() {
 ensure_cache_files() {
     mkdir -p "$CACHE_DIR"
     touch "$HISTORY_FILE" "$STATS_FILE" "$SEARCH_HISTORY_FILE"
+}
+
+ensure_search_groups_file() {
+    touch "$SEARCH_GROUPS_FILE"
 }
 
 load_sort_mode() {
@@ -340,10 +351,163 @@ show_prefix_history() {
     done
 }
 
+resolve_quicklink_identity() {
+    local raw_name="$1"
+    local type="$2"
+    local first_char
+
+    QUICKLINK_EMOJI=""
+    QUICKLINK_NAME=""
+
+    first_char="${raw_name%% *}"
+    if [[ -n "$first_char" ]] && python3 -c '
+import sys, unicodedata
+s = sys.argv[1]
+if not s:
+    raise SystemExit(1)
+c = s[0]
+cat = unicodedata.category(c)
+raise SystemExit(0 if cat == "So" or ord(c) > 0x1F000 else 1)
+' "$first_char" 2>/dev/null; then
+        QUICKLINK_EMOJI="$first_char"
+        if [[ "$raw_name" == *" "* ]]; then
+            QUICKLINK_NAME="${raw_name#* }"
+        else
+            return 1
+        fi
+    else
+        QUICKLINK_NAME="$raw_name"
+        case "$type" in
+            url) QUICKLINK_EMOJI="🔗" ;;
+            path) QUICKLINK_EMOJI="📁" ;;
+            cmd) QUICKLINK_EMOJI="⚡" ;;
+            *) return 1 ;;
+        esac
+    fi
+
+    [[ -n "$QUICKLINK_NAME" ]]
+}
+
+load_search_groups() {
+    local prefix sub emoji name url_template base_url key
+
+    if [[ ! -f "$SEARCH_GROUPS_FILE" ]]; then
+        return 0
+    fi
+
+    while IFS=$'\t' read -r prefix sub emoji name url_template base_url; do
+        [[ -z "$prefix$sub$emoji$name$url_template$base_url" ]] && continue
+        [[ "$prefix" =~ ^# ]] && continue
+        [[ -z "$prefix" || -z "$sub" || -z "$url_template" || -z "$base_url" ]] && continue
+
+        key="${prefix}:${sub}"
+        SEARCH_GROUP_EMOJI["$key"]="$emoji"
+        SEARCH_GROUP_NAME["$key"]="$name"
+        SEARCH_GROUP_URL_TEMPLATE["$key"]="$url_template"
+        SEARCH_GROUP_BASE_URL["$key"]="$base_url"
+
+        if [[ -z "${SEARCH_GROUP_SUBS[$prefix]}" ]]; then
+            SEARCH_GROUP_SUBS["$prefix"]="$sub"
+        else
+            SEARCH_GROUP_SUBS["$prefix"]+=" $sub"
+        fi
+        SEARCH_GROUP_COUNT["$prefix"]=$(( ${SEARCH_GROUP_COUNT["$prefix"]:-0} + 1 ))
+    done < "$SEARCH_GROUPS_FILE"
+}
+
+search_group_key_exists() {
+    local prefix="$1"
+    local sub="$2"
+    local key="${prefix}:${sub}"
+    [[ -n "${SEARCH_GROUP_URL_TEMPLATE[$key]}" ]]
+}
+
+get_default_sub() {
+    local prefix="$1"
+    local key="${prefix}:s"
+    local first_sub
+
+    if [[ -n "${SEARCH_GROUP_URL_TEMPLATE[$key]}" ]]; then
+        printf 's\n'
+        return 0
+    fi
+
+    first_sub="${SEARCH_GROUP_SUBS[$prefix]%% *}"
+    printf '%s\n' "$first_sub"
+}
+
+is_group() {
+    local prefix="$1"
+    [[ "${SEARCH_GROUP_COUNT[$prefix]:-0}" -gt 1 ]]
+}
+
+show_group_menu() {
+    local prefix="$1"
+    local sub key emoji name label selected
+    local -a labels=()
+    declare -A label_to_sub=()
+
+    for sub in ${SEARCH_GROUP_SUBS[$prefix]}; do
+        key="${prefix}:${sub}"
+        emoji="${SEARCH_GROUP_EMOJI[$key]}"
+        name="${SEARCH_GROUP_NAME[$key]}"
+        label="${emoji} ${name} (${sub})"
+        labels+=("$label")
+        label_to_sub["$label"]="$sub"
+    done
+
+    [[ "${#labels[@]}" -eq 0 ]] && return 1
+
+    selected=$(printf '%s\n' "${labels[@]}" | rofi -dmenu -config "$CONFIG" \
+        -p "${prefix}! " \
+        -theme-str 'entry { placeholder: "Select service..."; }')
+
+    [[ -z "$selected" ]] && return 1
+    printf '%s\n' "${label_to_sub[$selected]}"
+}
+
+open_base_url() {
+    local prefix="$1"
+    local sub="$2"
+    local key="${prefix}:${sub}"
+    local base_url="${SEARCH_GROUP_BASE_URL[$key]}"
+
+    if [[ -z "$base_url" ]]; then
+        notify_error "Unknown search target: ${prefix}:${sub}"
+        return 1
+    fi
+
+    xdg-open "$base_url"
+}
+
+execute_search() {
+    local prefix="$1"
+    local sub="$2"
+    local query="$3"
+    local key="${prefix}:${sub}"
+    local template="${SEARCH_GROUP_URL_TEMPLATE[$key]}"
+    local encoded url
+
+    if [[ -z "$template" ]]; then
+        notify_error "Unknown search target: ${prefix}:${sub}"
+        return 1
+    fi
+
+    encoded=$(urlencode "$query")
+    url="${template//%s/$encoded}"
+
+    if xdg-open "$url"; then
+        save_search_query "$prefix" "$query"
+        return 0
+    fi
+
+    return 1
+}
+
 add_quicklink() {
     local input="$1"
     local raw_name type action
-    local emoji name first_char
+    local emoji name
 
     IFS='|' read -r raw_name type action <<< "$input"
 
@@ -361,31 +525,12 @@ add_quicklink() {
         return 1
     fi
 
-    first_char="${raw_name%% *}"
-    if [[ -n "$first_char" ]] && python3 -c '
-import sys, unicodedata
-s = sys.argv[1]
-if not s:
-    raise SystemExit(1)
-c = s[0]
-cat = unicodedata.category(c)
-raise SystemExit(0 if cat == "So" or ord(c) > 0x1F000 else 1)
-' "$first_char" 2>/dev/null; then
-        emoji="$first_char"
-        if [[ "$raw_name" == *" "* ]]; then
-            name="${raw_name#* }"
-        else
-            notify_error "Format: add! [emoji] name | type | action"
-            return 1
-        fi
-    else
-        name="$raw_name"
-        case "$type" in
-            url) emoji="🔗" ;;
-            path) emoji="📁" ;;
-            cmd) emoji="⚡" ;;
-        esac
+    if ! resolve_quicklink_identity "$raw_name" "$type"; then
+        notify_error "Format: add! [emoji] name | type | action"
+        return 1
     fi
+    emoji="$QUICKLINK_EMOJI"
+    name="$QUICKLINK_NAME"
 
     if awk -F'\t' -v n="$name" 'NF >= 2 && !/^#/ && $2 == n { found=1; exit } END { exit found ? 0 : 1 }' "$QUICKLINKS_FILE"; then
         notify_error "Quicklink '$name' already exists"
@@ -394,6 +539,49 @@ raise SystemExit(0 if cat == "So" or ord(c) > 0x1F000 else 1)
 
     printf '%s\t%s\t%s\t%s\n' "$emoji" "$name" "$type" "$action" >> "$QUICKLINKS_FILE"
     notify_success "Added: $emoji $name"
+}
+
+edit_quicklink() {
+    local input="$1"
+    local raw_name type action
+    local emoji name tmp_file
+
+    IFS='|' read -r raw_name type action <<< "$input"
+
+    raw_name=$(echo "$raw_name" | xargs)
+    type=$(echo "$type" | xargs)
+    action=$(echo "$action" | xargs)
+
+    if [[ -z "$raw_name" || -z "$type" || -z "$action" ]]; then
+        notify_error "Format: edit! [emoji] name | type | action"
+        return 1
+    fi
+
+    if [[ ! "$type" =~ ^(url|path|cmd)$ ]]; then
+        notify_error "Type must be: url, path, or cmd"
+        return 1
+    fi
+
+    if ! resolve_quicklink_identity "$raw_name" "$type"; then
+        notify_error "Format: edit! [emoji] name | type | action"
+        return 1
+    fi
+    emoji="$QUICKLINK_EMOJI"
+    name="$QUICKLINK_NAME"
+
+    if ! awk -F'\t' -v n="$name" 'NF >= 2 && !/^#/ && $2 == n { found=1; exit } END { exit found ? 0 : 1 }' "$QUICKLINKS_FILE"; then
+        notify_error "Quicklink '$name' not found"
+        return 1
+    fi
+
+    tmp_file=$(mktemp)
+    awk -F'\t' -v OFS='\t' -v n="$name" -v e="$emoji" -v t="$type" -v a="$action" '
+        !/^#/ && NF >= 2 && $2 == n { $1 = e; $2 = n; $3 = t; $4 = a }
+        { print }
+    ' "$QUICKLINKS_FILE" > "$tmp_file"
+    mv "$tmp_file" "$QUICKLINKS_FILE"
+
+    notify_success "Updated: $emoji $name"
 }
 
 rm_quicklink() {
@@ -431,15 +619,180 @@ rm_quicklink() {
     fi
 }
 
+add_search_group() {
+    local input="$1"
+    local prefix sub name url_template base_url
+
+    IFS='|' read -r prefix sub name url_template base_url <<< "$input"
+
+    prefix=$(echo "$prefix" | xargs)
+    sub=$(echo "$sub" | xargs)
+    name=$(echo "$name" | xargs)
+    url_template=$(echo "$url_template" | xargs)
+    base_url=$(echo "$base_url" | xargs)
+
+    if [[ -z "$prefix" || -z "$sub" || -z "$name" || -z "$url_template" || -z "$base_url" ]]; then
+        notify_error "Format: padd! prefix | sub | name | url_template | base_url"
+        return 1
+    fi
+
+    if [[ ! "$prefix" =~ ^[a-z]+$ ]]; then
+        notify_error "Prefix must match: [a-z]+"
+        return 1
+    fi
+
+    if [[ ! "$sub" =~ ^[a-z0-9]+$ ]]; then
+        notify_error "Sub must match: [a-z0-9]+"
+        return 1
+    fi
+
+    if [[ "$url_template" != *"%s"* ]]; then
+        notify_error "url_template must contain %s"
+        return 1
+    fi
+
+    if [[ ! "$base_url" =~ ^https?:// ]]; then
+        notify_error "base_url must start with http/https"
+        return 1
+    fi
+
+    if awk -F'\t' -v p="$prefix" -v s="$sub" '!/^#/ && NF >= 2 && $1 == p && $2 == s { found=1; exit } END { exit found ? 0 : 1 }' "$SEARCH_GROUPS_FILE"; then
+        notify_error "Prefix '${prefix}:${sub}' already exists"
+        return 1
+    fi
+
+    printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$prefix" "$sub" "$name" "$url_template" "$base_url" >> "$SEARCH_GROUPS_FILE"
+    notify_success "Added prefix: ${prefix}:${sub} -> $name"
+}
+
+rm_search_group() {
+    local input="$1"
+    local key prefix sub tmp_file selected label
+    local -a labels=()
+    declare -A label_to_key=()
+
+    input=$(echo "$input" | xargs)
+
+    if [[ -z "$input" ]]; then
+        while IFS=$'\t' read -r prefix sub name _ _; do
+            [[ -z "$prefix$sub" ]] && continue
+            [[ "$prefix" =~ ^# ]] && continue
+            key="${prefix}:${sub}"
+            label="${key} ${name}"
+            labels+=("$label")
+            label_to_key["$label"]="$key"
+        done < "$SEARCH_GROUPS_FILE"
+
+        if [[ "${#labels[@]}" -eq 0 ]]; then
+            notify_error "No prefix groups to remove"
+            return 1
+        fi
+
+        selected=$(printf '%s\n' "${labels[@]}" | rofi -dmenu -config "$CONFIG" \
+            -p "prm " \
+            -theme-str 'entry { placeholder: "Select prefix:sub to remove..."; }')
+        [[ -z "$selected" ]] && return 0
+        rm_search_group "${label_to_key[$selected]}"
+        return $?
+    fi
+
+    tmp_file=$(mktemp)
+    if [[ "$input" == *:* ]]; then
+        prefix="${input%%:*}"
+        sub="${input##*:}"
+
+        if ! awk -F'\t' -v p="$prefix" -v s="$sub" '!/^#/ && NF >= 2 && $1 == p && $2 == s { found=1; exit } END { exit found ? 0 : 1 }' "$SEARCH_GROUPS_FILE"; then
+            rm -f "$tmp_file"
+            notify_error "Prefix '${prefix}:${sub}' not found"
+            return 1
+        fi
+
+        awk -F'\t' -v OFS='\t' -v p="$prefix" -v s="$sub" '!(!/^#/ && NF >= 2 && $1 == p && $2 == s) { print }' "$SEARCH_GROUPS_FILE" > "$tmp_file"
+        mv "$tmp_file" "$SEARCH_GROUPS_FILE"
+        notify_success "Removed prefix: ${prefix}:${sub}"
+    else
+        prefix="$input"
+
+        if ! awk -F'\t' -v p="$prefix" '!/^#/ && NF >= 1 && $1 == p { found=1; exit } END { exit found ? 0 : 1 }' "$SEARCH_GROUPS_FILE"; then
+            rm -f "$tmp_file"
+            notify_error "Prefix '$prefix' not found"
+            return 1
+        fi
+
+        awk -F'\t' -v OFS='\t' -v p="$prefix" '!(!/^#/ && NF >= 1 && $1 == p) { print }' "$SEARCH_GROUPS_FILE" > "$tmp_file"
+        mv "$tmp_file" "$SEARCH_GROUPS_FILE"
+        notify_success "Removed all groups for prefix: $prefix"
+    fi
+}
+
+edit_search_group() {
+    local input="$1"
+    local key prefix sub name url_template base_url tmp_file
+
+    IFS='|' read -r key name url_template base_url <<< "$input"
+
+    key=$(echo "$key" | xargs)
+    name=$(echo "$name" | xargs)
+    url_template=$(echo "$url_template" | xargs)
+    base_url=$(echo "$base_url" | xargs)
+
+    if [[ -z "$key" || -z "$name" || -z "$url_template" || -z "$base_url" ]]; then
+        notify_error "Format: pedit! prefix:sub | name | url_template | base_url"
+        return 1
+    fi
+
+    prefix="${key%%:*}"
+    sub="${key##*:}"
+    if [[ -z "$prefix" || -z "$sub" || "$key" != *:* ]]; then
+        notify_error "Format: pedit! prefix:sub | name | url_template | base_url"
+        return 1
+    fi
+
+    if [[ ! "$prefix" =~ ^[a-z]+$ ]]; then
+        notify_error "Prefix must match: [a-z]+"
+        return 1
+    fi
+
+    if [[ ! "$sub" =~ ^[a-z0-9]+$ ]]; then
+        notify_error "Sub must match: [a-z0-9]+"
+        return 1
+    fi
+
+    if [[ "$url_template" != *"%s"* ]]; then
+        notify_error "url_template must contain %s"
+        return 1
+    fi
+
+    if [[ ! "$base_url" =~ ^https?:// ]]; then
+        notify_error "base_url must start with http/https"
+        return 1
+    fi
+
+    if ! awk -F'\t' -v p="$prefix" -v s="$sub" '!/^#/ && NF >= 2 && $1 == p && $2 == s { found=1; exit } END { exit found ? 0 : 1 }' "$SEARCH_GROUPS_FILE"; then
+        notify_error "Prefix '${prefix}:${sub}' not found"
+        return 1
+    fi
+
+    tmp_file=$(mktemp)
+    awk -F'\t' -v OFS='\t' -v p="$prefix" -v s="$sub" -v n="$name" -v u="$url_template" -v b="$base_url" '
+        !/^#/ && NF >= 2 && $1 == p && $2 == s { $1 = p; $2 = s; $3 = e; $4 = n; $5 = u; $6 = b }
+        { print }
+    ' "$SEARCH_GROUPS_FILE" > "$tmp_file"
+    mv "$tmp_file" "$SEARCH_GROUPS_FILE"
+    notify_success "Updated prefix: ${prefix}:${sub} -> $name"
+}
+
 SORT_MODE="$DEFAULT_SORT_MODE"
 ensure_cache_files
+ensure_search_groups_file
 load_sort_mode
+load_search_groups
 read_quicklinks || true
 load_stats
 
 LIST=$(build_menu_list)
 
-CHOICE=$(echo -e "$LIST" | rofi -dmenu -config "$CONFIG" -p " " -theme-str 'entry { placeholder: "Search, select, add! or rm!"; }')
+CHOICE=$(echo -e "$LIST" | rofi -dmenu -config "$CONFIG" -p " " -theme-str 'entry { placeholder: "Search, add!/rm!/edit!, padd!/prm!/pedit!"; }')
 
 [[ -z "$CHOICE" ]] && exit 0
 
@@ -448,11 +801,30 @@ if [[ "$CHOICE" =~ ^add!\ (.+)$ ]]; then
     exit 0
 fi
 
+if [[ "$CHOICE" =~ ^edit!\ (.+)$ ]]; then
+    edit_quicklink "${BASH_REMATCH[1]}"
+    exit 0
+fi
+
 if [[ "$CHOICE" == "rm!" ]]; then
     rm_quicklink ""
     exit 0
 elif [[ "$CHOICE" =~ ^rm!\ (.+)$ ]]; then
     rm_quicklink "${BASH_REMATCH[1]}"
+    exit 0
+fi
+
+if [[ "$CHOICE" =~ ^padd!\ (.+)$ ]]; then
+    add_search_group "${BASH_REMATCH[1]}"
+    exit 0
+elif [[ "$CHOICE" =~ ^pedit!\ (.+)$ ]]; then
+    edit_search_group "${BASH_REMATCH[1]}"
+    exit 0
+elif [[ "$CHOICE" == "prm!" ]]; then
+    rm_search_group ""
+    exit 0
+elif [[ "$CHOICE" =~ ^prm!\ (.+)$ ]]; then
+    rm_search_group "${BASH_REMATCH[1]}"
     exit 0
 fi
 
@@ -473,97 +845,50 @@ if [[ "$MATCH_INDEX" -ge 0 ]]; then
     fi
 else
     QUERY="$CHOICE"
-    QUERY_ENCODED=$(urlencode "$QUERY")
-    SEARCH_PREFIX=""
-    SEARCH_QUERY=""
-    
-    case "$QUERY" in
-        "y!")
-            SEARCH_PREFIX="y!"
-            SEARCH_QUERY="$(show_prefix_history "$SEARCH_PREFIX")"
-            [[ -z "$SEARCH_QUERY" ]] && exit 0
-            SEARCH_TERM=$(urlencode "$SEARCH_QUERY")
-            URL="https://www.youtube.com/results?search_query=$SEARCH_TERM"
-            ;;
-        "y! "*)
-            SEARCH_PREFIX="y!"
-            SEARCH_QUERY="${QUERY#y! }"
-            SEARCH_TERM=$(urlencode "$SEARCH_QUERY")
-            URL="https://www.youtube.com/results?search_query=$SEARCH_TERM"
-            ;;
-        "g!")
-            SEARCH_PREFIX="g!"
-            SEARCH_QUERY="$(show_prefix_history "$SEARCH_PREFIX")"
-            [[ -z "$SEARCH_QUERY" ]] && exit 0
-            SEARCH_TERM=$(urlencode "$SEARCH_QUERY")
-            URL="https://www.google.com/search?q=$SEARCH_TERM"
-            ;;
-        "g! "*)
-            SEARCH_PREFIX="g!"
-            SEARCH_QUERY="${QUERY#g! }"
-            SEARCH_TERM=$(urlencode "$SEARCH_QUERY")
-            URL="https://www.google.com/search?q=$SEARCH_TERM"
-            ;;
-        "aw!")
-            SEARCH_PREFIX="aw!"
-            SEARCH_QUERY="$(show_prefix_history "$SEARCH_PREFIX")"
-            [[ -z "$SEARCH_QUERY" ]] && exit 0
-            SEARCH_TERM=$(urlencode "$SEARCH_QUERY")
-            URL="https://wiki.archlinux.org/index.php?search=$SEARCH_TERM"
-            ;;
-        "aw! "*)
-            SEARCH_PREFIX="aw!"
-            SEARCH_QUERY="${QUERY#aw! }"
-            SEARCH_TERM=$(urlencode "$SEARCH_QUERY")
-            URL="https://wiki.archlinux.org/index.php?search=$SEARCH_TERM"
-            ;;
-        "au!")
-            SEARCH_PREFIX="au!"
-            SEARCH_QUERY="$(show_prefix_history "$SEARCH_PREFIX")"
-            [[ -z "$SEARCH_QUERY" ]] && exit 0
-            SEARCH_TERM=$(urlencode "$SEARCH_QUERY")
-            URL="https://aur.archlinux.org/packages?O=0&K=$SEARCH_TERM"
-            ;;
-        "au! "*)
-            SEARCH_PREFIX="au!"
-            SEARCH_QUERY="${QUERY#au! }"
-            SEARCH_TERM=$(urlencode "$SEARCH_QUERY")
-            URL="https://aur.archlinux.org/packages?O=0&K=$SEARCH_TERM"
-            ;;
-        "gh!")
-            SEARCH_PREFIX="gh!"
-            SEARCH_QUERY="$(show_prefix_history "$SEARCH_PREFIX")"
-            [[ -z "$SEARCH_QUERY" ]] && exit 0
-            SEARCH_TERM=$(urlencode "$SEARCH_QUERY")
-            URL="https://www.github.com/search?q=$SEARCH_TERM"
-            ;;
-        "gh! "*)
-            SEARCH_PREFIX="gh!"
-            SEARCH_QUERY="${QUERY#gh! }"
-            SEARCH_TERM=$(urlencode "$SEARCH_QUERY")
-            URL="https://www.github.com/search?q=$SEARCH_TERM"
-            ;;
-        "yt!")
-            SEARCH_PREFIX="yt!"
-            SEARCH_QUERY="$(show_prefix_history "$SEARCH_PREFIX")"
-            [[ -z "$SEARCH_QUERY" ]] && exit 0
-            TEXT=$(urlencode "$SEARCH_QUERY")
-            URL="https://translate.yandex.com/?source_lang=en&target_lang=ru&text=$TEXT"
-            ;;
-        "yt! "*)
-            SEARCH_PREFIX="yt!"
-            SEARCH_QUERY="${QUERY#yt! }"
-            TEXT=$(urlencode "$SEARCH_QUERY")
-            URL="https://translate.yandex.com/?source_lang=en&target_lang=ru&text=$TEXT"
-            ;;
-        *)
-            URL="https://www.perplexity.ai/search?q=$QUERY_ENCODED"
-            ;;
-    esac
-
-    if xdg-open "$URL"; then
-        if [[ -n "$SEARCH_PREFIX" && -n "$SEARCH_QUERY" ]]; then
-            save_search_query "$SEARCH_PREFIX" "$SEARCH_QUERY"
+    if [[ "$QUERY" =~ ^([a-z]+):h!$ ]]; then
+        prefix="${BASH_REMATCH[1]}"
+        default_sub="$(get_default_sub "$prefix")"
+        if [[ -z "$default_sub" ]]; then
+            notify_error "Unknown prefix: $prefix"
+            exit 0
         fi
+        history_query="$(show_prefix_history "$prefix")"
+        [[ -z "$history_query" ]] && exit 0
+        execute_search "$prefix" "$default_sub" "$history_query"
+    elif [[ "$QUERY" =~ ^([a-z]+):([a-z0-9]+)!\ (.+)$ ]]; then
+        prefix="${BASH_REMATCH[1]}"
+        sub="${BASH_REMATCH[2]}"
+        query_text="${BASH_REMATCH[3]}"
+        execute_search "$prefix" "$sub" "$query_text"
+    elif [[ "$QUERY" =~ ^([a-z]+):([a-z0-9]+)!$ ]]; then
+        prefix="${BASH_REMATCH[1]}"
+        sub="${BASH_REMATCH[2]}"
+        open_base_url "$prefix" "$sub"
+    elif [[ "$QUERY" =~ ^([a-z]+)!\ (.+)$ ]]; then
+        prefix="${BASH_REMATCH[1]}"
+        query_text="${BASH_REMATCH[2]}"
+        default_sub="$(get_default_sub "$prefix")"
+        if [[ -n "$default_sub" ]]; then
+            execute_search "$prefix" "$default_sub" "$query_text"
+        else
+            xdg-open "https://www.perplexity.ai/search?q=$(urlencode "$QUERY")"
+        fi
+    elif [[ "$QUERY" =~ ^([a-z]+)!$ ]]; then
+        prefix="${BASH_REMATCH[1]}"
+        default_sub="$(get_default_sub "$prefix")"
+        if [[ -z "$default_sub" ]]; then
+            xdg-open "https://www.perplexity.ai/search?q=$(urlencode "$QUERY")"
+            exit 0
+        fi
+
+        if is_group "$prefix"; then
+            selected_sub="$(show_group_menu "$prefix")"
+            [[ -z "$selected_sub" ]] && exit 0
+            open_base_url "$prefix" "$selected_sub"
+        else
+            open_base_url "$prefix" "$default_sub"
+        fi
+    else
+        xdg-open "https://www.perplexity.ai/search?q=$(urlencode "$QUERY")"
     fi
 fi

@@ -183,4 +183,8 @@ source <(openclaw completion --shell zsh)
 
 export _JAVA_AWT_WM_NONREPARENTING=1
 
+#php-composer
 export PATH="$PATH:$HOME/.config/composer/vendor/bin"
+
+#csvlens
+alias tsv='csvlens -t'
