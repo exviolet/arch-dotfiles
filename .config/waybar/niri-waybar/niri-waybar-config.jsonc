@@ -3,7 +3,8 @@
     "spacing": 4,
     "modules-left": [
         "niri/workspaces",
-        "custom/media",
+        // "custom/media",
+        "mpris"
     ],
   "modules-center": [
       "group/time"
@@ -150,4 +151,25 @@
         "on-click-right": "playerctl -p spotify next", 
         "on-click-middle": "playerctl -p spotify play-pause"
     },
+     "mpris": {
+         "format": "{player_icon} {artist} - {title}",
+         "format-paused": "{player_icon} {artist} - {title}",
+         "player-icons": {
+             "default": "",
+             "mpv": "",
+             "spotify": "",
+             "chromium": "",
+             "firefox": "",
+             "vlc": "",
+         },
+         "dynamic-order": ["title", "artist"],
+         "status-icons": {
+             "playing": "",
+             "paused": "",
+         },
+         // "ignored-players": ["firefox", "chromium"],
+         // "ignored-players": ["firefox"],
+         "interval": 1,
+         "max-length": 50,
+     },
 }
