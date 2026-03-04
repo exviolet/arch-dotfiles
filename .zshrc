@@ -172,7 +172,7 @@ alias zed='zeditor'
 alias b='bun'
 
 #clear
-alias cls='clear'
+alias cl='clear'
 
 #yazi 
 bindkey -s '^Y' 'yazi\n'
