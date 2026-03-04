@@ -8,6 +8,11 @@
     }
   },
   "agent": {
+    "inline_assistant_model": {
+      "provider": "google",
+      "model": "gemini-3.1-pro-preview",
+      "enable_thinking": false
+    },
     "default_profile": "write",
     "default_model": {
       "provider": "google",
