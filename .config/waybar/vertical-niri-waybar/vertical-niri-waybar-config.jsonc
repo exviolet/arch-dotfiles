@@ -1,7 +1,9 @@
 {
-    "height": 40,
+    "position": "left",
+    "layer": "top",
+    "width": 40,
     "spacing": 4,
-    "modules-left": [
+    "modules-top": [
         "niri/workspaces",
         // "custom/media",
         "mpris"
@@ -9,7 +11,7 @@
   "modules-center": [
       "group/time"
   ],
-    "modules-right": [
+    "modules-bottom": [
         "tray",
         "group/hardware",
         "pulseaudio",
@@ -18,11 +20,11 @@
         "battery",
         "backlight"
     ],
-    
+
 
   "group/time": {
     "modules": ["clock", "clock#simple"],
-    "orientation": "horizontal",
+    "orientation": "vertical",
   },
   "clock#simple": {
     "format": "{:%H:%M}",
@@ -36,44 +38,23 @@
   },
     "pulseaudio": {
         "format": "<span color=\"#a55e5b\">{icon}</span>  {volume}%",
-        "format-muted": "<span color =\"#a55e5b\"> </span>Muted",
-        "format-source": " {volume}%",
-        "format-source-muted": "",
+        "format-muted": "<span color =\"#a55e5b\"> </span>Muted",
+        "format-source": " {volume}%",
+        "format-source-muted": "",
         "format-icons": {
-            "headphone": "",
-            "hands-free": "",
-            "headset": " ",
-            "phone": "",
-            "portable": "",
-            "car": "",
-            "default": ["", "", ""]
+            "headphone": "",
+            "hands-free": "",
+            "headset": " ",
+            "phone": "",
+            "portable": "",
+            "car": "",
+            "default": ["", "", ""]
         },
         "on-click": "pavucontrol"
     },
 
-    "niri/workspaces": {
-      "format": "{icon}",
-      "format-icons": {
-        "1": "",
-        "2": "",
-        "3": "",
-        "4": "",
-        "5": "",
-        "6": "",
-        "7": "",
-        "8": "",
-        "9": "",
-        "magic": ""
-      },
-      "persistent-workspaces": {
-        "*": 9
-      },
-      "show-special": true,
-      "special-visible-only": true
-    },
-
     "niri/language": {
-        "format": "<span color=\"#a55e5b\"></span>  {}",
+        "format": "<span color=\"#a55e5b\"></span>  {}",
         "format-en": "<span color=\"#E8705F\">US</span>",
         "format-ru": "<span color=\"#66A0C8\">RU</span>",
         "format-kk": "<span color=\"#DFB431\">KZ</span>"
@@ -89,12 +70,12 @@
         "format-charging": "{capacity}% 󰂄",
         "format-plugged": "{capacity}% 󰂄",
         "format-alt": "{time} {icon}",
-        "format-icons": ["", "", "", "", ""]
+        "format-icons": ["", "", "", "", ""]
     },
 
     "backlight": {
         "format": "{percent}% {icon}",
-        "format-icons": ["", "", "", "", "", "", "", "", ""]
+        "format-icons": ["", "", "", "", "", "", "", "", ""]
     },
 
     "tray": {
@@ -103,16 +84,16 @@
     },
 
     "group/net": {
-        "orientation": "horizontal",
+        "orientation": "vertical",
         "modules": [
             "network",
             "bluetooth"
         ]
     },
     "network": {
-        "format-wifi": " {essid}",
-        "format-ethernet": "",
-        "tooltip-format": "{ifname} via {gwaddr} \nSignal: {signalStrength}%",
+        "format-wifi": " {essid}",
+        "format-ethernet": "",
+        "tooltip-format": "{ifname} via {gwaddr} \nSignal: {signalStrength}%",
         "format-disconnected": "⚠ Disconnected",
         "on-click": "kitty nmtui"
     },
@@ -124,10 +105,10 @@
     },
 
     "group/hardware": {
-        "orientation": "horizontal",
+        "orientation": "vertical",
         "drawer": {
             "transition-duration": 300,
-            "transition-left-to-right": true
+            "transition-top-to-bottom": true
         },
         "modules": [
             "temperature",
@@ -137,7 +118,7 @@
         ]
     },
     "cpu": {
-        "format": " {usage}%",
+        "format": " {usage}%",
         "tooltip": true,
         "on-click": "alacritty btop"
     },
@@ -150,7 +131,7 @@
         "hwmon-path": "/sys/class/hwmon/hwmon2/temp1_input", // Найдите свой путь!
         "critical-threshold": 80,
         "format": "{icon} {temperatureC}°C",
-        "format-icons": ["", "", ""],
+        "format-icons": ["", "", ""],
         "on-click": "alacritty btop"
     },
     "disk": {
@@ -161,15 +142,15 @@
         "on-click": "alacritty btop"
     },
     "custom/media": {
-        "format": " {text}",
+        "format": " {text}",
         // "return-type": "json",
         "interval": 1,
         "max-length": 40,
         "escape": true,
         "exec": "$HOME/.config/waybar/customs/spotify-track.sh", // Script in resources folder
         // "exec": "$HOME/.config/waybar/mediaplayer.py --player spotify 2> /dev/null" // Filter player based on name
-        "on-click": "playerctl -p spotify previous", 
-        "on-click-right": "playerctl -p spotify next", 
+        "on-click": "playerctl -p spotify previous",
+        "on-click-right": "playerctl -p spotify next",
         "on-click-middle": "playerctl -p spotify play-pause"
     },
      "mpris": {
@@ -178,9 +159,9 @@
          "player-icons": {
              "default": "",
              "mpv": "",
-             "spotify": "",
-             "chromium": "",
-             "firefox": "",
+             "spotify": "",
+             "chromium": "",
+             "firefox": "",
              "vlc": "",
          },
          "dynamic-order": ["title", "artist"],
