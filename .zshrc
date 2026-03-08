@@ -125,9 +125,17 @@ alias lst="exa -lT --icons"
 # Load Angular CLI autocompletion.
 # source <(ng completion script)
 
+# Lazy-load nvm — загружается только при первом вызове nvm/node/npm/npx
 export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+lazy_load_nvm() {
+  unset -f nvm node npm npx
+  [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+  [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+}
+nvm()  { lazy_load_nvm; nvm "$@"; }
+node() { lazy_load_nvm; node "$@"; }
+npm()  { lazy_load_nvm; npm "$@"; }
+npx()  { lazy_load_nvm; npx "$@"; }
 
 # bun completions
 # [ -s "/home/ex1te/.bun/_bun" ] && source "/home/ex1te/.bun/_bun"
@@ -179,8 +187,14 @@ alias cl='clear'
 bindkey -s '^Y' 'yazi\n'
 export PATH="$PATH:/home/ex1te/.local/bin"
 
-# OpenClaw Completion
-source <(openclaw completion --shell zsh)
+# OpenClaw Completion (cached for fast startup)
+# Regenerate cache: openclaw completion --shell zsh > ~/.cache/zsh/openclaw_completion.zsh
+if [[ ! -f ~/.cache/zsh/openclaw_completion.zsh ]] || \
+   [[ "$(command -v openclaw)" -nt ~/.cache/zsh/openclaw_completion.zsh ]]; then
+  mkdir -p ~/.cache/zsh
+  openclaw completion --shell zsh > ~/.cache/zsh/openclaw_completion.zsh 2>/dev/null
+fi
+source ~/.cache/zsh/openclaw_completion.zsh 2>/dev/null
 
 export _JAVA_AWT_WM_NONREPARENTING=1
 
