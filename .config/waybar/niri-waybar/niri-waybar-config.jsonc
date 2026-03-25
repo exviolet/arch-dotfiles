@@ -1,4 +1,6 @@
 {
+    "layer": "top",
+    "position": "top",
     "height": 40,
     "spacing": 4,
     "modules-left": [
