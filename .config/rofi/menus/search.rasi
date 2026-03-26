@@ -13,10 +13,20 @@ configuration {
 }
 
 window {
-    width: 550px;
+    width: 1000px;
 }
 
 listview {
-    columns: 1;
-    lines:   10;
+    columns:      1;
+    lines:        18;
+    fixed-height: false;
+    spacing:      4px;
+}
+
+element {
+    padding: 6px 12px;
+}
+
+element-icon {
+    size: 0;
 }
