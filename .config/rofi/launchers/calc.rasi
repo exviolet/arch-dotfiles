@@ -1,0 +1,42 @@
+@import "../shared/appearance.rasi"
+
+* { accent-color: #3aa99f; }
+
+window {
+    width: 550px;
+}
+
+mainbox {
+    children: [ "inputbar", "listview", "message" ];
+    padding:  4px 8px;
+    spacing:  6px;
+}
+
+entry {
+    placeholder: "Calculate...";
+}
+
+message {
+    padding:          0;
+    margin:           0;
+    background-color: transparent;
+}
+
+textbox {
+    text-color:       @fg;
+    background-color: transparent;
+}
+
+listview {
+    columns: 1;
+    lines:   5;
+    spacing: 4px;
+}
+
+element {
+    padding: 12px 8px;
+}
+
+element-icon {
+    size: 0;
+}

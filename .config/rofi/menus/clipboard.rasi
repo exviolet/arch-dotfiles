@@ -1,0 +1,25 @@
+@import "../shared/appearance.rasi"
+
+* { accent-color: #879a39; }
+
+window {
+    width: 750px;
+}
+
+entry {
+    placeholder: "Clipboard";
+}
+
+listview {
+    columns: 1;
+    lines:   15;
+    spacing: 4px;
+}
+
+element {
+    padding: 10px 8px;
+}
+
+element-icon {
+    size: 0;
+}

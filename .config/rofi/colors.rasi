@@ -1,17 +1,26 @@
 * {
-    b-color: #000000FF;
-    fg-color: #FFFFFFFF;
-    fgp-color: #888888FF;
-    hl-color:#FFFCF0FF;
-    hlt-color: #000000FF;
-    alt-color: #111111FF;
-    wbg-color: #000000CC;
-    w-border-color: #dc3c22FF;
+    /* Flexoki palette — base tones */
+    bg:           #100F0FCC;
+    bg-solid:     #100F0F;
+    bg-alt:       #1C1B1A;
+    bg-surface:   #282726;
+    fg:           #FFFCF0;
+    fg-muted:     #878580;
 
-    background:     #1E2127FF;
-    background-alt: #282B31FF;
-    foreground:     #DCD7BAFF;
-    selected:       #61AFEFFF;
-    active:         #98C379FF;
-    urgent:         #E06C75FF;
+    /* Highlight */
+    hl-bg:        #282726;
+    hl-fg:        #FFFCF0;
+
+    /* Accent (default: blue — override per layout) */
+    accent-color: #4385be;
+
+    /* Full Flexoki accent palette */
+    red:          #d14d41;
+    orange:       #da702c;
+    yellow:       #d0a215;
+    green:        #879a39;
+    cyan:         #3aa99f;
+    blue:         #4385be;
+    purple:       #8b7ec8;
+    magenta:      #ce5d97;
 }

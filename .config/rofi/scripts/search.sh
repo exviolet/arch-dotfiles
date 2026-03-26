@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-CONFIG="$HOME/.config/rofi/search.rasi"
+CONFIG="$HOME/.config/rofi/menus/search.rasi"
 QUICKLINKS_FILE="$HOME/.config/rofi/quicklinks.tsv"
 SEARCH_GROUPS_FILE="$HOME/.config/rofi/search_groups.tsv"
 CACHE_DIR="$HOME/.cache/rofi"

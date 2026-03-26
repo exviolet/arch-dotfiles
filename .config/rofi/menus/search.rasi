@@ -1,0 +1,22 @@
+@import "../shared/appearance.rasi"
+
+* { accent-color: #da702c; }
+
+configuration {
+    font:                "IBM Plex Sans 12";
+    show-icons:          false;
+    matching:            "fuzzy";
+    kb-row-down:         "Down,Control+j";
+    kb-row-up:           "Up,Control+k";
+    kb-accept-entry:     "Return,KP_Enter";
+    kb-remove-to-eol:    "Control+Shift+K";
+}
+
+window {
+    width: 550px;
+}
+
+listview {
+    columns: 1;
+    lines:   10;
+}

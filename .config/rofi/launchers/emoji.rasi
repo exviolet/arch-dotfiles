@@ -1,0 +1,21 @@
+@import "../shared/appearance.rasi"
+
+* { accent-color: #d0a215; }
+
+window {
+    width: 700px;
+}
+
+listview {
+    columns: 1;
+    lines:   15;
+    spacing: 4px;
+}
+
+element {
+    padding: 12px 8px;
+}
+
+element-icon {
+    size: 0;
+}

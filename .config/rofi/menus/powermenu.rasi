@@ -1,0 +1,80 @@
+@import "../shared/appearance.rasi"
+
+* {
+    accent-color: #d14d41;
+}
+
+window {
+    fullscreen:       true;
+    background-color: #100F0F99;
+    border:           0px solid;
+    padding:          0;
+}
+
+mainbox {
+    spacing:          30px;
+    padding:          35% 20%;
+    children:         [ "message", "listview" ];
+    background-color: transparent;
+}
+
+message {
+    expand:           false;
+    padding:          12px 20px;
+    border-radius:    @b-radius;
+    background-color: @bg-alt;
+}
+
+textbox {
+    background-color: transparent;
+    text-color:       @fg-muted;
+    horizontal-align: 0.5;
+    font:             "IBM Plex Sans 14";
+}
+
+listview {
+    expand:           false;
+    columns:          6;
+    lines:            1;
+    spacing:          16px;
+    fixed-height:     true;
+    fixed-columns:    true;
+    cycle:            true;
+    background-color: transparent;
+}
+
+element {
+    padding:          30px;
+    border-radius:    @b-radius;
+    background-color: @bg-alt;
+    text-color:       @fg;
+    border:           1px solid;
+    border-color:     @bg-surface;
+    cursor:           pointer;
+}
+
+element selected.normal {
+    background-color: @accent-color;
+    text-color:       @fg;
+    border-color:     @accent-color;
+    border:           1px solid;
+}
+
+element-icon {
+    size:             0;
+    background-color: transparent;
+}
+
+element-text {
+    horizontal-align: 0.5;
+    vertical-align:   0.5;
+    text-color:       inherit;
+    background-color: transparent;
+    font:             "IosevkaTermNerdFont 28";
+    expand:           false;
+}
+
+inputbar      { enabled: false; }
+prompt        { enabled: false; }
+entry         { enabled: false; }
+mode-switcher { enabled: false; }

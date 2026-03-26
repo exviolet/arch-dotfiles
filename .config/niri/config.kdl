@@ -253,11 +253,13 @@ layout {
 
 // wallpaper = "$HOME/.config/wallpaper/wallpaper-6.png"
 
+
+spawn-at-startup "sh" "-c" "waybar & awww-daemon & swaync &"
+
 layer-rule {
-    // command "sh" "-c" "swww img $HOME/.config/wallpapers/wallpaper-6.png"
+    // command "sh" "-c" "awww img $HOME/.dotfiles/.config/wallpapers/wallpaper-6.png"
     // Put swaybg inside the overview backdrop.
-    match namespace="waybar"
-    match namespace="^awww-daemon$"
+    match namespace="^wallpaper$"
     place-within-backdrop true
 }
 
@@ -284,7 +286,6 @@ gestures {
 // See the binds section below for more spawn examples.
 
 // This line starts waybar, a commonly used bar for Wayland compositors.
-spawn-at-startup "sh" "-c" "waybar & awww-daemon & swaync &"
 spawn-at-startup "sh" "-c" "wl-paste --type text --watch cliphist store"
 spawn-at-startup "sh" "-c" "wl-paste --type image --watch cliphist store"
 spawn-at-startup "sh" "-c" "wl-paste --watch cliphist store"
@@ -390,14 +391,14 @@ binds {
     Mod+D hotkey-overlay-title="Run an Application: rofi" { spawn "sh" "-c" "rofi -show drun"; }
     Mod+S { spawn "bash" "-c" "$HOME/.config/rofi/scripts/search.sh"; }
 
-    Mod+Shift+E hotkey-overlay-title="Run an Application: rofi-emoji" { spawn "sh" "-c" "rofi -show emoji"; }
-    Mod+Shift+D { spawn "sh" "-c" "cliphist list | rofi -dmenu | cliphist decode | wl-copy"; }
+    Mod+Shift+E hotkey-overlay-title="Run an Application: rofi-emoji" { spawn "sh" "-c" "rofi -show emoji -theme ~/.config/rofi/launchers/emoji.rasi"; }
+    Mod+Shift+D { spawn "bash" "-c" "$HOME/.config/rofi/scripts/clipboard.sh"; }
     Super+Alt+L hotkey-overlay-title="Lock the Screen: hyprlock" { spawn "hyprlock"; }
     Mod+Shift+T hotkey-overlay-title="Lock the Screen: Telegram" { spawn "Telegram"; }
     Mod+Shift+O { spawn "bash" "-c" "$HOME/.config/rofi/scripts/wallpapermenu.sh"; }
-    Mod+Shift+C { spawn "sh" "-c" "rofi -show calc"; }
+    Mod+Shift+C { spawn "sh" "-c" "rofi -show calc -theme ~/.config/rofi/launchers/calc.rasi"; }
     Mod+Shift+B { spawn "bash" "-c" "$HOME/.config/rofi/scripts/bluetoothctlmenu.sh"; }
-    Mod+Shift+W { spawn "wlogout"; }
+    Mod+Shift+W { spawn "bash" "-c" "$HOME/.config/rofi/scripts/powermenu.sh"; }
 
     // You can also use a shell. Do this if you need pipes, multiple commands, etc.
     // Note: the entire command goes as a single argument in the end.

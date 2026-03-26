@@ -1,0 +1,34 @@
+@import "../shared/appearance.rasi"
+
+* { accent-color: #8b7ec8; }
+
+configuration {
+    show-icons: true;
+}
+
+window {
+    width: 700px;
+}
+
+entry {
+    placeholder: "Wallpaper";
+}
+
+listview {
+    columns: 3;
+    lines:   5;
+}
+
+element {
+    orientation: vertical;
+    padding:     8px;
+}
+
+element-icon {
+    size:             128px;
+    horizontal-align: 0.5;
+}
+
+element-text {
+    horizontal-align: 0.5;
+}

@@ -1,92 +1,69 @@
-/**
- *
- * Author : Aditya Shakya (adi1090x)
- * Github : @adi1090x
- * 
- * Rofi Theme File
- * Rofi Version: 1.7.3
- **/
+@import "appearance.rasi"
 
-/*****----- Configuration -----*****/
 configuration {
-    show-icons:                 false;
+    show-icons: false;
 }
 
-/*****----- Global Properties -----*****/
-@import                          "colors.rasi"
-
-/*****----- Main Window -----*****/
 window {
-    location:                    center;
-    anchor:                      center;
-    fullscreen:                  false;
-    width:                       500px;
-    border-radius:               20px;
-    cursor:                      "default";
-    background-color:            @background;
+    width:            300px;
+    border-radius:    @b-radius;
+    background-color: @bg;
+    border-color:     @accent-color;
 }
 
-/*****----- Main Box -----*****/
 mainbox {
-    spacing:                     30px;
-    padding:                     30px;
-    background-color:            transparent;
-    children:                    [ "message", "listview" ];
+    spacing:          20px;
+    padding:          20px;
+    background-color: transparent;
+    children:         [ "message", "listview" ];
 }
 
-/*****----- Message -----*****/
 message {
-    margin:                      0px;
-    padding:                     20px;
-    border-radius:               20px;
-    background-color:            @background-alt;
-    text-color:                  @foreground;
+    padding:          12px;
+    border-radius:    @b-radius;
+    background-color: @bg-alt;
 }
+
 textbox {
-    background-color:            inherit;
-    text-color:                  inherit;
-    vertical-align:              0.5;
-    horizontal-align:            0.5;
-    placeholder-color:           @foreground;
-    blink:                       true;
-    markup:                      true;
+    background-color: inherit;
+    text-color:       @fg;
+    horizontal-align: 0.5;
+    vertical-align:   0.5;
 }
 
-/*****----- Listview -----*****/
 listview {
-    columns:                     2;
-    lines:                       1;
-    cycle:                       true;
-    dynamic:                     true;
-    scrollbar:                   false;
-    layout:                      vertical;
-    reverse:                     false;
-    fixed-height:                true;
-    fixed-columns:               true;
-    
-    spacing:                     30px;
-    background-color:            transparent;
-    text-color:                  @foreground;
-    cursor:                      "default";
+    columns:          2;
+    lines:            1;
+    cycle:            true;
+    scrollbar:        false;
+    spacing:          16px;
+    fixed-height:     true;
+    fixed-columns:    true;
+    background-color: transparent;
 }
 
-/*****----- Elements -----*****/
 element {
-    padding:                     60px 10px;
-    border-radius:               20px;
-    background-color:            @background-alt;
-    text-color:                  @foreground;
-    cursor:                      pointer;
+    padding:          16px 10px;
+    border-radius:    @b-radius;
+    background-color: @bg-alt;
+    text-color:       @fg;
+    cursor:           pointer;
 }
-element-text {
-    font:                        "feather 48";
-    background-color:            transparent;
-    text-color:                  inherit;
-    cursor:                      inherit;
-    vertical-align:              0.5;
-    horizontal-align:            0.5;
-}
+
 element selected.normal {
-    background-color:            var(selected);
-    text-color:                  var(background);
+    background-color: @accent-color;
+    text-color:       @bg-solid;
+    border:           0px solid;
 }
+
+element-text {
+    horizontal-align: 0.5;
+    vertical-align:   0.5;
+    text-color:       inherit;
+    background-color: transparent;
+    font:             "IBM Plex Sans 14";
+}
+
+inputbar   { enabled: false; }
+prompt     { enabled: false; }
+entry      { enabled: false; }

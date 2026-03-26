@@ -1,0 +1,27 @@
+@import "../shared/appearance.rasi"
+
+/* Accent: blue (default) */
+
+window {
+    width: 1000px;
+}
+
+listview {
+    columns:      5;
+    lines:        4;
+    fixed-height: false;
+}
+
+element {
+    orientation: vertical;
+    padding:     10px 6px;
+}
+
+element-icon {
+    size:             48px;
+    horizontal-align: 0.5;
+}
+
+element-text {
+    horizontal-align: 0.5;
+}

@@ -1,0 +1,11 @@
+* {
+    font-base:    "IBM Plex Sans 12";
+    font-icon:    "IosevkaTermNerdFont 20";
+    g-spacing:    10px;
+    g-margin:     0;
+    g-padding:    8px;
+    b-radius:     8px;
+    w-border:     2px solid;
+    w-padding:    12px;
+    icon-size:    40px;
+}

@@ -1,37 +1,28 @@
 #!/usr/bin/env bash
 
-## Author : Aditya Shakya (adi1090x)
-## Github : @adi1090x
-#
-## Rofi   : Power Menu
-#
-## Available Styles
-#
-## style-1   style-2   style-3   style-4   style-5
-
-# Current Theme
 dir="$HOME/.config/rofi"
-theme='powermenu'
+theme='menus/powermenu'
 
 # CMDs
-uptime="`uptime -p | sed -e 's/up //g'`"
-host=`hostname`
+uptime="$(uptime -p | sed -e 's/up //g')"
+host=$(hostname)
 
 # Options
 shutdown=''
 reboot=''
 lock=''
 suspend=''
+hibernate=''
 logout='󰈆'
-yes=''
-no=''
+yes='Yes'
+no='No'
 
 # Rofi CMD
 rofi_cmd() {
 	rofi -dmenu \
 		-p "Goodbye ${USER}" \
 		-mesg "Uptime: $uptime" \
-		-theme ${dir}/${theme}.rasi
+		-theme "${dir}/${theme}.rasi"
 }
 
 # Confirmation CMD
@@ -39,7 +30,7 @@ confirm_cmd() {
 	rofi -dmenu \
 		-p 'Confirmation' \
 		-mesg 'Are you Sure?' \
-		-theme ${dir}/shared/confirm.rasi
+		-theme "${dir}/shared/confirm.rasi"
 }
 
 # Ask for confirmation
@@ -49,7 +40,7 @@ confirm_exit() {
 
 # Pass variables to rofi dmenu
 run_rofi() {
-	echo -e "$lock\n$suspend\n$logout\n$reboot\n$shutdown" | rofi_cmd
+	echo -e "$lock\n$suspend\n$logout\n$reboot\n$shutdown\n$hibernate" | rofi_cmd
 }
 
 # Execute Command
@@ -61,17 +52,15 @@ run_cmd() {
 		elif [[ $1 == '--reboot' ]]; then
 			systemctl reboot
 		elif [[ $1 == '--suspend' ]]; then
-			# mpc -q pause
-			# amixer set Master mute
 			systemctl suspend
+		elif [[ $1 == '--hibernate' ]]; then
+			notify-send "Hibernate" "Not configured yet"
 		elif [[ $1 == '--logout' ]]; then
-			if [[ "$DESKTOP_SESSION" == 'openbox' ]]; then
-				openbox --exit
-			elif [[ "$DESKTOP_SESSION" == 'bspwm' ]]; then
-				bspc quit
-			elif [[ "$DESKTOP_SESSION" == 'i3' ]]; then
+			if [[ "$XDG_CURRENT_DESKTOP" == 'niri' ]]; then
+				niri msg action quit
+			elif [[ "$XDG_CURRENT_DESKTOP" == 'i3' ]]; then
 				i3-msg exit
-			elif [[ "$DESKTOP_SESSION" == 'plasma' ]]; then
+			elif [[ "$XDG_CURRENT_DESKTOP" == 'KDE' ]]; then
 				qdbus org.kde.ksmserver /KSMServer logout 0 0 0
 			fi
 		fi
@@ -90,11 +79,13 @@ case ${chosen} in
 		run_cmd --reboot
         ;;
     $lock)
-        run_cmd
-        hyprlock
+		hyprlock
         ;;
     $suspend)
 		run_cmd --suspend
+        ;;
+    $hibernate)
+		run_cmd --hibernate
         ;;
     $logout)
 		run_cmd --logout
