@@ -259,8 +259,8 @@ spawn-at-startup "sh" "-c" "waybar & awww-daemon & swaync &"
 layer-rule {
     // command "sh" "-c" "awww img $HOME/.dotfiles/.config/wallpapers/wallpaper-6.png"
     // Put swaybg inside the overview backdrop.
-    match namespace="^wallpaper$"
-    place-within-backdrop true
+    match namespace="awww"
+    place-within-backdrop true    
 }
 
 overview {
@@ -286,6 +286,12 @@ gestures {
 // See the binds section below for more spawn examples.
 
 // This line starts waybar, a commonly used bar for Wayland compositors.
+environment {
+    export "LIBVA_DRIVER_NAME=nvidia"
+    export "NVD_BACKEND=direct"
+    export "__GLX_VENDOR_LIBRARY_NAME=nvidia"
+}
+
 spawn-at-startup "sh" "-c" "wl-paste --type text --watch cliphist store"
 spawn-at-startup "sh" "-c" "wl-paste --type image --watch cliphist store"
 spawn-at-startup "sh" "-c" "wl-paste --watch cliphist store"
@@ -333,6 +339,79 @@ window-rule {
     // You can get away with just app-id="wezterm" if you want.
     match app-id=r#"^org\.wezfurlong\.wezterm$"#
     default-column-width {}
+}
+
+window-rule {
+    match app-id="^Alacritty$"
+
+    background-effect {
+        blur true
+    }
+}
+
+layer-rule {
+    match layer="top"
+    match layer="overlay"
+
+    background-effect {
+        xray false
+    }
+}
+
+blur {
+    // off
+    passes 3
+    offset 3
+    noise 0.02
+    saturation 1.5
+}
+
+// Блюр за popup-меню в Loupe
+window-rule {
+    match app-id="Loupe"
+
+    popups {
+        // Совпадает с дефолтным радиусом popup'ов libadwaita
+        geometry-corner-radius 15
+
+        opacity 0.5
+
+        background-effect {
+            blur true
+        }
+    }
+}
+
+// Блюр за popup-меню в Loupe
+window-rule {
+    match app-id="firefox"
+
+    popups {
+        // Совпадает с дефолтным радиусом popup'ов libadwaita
+        geometry-corner-radius 15
+
+        opacity 0.8
+
+        background-effect {
+            blur true
+        }
+    }
+}
+
+
+window-rule {
+    match app-id="nautilus"
+
+    popups {
+        // Совпадает с дефолтным радиусом popup'ов libadwaita
+        geometry-corner-radius 15
+
+        opacity 0.8
+
+        background-effect {
+            blur true
+        }
+    }
 }
 
 // Open the Firefox picture-in-picture player as floating by default.
