@@ -1,190 +1,151 @@
-@import url("../themes/kanagawa.css");
+@define-color accent #d14d41;
+@define-color soft-bg #1a1a1a;
+@define-color module-bg #2a2a2a;
+@define-color border-color #444444;
+@define-color line-color #3a3a3a;
 
 * {
-  font-family: "FiraCodeNerdFontPropo", FontAwesome, sans-serif;
-  font-size: 14px;
+  font-family: "FiraCodeNerdFontPropo", sans-serif;
+  font-size: 12px;
   font-weight: bold;
   border: none;
-  border-radius: 0;
   min-height: 0;
-  min-width: 0; /* vertical: added to prevent horizontal overflow */
+  min-width: 0;
+  padding: 0;
+  margin: 0;
 }
 
 window#waybar {
-  background-color: rgba(62, 62, 62, 0.27);
-  border-radius: 0px;
-  transition-property: background-color;
-  transition-duration: 0.5s;
+  background: rgba(26, 26, 26, 0.95);
+  color: white;
 }
 
-window#waybar > box {
-  padding: 0 5px; /* vertical: changed from 5px 0 */
-}
-
-button {
-  box-shadow: inset 0 -3px transparent;
-  border: none;
-  border-radius: 10px;
-}
-
-button:hover {
-  background-color: @foreground;
-  box-shadow: inset 0 -3px @foreground;
+#custom-logo {
+  font-size: 16px;
+  color: @accent;
+  padding: 8px 0;
 }
 
 #workspaces {
-  margin-top: 10px; /* vertical: changed from margin-left: 10px */
-  background-color: @background;
-  color: @foreground;
-  border-radius: 10px;
+  background: @module-bg;
+  border: 1px solid @border-color;
+  border-radius: 8px;
+  margin: 2px;
+  padding: 4px 0;
 }
 
 #workspaces button {
-  border-radius: 10px;
-  color: inherit;
-  background-color: transparent;
-}
-
-#workspaces button:hover {
-  background: @foreground;
-  color: @background;
+  padding: 4px 0;
+  margin: 2px;
+  color: rgba(255, 255, 255, 0.2);
+  font-size: 14px;
 }
 
 #workspaces button.active {
-  background-color: @foreground-dark;
-  color: @background;
+  color: @accent;
 }
 
-#workspaces button.active:nth-child(1) {
-  border-radius: 10px 10px 0 0; /* vertical: changed from 10px 0 0 10px */
-}
-#workspaces button.active:nth-last-child(1) {
-  border-radius: 0 0 10px 10px; /* vertical: changed from 0 10px 10px 0 */
-}
-
-#workspaces button.urgent {
-  border-bottom: 2px solid @orange;
-  border-radius: 0;
-}
-
-#workspaces button.urgent:nth-child(1) {
-  border-bottom: 2px solid @orange;
-  border-radius: 10px 10px 0 0; /* vertical: changed from 10px 0 0 10px */
-}
-
-#workspaces button.urgent:nth-last-child(1) {
-  border-bottom: 2px solid @orange;
-  border-radius: 0 0 10px 10px; /* vertical: changed from 0 10px 10px 0 */
-}
-
-#custom-media {
-  color: @spotify;
-  font-size: 16px;
-  min-width: 0; /* vertical: changed from 100px */
-}
-
-#custom-media.custom-vlc {
-  background-color: #ffa000;
-}
-
-#mpris.spotify {
-  color: @spotify;
-}
-
-#time {
-  border-radius: 10px;
-  font-weight: 700;
-  background-color: @background;
-  color: @foreground;
-}
-
-#clock.simple {
-  padding: 6px 10px;
-  background-color: @foreground-dark;
-  color: @background;
-  border-radius: 0 0 10px 10px; /* vertical: changed from 0 10px 10px 0 */
-  font-weight: 700;
+#mpris {
+  padding: 10px 0;
+  color: #a6e3a1;
 }
 
 #clock {
-  padding: 6px 10px;
-  border-radius: 10px 10px 0 0; /* vertical: changed from 10px 0 0 10px */
+  font-size: 13px;
+  padding: 5px 0;
+  margin: 0 10px;
 }
 
-#tray {
-  padding-bottom: 8px; /* vertical: changed from padding-right: 8px */
-}
-#tray > .passive {
-  -gtk-icon-effect: dim;
-}
-#tray > .needs-attention {
-  -gtk-icon-effect: highlight;
-  background-color: #eb4d4b;
-}
-
-#memory.critical,
-#cpu.critical,
-#temperature.critical,
-#battery.critical {
-  background-color: @red;
-  color: @background;
+/* --- Основная карточка --- */
+#group-main-container {
+  background: @module-bg;
+  border: 1px solid @border-color;
+  border-radius: 8px;
+  margin: 4px 2px;
+  padding: 4px 0;
 }
 
 #pulseaudio,
 #network,
+#backlight,
 #bluetooth,
-#battery,
 #cpu,
 #memory,
-#temperature,
 #disk,
-#backlight,
+#language,
+#battery,
+#tray {
+  padding: 6px 0;
+}
+
+/* Декоративные линии внутри карточки */
+#group-audio,
+#group-brightness,
+#group-utils,
+#group-hardware {
+  border-bottom: 1px solid @line-color;
+  margin: 0 8px;
+}
+
 #language {
-  padding: 6px 12px;
-  margin: 1px 0; /* vertical: changed from 0 1px */
-  font-weight: 700;
-  color: @foreground;
-  background-color: @background;
-  border-radius: 10px;
+  border-bottom: 1px solid @line-color;
+  margin: 0 8px;
+  padding: 8px 0;
 }
 
-#battery.warning {
-  background-color: @orange;
-  color: @background;
+#battery {
+  color: @accent;
+  border-bottom: 1px solid @line-color;
+  margin: 0 8px;
 }
 
-#battery.charging {
-  background-color: @power;
-  color: @background;
+#tray {
+  padding: 5px 0;
 }
 
-#network.disconnected {
-  background-color: @red;
-  color: @background;
+#pulseaudio:hover,
+#network:hover,
+#cpu:hover,
+#battery:hover,
+#custom-logo:hover,
+#backlight:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
 }
 
-#pulseaudio.muted,
-#bluetooth.disabled,
-#bluetooth.off {
-  color: @foreground-dark;
+/* Стили для слайдеров (взято из предложенного вами, адаптировано под цвета) */
+#pulseaudio-slider,
+#backlight-slider {
+  min-height: 80px;
+  margin: 10px 0;
+}
+
+#pulseaudio-slider slider,
+#backlight-slider slider {
+  background: transparent;
+  box-shadow: none;
+}
+
+#pulseaudio-slider trough,
+#backlight-slider trough {
+  min-width: 6px;
+  background: @line-color;
+  border-radius: 3px;
+}
+
+#pulseaudio-slider highlight,
+#backlight-slider highlight {
+  background: @accent;
+  border-radius: 3px;
 }
 
 tooltip {
-  background-color: @background;
-  border: 1px solid @overlay;
-  border-radius: 10px;
+  background: @soft-bg;
+  border: 1px solid @border-color;
+  border-radius: 8px;
 }
 
 tooltip label {
-  color: @foreground;
-  padding: 8px;
-}
-
-.drawer {
-  padding: 5px 0px; /* vertical: changed from 0px 5px */
-  margin: 0px 3px; /* vertical: changed from 3px 0px */
-}
-
-.drawer:hover {
-  background-color: #4a4646;
+  color: white;
+  padding: 4px;
 }

@@ -1,177 +1,224 @@
 {
-    "position": "left",
+    "position": "right",
     "layer": "top",
-    "width": 40,
-    "spacing": 4,
-    "modules-top": [
+    "width": 38,
+    "spacing": 0,
+    "margin-top": 0,
+    "margin-bottom": 0,
+    "margin-left": 0,
+
+    "modules-left": [
+        "custom/logo",
         "niri/workspaces",
-        // "custom/media",
         "mpris"
     ],
-  "modules-center": [
-      "group/time"
-  ],
-    "modules-bottom": [
-        "tray",
-        "group/hardware",
-        "pulseaudio",
-        "niri/language",
-        "group/net",
-        "battery",
-        "backlight"
+    "modules-center": [
+        "clock"
+    ],
+    "modules-right": [
+        "group/main-container"
     ],
 
+    "custom/logo": {
+        "format": "󰮠",
+        "on-click": "systemctl --user restart waybar.service",
+        "tooltip": false
+    },
 
-  "group/time": {
-    "modules": ["clock", "clock#simple"],
-    "orientation": "vertical",
-  },
-  "clock#simple": {
-    "format": "{:%H:%M}",
-    "tooltip": false,
-    "interval": 1,
-  },
-  "clock": {
-    "format": "{:L%a %d, %b %Y}",
-    "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>",
-    "format-alt": "{:%d-%m-%Y}",
-  },
-    "pulseaudio": {
-        "format": "<span color=\"#a55e5b\">{icon}</span>  {volume}%",
-        "format-muted": "<span color =\"#a55e5b\"> </span>Muted",
-        "format-source": " {volume}%",
-        "format-source-muted": "",
+    "niri/workspaces": {
+        "format": "{icon}",
         "format-icons": {
-            "headphone": "",
-            "hands-free": "",
-            "headset": " ",
-            "phone": "",
-            "portable": "",
-            "car": "",
-            "default": ["", "", ""]
+            "default": "󰧞",
+            "active": "󰍹"
         },
-        "on-click": "pavucontrol"
+        "all-outputs": true
     },
 
-    "niri/language": {
-        "format": "<span color=\"#a55e5b\"></span>  {}",
-        "format-en": "<span color=\"#E8705F\">US</span>",
-        "format-ru": "<span color=\"#66A0C8\">RU</span>",
-        "format-kk": "<span color=\"#DFB431\">KZ</span>"
+    "mpris": {
+        "format": "{player_icon}",
+        "player-icons": {
+            "default": "",
+            "chromium": "",
+            "spotify": "",
+            "firefox": "󰈹"
+        },
+        "tooltip-format": "{title} - {artist}"
     },
 
-    "battery": {
+    "clock": {
         "interval": 1,
-        "states": {
-            "warning": 30,
-            "critical": 20
-        },
-        "format": "{capacity}% {icon}",
-        "format-charging": "{capacity}% 󰂄",
-        "format-plugged": "{capacity}% 󰂄",
-        "format-alt": "{time} {icon}",
-        "format-icons": ["", "", "", "", ""]
+        "format": "{:%H\n%M}",
+        "format-alt": "{:%d\n%m\n%y}",
+        "tooltip-format": "<tt><small>{calendar}</small></tt>"
     },
 
-    "backlight": {
-        "format": "{percent}% {icon}",
-        "format-icons": ["", "", "", "", "", "", "", "", ""]
-    },
-
-    "tray": {
-        "icon-size": 18,
-        "spacing": 10
-    },
-
-    "group/net": {
+    "group/main-container": {
         "orientation": "vertical",
         "modules": [
-            "network",
-            "bluetooth"
+            "group/brightness",
+            "group/audio",
+            "group/utils",
+            "group/hardware",
+            "niri/language",
+            "battery",
+            "tray"
         ]
     },
-    "network": {
-        "format-wifi": " {essid}",
-        "format-ethernet": "",
-        "tooltip-format": "{ifname} via {gwaddr} \nSignal: {signalStrength}%",
-        "format-disconnected": "⚠ Disconnected",
-        "on-click": "kitty nmtui"
+
+    "group/brightness": {
+        "orientation": "inherit",
+        "modules": [
+            "backlight",
+            "backlight/slider"
+        ]
     },
-    "bluetooth": {
-        "format": "<span color=\"#a55e5b\">󰂯</span>",
-        "format-connected": "󰂱",
-        "format-off": "󰂲",
-        "on-click": "blueman-manager"
+
+    "group/audio": {
+        "orientation": "inherit",
+        "modules": [
+            "pulseaudio",
+            "pulseaudio/slider"
+        ]
+    },
+
+    "group/utils": {
+        "orientation": "vertical",
+        "drawer": { "transition-duration": 500, "children-class": "drawer-item", "transition-left-to-right": true },
+        "modules": [ "network", "bluetooth" ]
     },
 
     "group/hardware": {
         "orientation": "vertical",
-        "drawer": {
-            "transition-duration": 300,
-            "transition-top-to-bottom": true
-        },
-        "modules": [
-            "temperature",
-            "cpu",
-            "memory",
-            "disk"
-        ]
+        "drawer": { "transition-duration": 500, "children-class": "drawer-item", "transition-left-to-right": true },
+        "modules": [ "cpu", "memory", "disk" ]
     },
+
     "cpu": {
-        "format": " {usage}%",
-        "tooltip": true,
-        "on-click": "alacritty btop"
-    },
-    "memory": {
-        "format": "󰾆 {used:0.1f}G",
-        "on-click": "alacritty btop"
-    },
-    "temperature": {
-        // "thermal-zone": 2, // Раскомментируйте и измените, если нужно
-        "hwmon-path": "/sys/class/hwmon/hwmon2/temp1_input", // Найдите свой путь!
-        "critical-threshold": 80,
-        "format": "{icon} {temperatureC}°C",
-        "format-icons": ["", "", ""],
-        "on-click": "alacritty btop"
-    },
-    "disk": {
-        "interval": 30,
-        "format": "󰋊 {percentage_used}%",
-        "path": "/",
-        "tooltip-format": "{used} out of {total} on {path} ({percentage_free}% free)",
-        "on-click": "alacritty btop"
-    },
-    "custom/media": {
-        "format": " {text}",
-        // "return-type": "json",
+        "format": "{icon}",
+        "format-icons": [
+            "<span size='14pt'>⠁</span>",
+            "<span size='14pt'>⠉</span>",
+            "<span size='14pt'>⠙</span>",
+            "<span size='14pt'>⠛</span>",
+            "<span size='14pt'>⠟</span>",
+            "<span size='14pt'>⠿</span>"
+        ],
         "interval": 1,
-        "max-length": 40,
-        "escape": true,
-        "exec": "$HOME/.config/waybar/customs/spotify-track.sh", // Script in resources folder
-        // "exec": "$HOME/.config/waybar/mediaplayer.py --player spotify 2> /dev/null" // Filter player based on name
-        "on-click": "playerctl -p spotify previous",
-        "on-click-right": "playerctl -p spotify next",
-        "on-click-middle": "playerctl -p spotify play-pause"
+        "tooltip": true,
+        "tooltip-format": "CPU Frequency: {avg_frequency} GHz",
+        "on-click": "alacritty -e btm"
     },
-     "mpris": {
-         "format": "{player_icon} {artist} - {title}",
-         "format-paused": "{player_icon} {artist} - {title}",
-         "player-icons": {
-             "default": "",
-             "mpv": "",
-             "spotify": "",
-             "chromium": "",
-             "firefox": "",
-             "vlc": "",
-         },
-         "dynamic-order": ["title", "artist"],
-         "status-icons": {
-             "playing": "",
-             "paused": "",
-         },
-         // "ignored-players": ["firefox", "chromium"],
-         // "ignored-players": ["firefox"],
-         "interval": 1,
-         "max-length": 50,
-     },
+
+    "memory": { "format": "󰍛" },
+    "disk": { "format": "󰋊", "path": "/" },
+
+    "network": {
+        "format-icons": {
+            "wifi": [
+                "<span size='12pt'>󰤯</span>",
+                "<span size='12pt'>󰤟</span>",
+                "<span size='12pt'>󰤢</span>",
+                "<span size='12pt'>󰤥</span>",
+                "<span size='12pt'>󰤨</span>"
+            ],
+            "ethernet": "<span size='12pt'>󰈀</span>",
+            "disabled": "<span size='12pt'>󰤭</span>",
+            "disconnected": "<span size='12pt'>󰤩</span>"
+        },
+        "format-wifi": "{icon}",
+        "format-ethernet": "{icon}",
+        "format-disconnected": "{icon}",
+        "format-disabled": "{icon}",
+        "interval": 5,
+        "tooltip-format": "{essid}\t{gwaddr}",
+        "on-click-right": "nm-connection-editor",
+        "tooltip": true,
+        "max-length": 20
+    },
+
+    "bluetooth": {
+        "interval": 5,
+        "format-on": "<span size='12pt'>󰂯</span>",
+        "format-off": "<span size='12pt'>󰂲</span>",
+        "format-disabled": "<span size='12pt'>󰂲</span>",
+        "format-connected": "<span size='12pt'>󰂱</span>",
+        "format-no-controller": "<span size='12pt'>󰂯</span>",
+        "tooltip": true,
+        "tooltip-format": "{device_enumerate}",
+        "tooltip-format-enumerate-connected": "{device_address}",
+        "tooltip-format-enumerate-connected-battery": "{device_address} | Battery: {device_battery_percentage}%",
+        "on-click-right": "blueman-manager"
+    },
+
+    "pulseaudio/slider": {
+        "min": 0,
+        "max": 100,
+        "orientation": "vertical"
+    },
+
+    "pulseaudio": {
+        "interval": 1,
+        "format": "{icon}",
+        "format-icons": [
+            "<span size='12pt'>󰕿</span>",
+            "<span size='12pt'>󰖀</span>",
+            "<span size='12pt'>󰕾</span>"
+        ],
+        "format-muted": "<span size='12pt'>󰝟</span>",
+        "on-click-right": "pavucontrol -t 3",
+        "on-click": "pactl set-sink-mute @DEFAULT_SINK@ toggle",
+        "reverse-scrolling": true,
+        "tooltip": true,
+        "tooltip-format": "Volume: {volume}%\n{desc}",
+        "ignored-sinks": [ "Easy Effects Sink" ]
+    },
+
+    "backlight/slider": {
+        "min": 0,
+        "max": 100,
+        "orientation": "vertical",
+        "device": "intel_backlight"
+    },
+
+    "backlight": {
+        "device": "intel_backlight",
+        "format": "{icon}",
+        "format-icons": [ "󰃚", "󰃛", "󰃜", "󰃝", "󰃞", "󰃟", "󰃠" ],
+        "reverse-scrolling": true,
+        "smooth-scrolling-threshold": 0.2,
+        "tooltip": false
+    },
+
+    "battery": {
+        "interval": 5,
+        "states": { "critical": 10 },
+        "format": "{icon}",
+        "format-icons": [
+            "<span size='12pt'>󰁺</span>",
+            "<span size='12pt'>󰁻</span>",
+            "<span size='12pt'>󰁼</span>",
+            "<span size='12pt'>󰁽</span>",
+            "<span size='12pt'>󰁾</span>",
+            "<span size='12pt'>󰁿</span>",
+            "<span size='12pt'>󰂀</span>",
+            "<span size='12pt'>󰂁</span>",
+            "<span size='12pt'>󰂂</span>",
+            "<span size='12pt'>󰁹</span>"
+        ],
+        "format-charging": "<span size='12pt'>󰂄</span>",
+        "format-plugged": "<span size='12pt'>󰚥</span>",
+        "format-critical": "<span size='12pt'>󰂃</span>",
+        "tooltip": true,
+        "tooltip-format": "Charge: {capacity}%",
+        "tooltip-format-charging": "Charging: {capacity}%"
+    },
+
+    "niri/language": {
+        "format": "{}",
+        "format-en": "<span color='#d14d41'>US</span>",
+        "format-ru": "<span color='#4385BE'>RU</span>",
+        "format-kk": "<span color='#D0A215'>KZ</span>"
+    },
+
+    "tray": { "icon-size": 13, "spacing": 4 }
 }

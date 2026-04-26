@@ -1,5 +1,5 @@
 {
    "include": [
-       "~/.config/waybar/niri-waybar/niri-waybar-config.jsonc",
+       "~/.config/waybar/vertical-niri-waybar/vertical-niri-waybar-config.jsonc",
    ],
 }
