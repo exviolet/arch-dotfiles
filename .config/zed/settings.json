@@ -1,4 +1,12 @@
 {
+  "agent_servers": {
+    "claude-acp": {
+      "type": "registry"
+    }
+  },
+  "git_panel": {
+    "dock": "right"
+  },
   "context_servers": {
     "mcp-server-context7": {
       "enabled": true,
@@ -8,6 +16,7 @@
     }
   },
   "agent": {
+    "dock": "left",
     "inline_assistant_model": {
       "provider": "google",
       "model": "gemini-3.1-pro-preview",
@@ -15,8 +24,10 @@
     },
     "default_profile": "write",
     "default_model": {
-      "provider": "google",
-      "model": "gemini-3-pro-preview"
+      "effort": "medium",
+      "enable_thinking": true,
+      "provider": "zed.dev",
+      "model": "gpt-5.4"
     },
     "model_parameters": []
   },
@@ -51,9 +62,11 @@
   "ui_font_size": 16,
   "buffer_font_size": 15.0,
   "outline_panel": {
+    "dock": "right",
     "button": false
   },
   "collaboration_panel": {
+    "dock": "right",
     "button": true
   },
   "tab_bar": {
