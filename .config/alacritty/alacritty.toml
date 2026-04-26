@@ -23,7 +23,7 @@ padding.x = 20
 padding.y = 20 
 
 decorations = "Buttonless"
-opacity = 0.5
+opacity = 0.3
 blur = true
 
 [font]
@@ -41,3 +41,8 @@ smooth_motion = true
 smooth_motion_factor = 1.0
 smooth_motion_spring = 0.3
 block_replace_shape = "Block"
+
+[[keyboard.bindings]]
+key = "Return"
+mods = "Shift"
+chars = "\u001B\r"
