@@ -183,6 +183,9 @@ alias b='bun'
 #clear
 alias cl='clear'
 
+#claude
+alias clde='claude'
+
 #yazi 
 bindkey -s '^Y' 'yazi\n'
 export PATH="$PATH:/home/ex1te/.local/bin"
@@ -203,3 +206,28 @@ export PATH="$PATH:$HOME/.config/composer/vendor/bin"
 
 #csvlens
 alias tsv='csvlens -t'
+
+#git
+alias gdst='git diff --stat'
+
+#tmux 
+alias tn='tmux new -s'
+alias ta='tmux attach -t'
+alias tl='tmux ls'
+
+unset SSH_ASKPASS
+
+
+port() {
+  # Сначала находим PID процесса, слушающего порт
+  local pid=$(sudo ss -tulnp | grep ":$1 " | awk -F'pid=' '{print $2}' | cut -d',' -f1 | head -n 1)
+  
+  # Выводим стандартный ss
+  sudo ss -tulnp | grep ":$1 "
+  
+  # Если PID найден, выводим подробности о команде
+  if [ -n "$pid" ]; then
+    echo -e "\n\033[1;32mДетали процесса:\033[0m"
+    ps -fp $pid | sed -n '2p'
+  fi
+}
