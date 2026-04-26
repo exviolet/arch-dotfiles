@@ -1,0 +1,16 @@
+// Startup processes and environment.
+// Note that running niri as a session supports xdg-desktop-autostart,
+// which may be more convenient to use.
+
+environment {
+    export "LIBVA_DRIVER_NAME=nvidia"
+    export "NVD_BACKEND=direct"
+    export "__GLX_VENDOR_LIBRARY_NAME=nvidia"
+}
+
+spawn-at-startup "sh" "-c" "waybar & awww-daemon & swaync &"
+spawn-at-startup "sh" "-c" "wl-paste --type text --watch cliphist store"
+spawn-at-startup "sh" "-c" "wl-paste --type image --watch cliphist store"
+spawn-at-startup "sh" "-c" "wl-paste --watch cliphist store"
+spawn-at-startup "dbus-update-activation-environment" "--systemd" "WAYLAND_DISPLAY" "XDG_CURRENT_DESKTOP" "DISPLAY"
+spawn-at-startup "gnome-keyring-daemon" "--start" "--components=secrets"

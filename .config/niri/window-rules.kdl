@@ -1,0 +1,119 @@
+// Window rules, layer rules and blur configuration.
+// Wiki: https://github.com/YaLTeR/niri/wiki/Configuration:-Window-Rules
+//       https://github.com/YaLTeR/niri/wiki/Configuration:-Layer-Rules
+
+// Put awww (wallpaper daemon) inside the overview backdrop.
+layer-rule {
+    match namespace="awww"
+    place-within-backdrop true
+}
+
+// Work around WezTerm's initial configure bug
+// by setting an empty default-column-width.
+window-rule {
+    // This regular expression is intentionally made as specific as possible,
+    // since this is the default config, and we want no false positives.
+    // You can get away with just app-id="wezterm" if you want.
+    match app-id=r#"^org\.wezfurlong\.wezterm$"#
+    default-column-width {}
+}
+
+window-rule {
+    match app-id="^Alacritty$"
+
+    background-effect {
+        blur true
+    }
+}
+
+layer-rule {
+    match layer="top"
+    match layer="overlay"
+
+    background-effect {
+        xray false
+    }
+}
+
+blur {
+    // off
+    passes 3
+    offset 3
+    noise 0.02
+    saturation 1.5
+}
+
+// Блюр за popup-меню в Loupe
+window-rule {
+    match app-id="Loupe"
+
+    popups {
+        // Совпадает с дефолтным радиусом popup'ов libadwaita
+        geometry-corner-radius 15
+
+        opacity 0.5
+
+        background-effect {
+            blur true
+        }
+    }
+}
+
+// Блюр за popup-меню в Firefox
+window-rule {
+    match app-id="firefox"
+
+    popups {
+        // Совпадает с дефолтным радиусом popup'ов libadwaita
+        geometry-corner-radius 15
+
+        opacity 0.8
+
+        background-effect {
+            blur true
+        }
+    }
+}
+
+
+window-rule {
+    match app-id="nautilus"
+
+    popups {
+        // Совпадает с дефолтным радиусом popup'ов libadwaita
+        geometry-corner-radius 15
+
+        opacity 0.8
+
+        background-effect {
+            blur true
+        }
+    }
+}
+
+// Open the Firefox picture-in-picture player as floating by default.
+window-rule {
+    // This app-id regular expression will work for both:
+    // - host Firefox (app-id is "firefox")
+    // - Flatpak Firefox (app-id is "org.mozilla.firefox")
+    match app-id=r#"firefox$"# title="^Picture-in-Picture$"
+    open-floating true
+}
+
+// Example: block out two password managers from screen capture.
+// (This example rule is commented out with a "/-" in front.)
+/-window-rule {
+    match app-id=r#"^org\.keepassxc\.KeePassXC$"#
+    match app-id=r#"^org\.gnome\.World\.Secrets$"#
+
+    block-out-from "screen-capture"
+
+    // Use this instead if you want them visible on third-party screenshot tools.
+    // block-out-from "screencast"
+}
+
+// Geometry corner radius for all windows (0 = sharp corners).
+window-rule {
+    geometry-corner-radius 0
+    clip-to-geometry true
+}
