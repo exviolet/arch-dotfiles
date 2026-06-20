@@ -1,1 +1,7 @@
 *.bak
+
+# Herdr runtime/state files; keep only .config/herdr/config.toml in dotfiles.
+.config/herdr/*.log
+.config/herdr/*.sock
+.config/herdr/session.json
+.config/herdr/release-notes.json

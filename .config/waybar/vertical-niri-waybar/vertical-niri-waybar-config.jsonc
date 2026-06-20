@@ -46,9 +46,8 @@
     },
 
     "clock": {
-        "interval": 1,
-        "format": "{:%H\n%M}",
-        "format-alt": "{:%d\n%m\n%y}",
+        "interval": 60,
+        "format": "{:%H\n%M\n<span color='#3a3a3a'>───</span>\n%d\n%m\n%y}",
         "tooltip-format": "<tt><small>{calendar}</small></tt>"
     },
 
@@ -57,8 +56,8 @@
         "modules": [
             "group/brightness",
             "group/audio",
-            "group/utils",
             "group/hardware",
+            "group/utils",
             "niri/language",
             "battery",
             "tray"
@@ -83,7 +82,6 @@
 
     "group/utils": {
         "orientation": "vertical",
-        "drawer": { "transition-duration": 500, "children-class": "drawer-item", "transition-left-to-right": true },
         "modules": [ "network", "bluetooth" ]
     },
 

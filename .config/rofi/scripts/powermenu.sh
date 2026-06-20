@@ -40,7 +40,7 @@ confirm_exit() {
 
 # Pass variables to rofi dmenu
 run_rofi() {
-	echo -e "$lock\n$suspend\n$logout\n$reboot\n$shutdown\n$hibernate" | rofi_cmd
+	echo -e "$shutdown\n$reboot\n$lock\n$suspend\n$logout\n$hibernate" | rofi_cmd
 }
 
 # Execute Command

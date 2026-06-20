@@ -186,6 +186,12 @@ alias cl='clear'
 #claude
 alias clde='claude'
 
+#codex
+alias cdx='codex'
+
+#hermes
+alias h='hermes'
+
 #yazi 
 bindkey -s '^Y' 'yazi\n'
 export PATH="$PATH:/home/ex1te/.local/bin"
@@ -231,3 +237,30 @@ port() {
     ps -fp $pid | sed -n '2p'
   fi
 }
+
+
+export PATH="$(npm config get prefix)/bin:$PATH"
+
+
+# Функция для запроса имени и переименования окна
+tmux_rename_bind() {
+  if [[ -n "$TMUX" ]]; then
+    local new_name=""
+    # Запрос ввода у пользователя с подсказкой "New window name: "
+    vared -p "New window name: " new_name
+    # Если имя введено, переименовываем окно
+    [[ -n "$new_name" ]] && tmux rename-window "$new_name"
+  fi
+  # Перерисовываем строку ввода, чтобы очистить prompt
+  zle reset-prompt
+}
+
+# Регистрируем функцию как Zsh Line Editor (ZLE) виджет
+zle -N tmux_rename_bind
+
+bindkey '^Wr' tmux_rename_bind
+
+# Сброс раскладки на Английский (US) при открытии Zsh в Niri WM
+if [[ $- == *i* ]] && [ -n "$NIRI_SOCKET" ] && command -v niri &> /dev/null; then
+    niri msg action switch-layout 0 &> /dev/null
+fi

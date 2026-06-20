@@ -59,9 +59,8 @@ window-rule {
     }
 }
 
-// Блюр за popup-меню в Firefox
 window-rule {
-    match app-id="firefox"
+    match app-id="nautilus"
 
     popups {
         // Совпадает с дефолтным радиусом popup'ов libadwaita
@@ -77,7 +76,34 @@ window-rule {
 
 
 window-rule {
-    match app-id="nautilus"
+    match app-id="helium-browser"
+
+    popups {
+        // Совпадает с дефолтным радиусом popup'ов libadwaita
+        geometry-corner-radius 15
+
+        opacity 0.8
+
+        background-effect {
+            blur true
+        }
+    }
+
+    opacity 0.8
+
+    background-effect {
+        blur true
+    }
+}
+
+
+window-rule {
+    match app-id="dev.zed.Zed"
+
+    background-effect {
+        blur true
+    }
+
 
     popups {
         // Совпадает с дефолтным радиусом popup'ов libadwaita
