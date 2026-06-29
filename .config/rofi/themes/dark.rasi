@@ -1,0 +1,23 @@
+* {
+    /* Flexoki dark */
+    bg:           #100F0FCC;
+    bg-solid:     #100F0F;
+    bg-alt:       #1C1B1A;
+    bg-surface:   #282726;
+    fg:           #FFFCF0;
+    fg-muted:     #878580;
+
+    hl-bg:        #282726;
+    hl-fg:        #FFFCF0;
+
+    accent-color: #4385be;
+
+    red:          #d14d41;
+    orange:       #da702c;
+    yellow:       #d0a215;
+    green:        #879a39;
+    cyan:         #3aa99f;
+    blue:         #4385be;
+    purple:       #8b7ec8;
+    magenta:      #ce5d97;
+}

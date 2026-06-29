@@ -1,0 +1,10 @@
+@define-color accent #d14d41;
+@define-color soft-bg #1a1a1a;
+@define-color bar-bg rgba(26, 26, 26, 0.95);
+@define-color module-bg #2a2a2a;
+@define-color border-color #444444;
+@define-color line-color #3a3a3a;
+@define-color fg #ffffff;
+@define-color fg-muted rgba(255, 255, 255, 0.2);
+@define-color hover-bg rgba(255, 255, 255, 0.05);
+@define-color mpris #a6e3a1;

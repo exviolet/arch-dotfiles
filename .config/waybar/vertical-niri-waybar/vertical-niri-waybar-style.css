@@ -1,8 +1,4 @@
-@define-color accent #d14d41;
-@define-color soft-bg #1a1a1a;
-@define-color module-bg #2a2a2a;
-@define-color border-color #444444;
-@define-color line-color #3a3a3a;
+@import url("../themes/current.css");
 
 * {
   font-family: "FiraCodeNerdFontPropo", sans-serif;
@@ -16,8 +12,8 @@
 }
 
 window#waybar {
-  background: rgba(26, 26, 26, 0.95);
-  color: white;
+  background: @bar-bg;
+  color: @fg;
 }
 
 #custom-logo {
@@ -37,7 +33,7 @@ window#waybar {
 #workspaces button {
   padding: 4px 0;
   margin: 2px;
-  color: rgba(255, 255, 255, 0.2);
+  color: @fg-muted;
   font-size: 14px;
 }
 
@@ -47,7 +43,7 @@ window#waybar {
 
 #mpris {
   padding: 10px 0;
-  color: #a6e3a1;
+  color: @mpris;
 }
 
 #clock {
@@ -109,7 +105,7 @@ window#waybar {
 #battery:hover,
 #custom-logo:hover,
 #backlight:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: @hover-bg;
   border-radius: 4px;
 }
 
@@ -146,6 +142,6 @@ tooltip {
 }
 
 tooltip label {
-  color: white;
+  color: @fg;
   padding: 4px;
 }

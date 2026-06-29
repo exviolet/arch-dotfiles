@@ -1,0 +1,34 @@
+:root {
+  --cc-bg: rgba(255, 252, 240, 0.92);
+  --noti-border-color: rgba(32, 94, 166, 0.28);
+  --noti-bg: 255, 252, 240;
+  --noti-bg-alpha: 0.96;
+  --noti-bg-darker: rgb(230, 228, 217);
+  --noti-bg-hover: rgba(230, 228, 217, 0.85);
+  --noti-bg-focus: rgba(32, 94, 166, 0.12);
+  --noti-close-bg: rgba(16, 15, 15, 0.08);
+  --noti-close-bg-hover: rgba(175, 48, 41, 0.18);
+  --text-color: rgb(16, 15, 15);
+  --text-color-disabled: rgb(111, 110, 105);
+  --bg-selected: rgb(32, 94, 166);
+  --border-radius: 12px;
+  --border: 1px solid var(--noti-border-color);
+  --notification-shadow: 0 8px 28px rgba(16, 15, 15, 0.18), 0 0 0 1px rgba(32, 94, 166, 0.12);
+}
+
+@define-color base00 #FFFCF0;
+@define-color base01 #F2F0E5;
+@define-color base02 #E6E4D9;
+@define-color base03 #DAD8CE;
+@define-color base04 #878580;
+@define-color base05 #100F0F;
+@define-color base06 #100F0F;
+@define-color base07 #100F0F;
+@define-color base08 #AF3029;
+@define-color base09 #BC5215;
+@define-color base0A #AD8301;
+@define-color base0B #66800B;
+@define-color base0C #24837B;
+@define-color base0D #205EA6;
+@define-color base0E #5E409D;
+@define-color base0F #A02F6F;
