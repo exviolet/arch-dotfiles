@@ -116,6 +116,7 @@ alias lst="exa -lT --icons"
 
 # To customize prompt, run p10k configure or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+[[ ! -f ~/.config/zsh/p10k-themes/current.zsh ]] || source ~/.config/zsh/p10k-themes/current.zsh
 # export ANDROID_HOME=$HOME/Android/Sdk
 # export PATH=$PATH:$ANDROID_HOME/emulator:$ANDROID_HOME/tools:$ANDROID_HOME/tools/bin:$ANDROID_HOME/platform-tools
 # export PATH="$PATH:$HOME/development/flutter/bin"
