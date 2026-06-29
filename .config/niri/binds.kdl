@@ -31,6 +31,7 @@ binds {
     Super+Alt+L hotkey-overlay-title="Lock the Screen: hyprlock" { spawn "hyprlock"; }
     Mod+T hotkey-overlay-title="Lock the Screen: Telegram" { spawn "Telegram"; }
     Mod+Shift+O { spawn "bash" "-c" "$HOME/.config/rofi/scripts/wallpapermenu.sh"; }
+    Mod+Shift+T hotkey-overlay-title="Toggle desktop theme" { spawn "bash" "-c" "$HOME/.config/rofi/scripts/toggle-gtk-theme.sh toggle"; }
     Mod+Shift+C { spawn "sh" "-c" "rofi -show calc -theme ~/.config/rofi/launchers/calc.rasi"; }
     Mod+Shift+B { spawn "bash" "-c" "$HOME/.config/rofi/scripts/bluetoothctlmenu.sh"; }
     Mod+Shift+W { spawn "bash" "-c" "$HOME/.config/rofi/scripts/powermenu.sh"; }

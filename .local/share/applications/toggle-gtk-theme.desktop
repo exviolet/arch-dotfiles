@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Toggle Desktop Theme
+Name[ru]=Переключить тему системы
+Comment=Switch light/dark theme for GTK, rofi, Waybar, swaync, Alacritty and wallpaper
+Comment[ru]=Переключить светлую/тёмную тему GTK, rofi, Waybar, swaync, Alacritty и обои
+Exec=/home/ex1te/.config/rofi/scripts/toggle-gtk-theme.sh toggle
+Icon=preferences-desktop-theme
+Terminal=false
+Categories=Settings;DesktopSettings;
+Keywords=theme;gtk;dark;light;Graphite;тема;темная;светлая;
+StartupNotify=false
