@@ -1,0 +1,318 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# rn — small tmux workspace launcher backed by tmuxp configs.
+# Configs live in ~/.config/tmuxp by default. Override with RN_CONFIG_DIR.
+
+CONFIG_DIR="${RN_CONFIG_DIR:-${TMUXP_CONFIGDIR:-${XDG_CONFIG_HOME:-$HOME/.config}/tmuxp}}"
+TERMINAL_CMD="${RN_TERMINAL:-alacritty}"
+EDITOR_CMD="${EDITOR:-nvim}"
+
+usage() {
+  cat <<'EOF'
+Usage:
+  rn [workspace]        Open workspace in Alacritty; attach if session exists
+  rn                   Pick workspace with fzf inside Alacritty
+  rn list|ls           List available workspaces
+  rn path [workspace]  Print resolved tmuxp config path
+  rn inspect [workspace]
+                       Show config path, session name, and tmux status
+  rn edit [workspace]  Edit workspace config
+  rn new <workspace>   Create a starter tmuxp config
+
+Environment:
+  RN_CONFIG_DIR        Config directory (default: ~/.config/tmuxp)
+  RN_TERMINAL          Terminal command (default: alacritty)
+  EDITOR               Editor for rn edit/new (default: nvim)
+EOF
+}
+
+die() {
+  printf 'rn: %s\n' "$*" >&2
+  exit 1
+}
+
+trim_ext() {
+  local base="$1"
+  base="${base##*/}"
+  base="${base%.*}"
+  printf '%s\n' "$base"
+}
+
+validate_workspace_name() {
+  local name="$1"
+
+  [[ "$name" =~ ^[A-Za-z0-9._-]+$ ]] ||
+    die "workspace name must use only letters, digits, dot, underscore, or hyphen: $name"
+
+  case "$name" in
+    list|ls|path|inspect|status|edit|new|help|-h|--help|--inside)
+      die "workspace name is reserved by rn: $name"
+      ;;
+  esac
+}
+
+list_configs() {
+  shopt -s nullglob
+  local file
+  for file in "$CONFIG_DIR"/*.yaml "$CONFIG_DIR"/*.yml "$CONFIG_DIR"/*.json; do
+    [[ -f "$file" ]] || continue
+    trim_ext "$file"
+  done | sort -u
+}
+
+pick_workspace() {
+  local selected
+  if ! [[ -d "$CONFIG_DIR" ]]; then
+    die "config dir does not exist: $CONFIG_DIR"
+  fi
+
+  if command -v fzf >/dev/null 2>&1; then
+    selected="$(list_configs | fzf --prompt='tmux workspace> ')"
+  else
+    list_configs >&2
+    printf 'workspace> ' >&2
+    IFS= read -r selected
+  fi
+
+  [[ -n "${selected:-}" ]] || exit 0
+  printf '%s\n' "$selected"
+}
+
+resolve_config() {
+  local name="${1:-}"
+  local candidate
+
+  [[ -n "$name" ]] || name="$(pick_workspace)"
+
+  if [[ "$name" == */* || "$name" == ./* || "$name" == ../* ]]; then
+    [[ -f "$name" ]] || die "config file not found: $name"
+    realpath "$name"
+    return
+  fi
+
+  validate_workspace_name "$name"
+
+  for candidate in "$CONFIG_DIR/$name.yaml" "$CONFIG_DIR/$name.yml" "$CONFIG_DIR/$name.json"; do
+    if [[ -f "$candidate" ]]; then
+      realpath "$candidate"
+      return
+    fi
+  done
+
+  die "workspace not found: $name (looked in $CONFIG_DIR)"
+}
+
+session_name_from_config() {
+  local config="$1"
+  local value
+
+  command -v python3 >/dev/null 2>&1 || die "python3 is required to read workspace configs"
+  if ! value="$(python3 - "$config" <<'PY'
+import json
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+try:
+    with path.open(encoding="utf-8") as stream:
+        if path.suffix == ".json":
+            data = json.load(stream)
+        else:
+            import yaml
+
+            data = yaml.safe_load(stream)
+except ModuleNotFoundError:
+    print("rn: PyYAML is required to read YAML workspace configs", file=sys.stderr)
+    raise SystemExit(1)
+except Exception as error:
+    print(f"rn: unable to parse {path}: {error}", file=sys.stderr)
+    raise SystemExit(1)
+
+if data is None:
+    data = {}
+if not isinstance(data, dict):
+    print(f"rn: workspace config must be a mapping: {path}", file=sys.stderr)
+    raise SystemExit(1)
+
+value = data.get("session_name", "")
+if value is None:
+    value = ""
+if not isinstance(value, str):
+    print("rn: session_name must be a string", file=sys.stderr)
+    raise SystemExit(1)
+print(value)
+PY
+)"; then
+    die "failed to read session_name from $config"
+  fi
+
+  if [[ -z "${value:-}" ]]; then
+    value="$(trim_ext "$config")"
+  fi
+
+  [[ "$value" =~ ^[A-Za-z0-9._-]+$ ]] ||
+    die "session_name must use only letters, digits, dot, underscore, or hyphen: $value"
+
+  printf '%s\n' "$value"
+}
+
+ensure_runtime_deps() {
+  command -v tmux >/dev/null 2>&1 || die "tmux is not installed"
+  command -v tmuxp >/dev/null 2>&1 || die "tmuxp is not installed; run: uv tool install tmuxp"
+}
+
+launch_inside() {
+  local config session
+  config="$(resolve_config "${1:-}")"
+  session="$(session_name_from_config "$config")"
+
+  ensure_runtime_deps
+
+  if tmux has-session -t "=$session" 2>/dev/null; then
+    exec tmux attach-session -t "=$session"
+  fi
+
+  exec tmuxp load "$config"
+}
+
+open_terminal() {
+  local self
+  self="$(realpath "$0" 2>/dev/null || printf '%s\n' "$0")"
+
+  if command -v "$TERMINAL_CMD" >/dev/null 2>&1; then
+    exec "$TERMINAL_CMD" -e "$self" --inside "$@"
+  fi
+
+  if [[ -t 1 ]]; then
+    printf 'rn: %s not found, launching in current terminal\n' "$TERMINAL_CMD" >&2
+    exec "$self" --inside "$@"
+  fi
+
+  die "$TERMINAL_CMD not found and current process has no TTY"
+}
+
+cmd_path() {
+  resolve_config "${1:-}"
+}
+
+cmd_inspect() {
+  local config session status
+  config="$(resolve_config "${1:-}")"
+  session="$(session_name_from_config "$config")"
+
+  if command -v tmux >/dev/null 2>&1 && tmux has-session -t "=$session" 2>/dev/null; then
+    status="running"
+  else
+    status="not running"
+  fi
+
+  printf 'workspace: %s\n' "$(trim_ext "$config")"
+  printf 'config:    %s\n' "$config"
+  printf 'session:   %s\n' "$session"
+  printf 'status:    %s\n' "$status"
+}
+
+cmd_edit() {
+  local config
+  config="$(resolve_config "${1:-}")"
+  exec "$EDITOR_CMD" "$config"
+}
+
+cmd_new() {
+  local name="${1:-}"
+  local target
+  [[ -n "$name" ]] || die "usage: rn new <workspace>"
+  validate_workspace_name "$name"
+
+  mkdir -p "$CONFIG_DIR"
+  target="$CONFIG_DIR/$name.yaml"
+
+  if ! python3 - "$target" "$name" "$HOME" <<'PY'
+import json
+import os
+from pathlib import Path
+import sys
+import tempfile
+
+path = Path(sys.argv[1])
+name = sys.argv[2]
+home = sys.argv[3]
+content = f"""session_name: {json.dumps(name)}
+startup_window: shell
+
+windows:
+  - window_name: shell
+    start_directory: {json.dumps(home)}
+    panes:
+      - \"zsh -i\"
+"""
+
+temporary = None
+try:
+    descriptor, temporary_name = tempfile.mkstemp(
+        dir=path.parent,
+        prefix=f".{path.name}.",
+        suffix=".tmp",
+    )
+    temporary = Path(temporary_name)
+    with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+        stream.write(content)
+        stream.flush()
+        os.fsync(stream.fileno())
+
+    # Hard-linking a complete temporary inode installs it atomically while
+    # refusing every existing destination, including dangling symlinks.
+    os.link(temporary, path)
+except FileExistsError:
+    print(f"rn: config already exists: {path}", file=sys.stderr)
+    raise SystemExit(1)
+except OSError as error:
+    print(f"rn: unable to create {path}: {error}", file=sys.stderr)
+    raise SystemExit(1)
+finally:
+    if temporary is not None:
+        try:
+            temporary.unlink()
+        except FileNotFoundError:
+            pass
+PY
+  then
+    die "failed to create config: $target"
+  fi
+
+  printf 'created %s\n' "$target"
+  exec "$EDITOR_CMD" "$target"
+}
+
+case "${1:-}" in
+  --inside)
+    shift
+    launch_inside "${1:-}"
+    ;;
+  -h|--help|help)
+    usage
+    ;;
+  list|ls)
+    list_configs
+    ;;
+  path)
+    shift
+    cmd_path "${1:-}"
+    ;;
+  inspect|status)
+    shift
+    cmd_inspect "${1:-}"
+    ;;
+  edit)
+    shift
+    cmd_edit "${1:-}"
+    ;;
+  new)
+    shift
+    cmd_new "${1:-}"
+    ;;
+  *)
+    open_terminal "$@"
+    ;;
+esac
