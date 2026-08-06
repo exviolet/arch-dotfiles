@@ -1,0 +1,32 @@
+@import "../shared/appearance.rasi"
+
+* { accent-color: #8b7ec8; }
+
+window {
+    width: 1100px;
+    height: 1000px;
+}
+
+entry {
+    placeholder: "Screenshots";
+}
+
+listview {
+    columns: 2;
+    lines:   6;
+    spacing: 8px;
+}
+
+element {
+    padding: 10px 10px;
+    spacing: 12px;
+}
+
+element-icon {
+    size: 180px;
+    border-radius: 10px;
+}
+
+element-text {
+    vertical-align: 0.5;
+}
