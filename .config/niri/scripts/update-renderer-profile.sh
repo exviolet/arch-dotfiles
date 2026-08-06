@@ -77,7 +77,10 @@ trap - EXIT
 
 if $mark_active; then
     runtime_dir="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+    cache_active="${XDG_CACHE_HOME:-$HOME/.cache}/niri/renderer-profile-active"
+    mkdir -p "$(dirname "$cache_active")"
     printf '%s\n' "$mode" >"$runtime_dir/niri-renderer-profile-active"
+    printf '%s\n' "$mode" >"$cache_active"
 fi
 
 printf '%s\n' "$mode"

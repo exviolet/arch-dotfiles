@@ -8,6 +8,7 @@ WPCTL="${WPCTL_BIN:-/usr/sbin/wpctl}"
 BRIGHTNESSCTL="${BRIGHTNESSCTL_BIN:-/usr/sbin/brightnessctl}"
 UPDATER="${NIRI_RENDERER_UPDATER:-$HOME/.config/niri/scripts/update-renderer-profile.sh}"
 ACTIVE_FILE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/niri-renderer-profile-active"
+CACHED_ACTIVE_FILE="${XDG_CACHE_HOME:-$HOME/.cache}/niri/renderer-profile-active"
 
 focused_screen() {
     "$NIRI" msg --json focused-output 2>/dev/null | "$JQ" -r '.name // empty' 2>/dev/null || true
@@ -50,7 +51,13 @@ show_renderer() {
     local wanted active renderer status warning screen
 
     wanted="$($UPDATER)"
-    active="$(<"$ACTIVE_FILE" 2>/dev/null || printf 'unknown')"
+    if [[ -r "$ACTIVE_FILE" ]]; then
+        active="$(<"$ACTIVE_FILE")"
+    elif [[ -r "$CACHED_ACTIVE_FILE" ]]; then
+        active="$(<"$CACHED_ACTIVE_FILE")"
+    else
+        active="unknown"
+    fi
     screen="$(focused_screen)"
 
     case "$active" in
@@ -71,9 +78,10 @@ show_renderer() {
 }
 
 wait_ready() {
-    local attempt
+    local attempt response
     for attempt in {1..30}; do
-        if "$QS" ipc call sidecar ping >/dev/null 2>&1; then
+        response="$("$QS" ipc call sidecar ping 2>/dev/null || true)"
+        if [[ "$response" == "ready" ]]; then
             return 0
         fi
         sleep 0.1
