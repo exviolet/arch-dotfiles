@@ -5,3 +5,11 @@
 .config/herdr/*.sock
 .config/herdr/session.json
 .config/herdr/release-notes.json
+.config/herdr/.plugins.lock
+
+# Font-manager generated per-directory identifiers.
+.fonts/**/.uuid
+
+# Machine-local Zed settings may contain API keys.
+.config/zed/settings.json
+.config/zed/settings_backup.json
