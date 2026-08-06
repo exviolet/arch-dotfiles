@@ -56,7 +56,10 @@
         "modules": [
             "group/brightness",
             "group/audio",
-            "group/hardware",
+            "cpu",
+            "memory",
+            "disk",
+            //"group/hardware",
             "group/utils",
             "niri/language",
             "battery",
@@ -85,11 +88,11 @@
         "modules": [ "network", "bluetooth" ]
     },
 
-    "group/hardware": {
-        "orientation": "vertical",
-        "drawer": { "transition-duration": 500, "children-class": "drawer-item", "transition-left-to-right": true },
-        "modules": [ "cpu", "memory", "disk" ]
-    },
+//    "group/hardware": {
+//        "orientation": "vertical",
+//        "drawer": { "transition-duration": 500, "children-class": "drawer-item", "transition-left-to-right": true },
+//        "modules": [ "cpu", "memory", "disk" ]
+//    },
 
     "cpu": {
         "format": "{icon}",
@@ -218,5 +221,11 @@
         "format-kk": "<span color='#D0A215'>KZ</span>"
     },
 
-    "tray": { "icon-size": 13, "spacing": 4 }
+    "tray": {
+        "icon-size": 13,
+        "spacing": 4,
+        "icons": {
+            "Claude_status_icon_1": "claude-desktop"
+        }
+    }
 }

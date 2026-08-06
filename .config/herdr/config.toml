@@ -11,11 +11,17 @@ onboarding = false
 #                  vesper
 name = "vesper"
 
+# Follow the light/dark appearance of the host terminal. Alacritty is switched
+# by the desktop theme toggle, so Herdr follows without rewriting this config.
+auto_switch = true
+dark_name = "kanagawa"
+light_name = "catppuccin-latte"
+
 # Override individual color tokens on top of the base theme.
 # Accepts: hex (#rrggbb), named colors, rgb(r,g,b), or panel_bg = "reset"
 [theme.custom]
-panel_bg = "#1b1c1d"
-accent = "#ff085e"
+panel_bg = "reset"
+accent = "#d14d41"
 # red = "#ff6188"
 # green = "#a6e3a1"
 
@@ -194,8 +200,7 @@ mouse_capture = true
 # Accepts: hex (#89b4fa), named colors (cyan, blue, magenta), or rgb(r,g,b)
 accent = "#ff085e"
 
-# Background notification popup delivery
-agent_panel_scope = "all"
+agent_panel_sort = "priority"
 [ui.toast]
 # off = disable pop-up notifications
 # herdr = show in-app toasts

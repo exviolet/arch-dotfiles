@@ -1,19 +1,20 @@
 :root {
-  --cc-bg: rgba(16, 15, 15, 0.90);
-  --noti-border-color: rgba(67, 133, 190, 0.34);
+  --cc-bg: rgba(16, 15, 15, 0.9);
+  --noti-border-color: rgba(209, 77, 65, 0.18);
   --noti-bg: 28, 27, 26;
   --noti-bg-alpha: 0.96;
   --noti-bg-darker: rgb(40, 39, 38);
   --noti-bg-hover: rgba(40, 39, 38, 0.95);
-  --noti-bg-focus: rgba(67, 133, 190, 0.16);
+  --noti-bg-focus: rgba(209, 77, 65, 0.18);
   --noti-close-bg: rgba(255, 252, 240, 0.08);
   --noti-close-bg-hover: rgba(209, 77, 65, 0.18);
   --text-color: rgb(255, 252, 240);
   --text-color-disabled: rgb(135, 133, 128);
-  --bg-selected: rgb(67, 133, 190);
+  --bg-selected: rgba(209, 77, 65, 0.18);
   --border-radius: 12px;
   --border: 1px solid var(--noti-border-color);
-  --notification-shadow: 0 8px 28px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(67, 133, 190, 0.12);
+  --notification-shadow:
+    0 8px 28px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(209, 77, 65, 0.18);
 }
 
 @define-color base00 #100F0F;

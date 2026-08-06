@@ -5,7 +5,8 @@ CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 
 LIGHT_THEME="${GTK_LIGHT_THEME:-Graphite}"
 DARK_THEME="${GTK_DARK_THEME:-Graphite-Dark}"
-ICON_THEME="${GTK_ICON_THEME:-Papirus}"
+LIGHT_ICON_THEME="${GTK_LIGHT_ICON_THEME:-Papirus-Light}"
+DARK_ICON_THEME="${GTK_DARK_ICON_THEME:-Papirus}"
 COLOR_SCHEME_LIGHT="prefer-light"
 COLOR_SCHEME_DARK="prefer-dark"
 
@@ -25,10 +26,10 @@ usage() {
 Usage: $(basename "$0") [toggle|light|dark|status]
 
 Switches the desktop color mode between:
-  light: $LIGHT_THEME / $COLOR_SCHEME_LIGHT
-  dark:  $DARK_THEME / $COLOR_SCHEME_DARK
+  light: $LIGHT_THEME / $LIGHT_ICON_THEME / $COLOR_SCHEME_LIGHT
+  dark:  $DARK_THEME / $DARK_ICON_THEME / $COLOR_SCHEME_DARK
 
-Also updates theme symlinks for rofi, Waybar, swaync, Alacritty, tmux and Powerlevel10k.
+Also updates rofi, Waybar, swaync, Alacritty, Herdr, tmux and Powerlevel10k.
 USAGE
 }
 
@@ -47,11 +48,12 @@ current_scheme() {
 update_settings_ini() {
   local file="$1"
   local theme="$2"
-  local prefer_dark="$3"
+  local icon_theme="$3"
+  local prefer_dark="$4"
 
   mkdir -p "$(dirname "$file")"
 
-  python3 - "$file" "$theme" "$ICON_THEME" "$prefer_dark" <<'PY'
+  python3 - "$file" "$theme" "$icon_theme" "$prefer_dark" <<'PY'
 from pathlib import Path
 import sys
 
@@ -84,10 +86,11 @@ PY
 update_gtkrc_2() {
   local file="$HOME/.gtkrc-2.0"
   local theme="$1"
+  local icon_theme="$2"
 
   [ -e "$file" ] || return 0
 
-  python3 - "$file" "$theme" "$ICON_THEME" <<'PY'
+  python3 - "$file" "$theme" "$icon_theme" <<'PY'
 from pathlib import Path
 import sys
 
@@ -113,10 +116,11 @@ PY
 update_xsettingsd() {
   local file="$CONFIG_HOME/xsettingsd/xsettingsd.conf"
   local theme="$1"
+  local icon_theme="$2"
 
   [ -e "$file" ] || return 0
 
-  python3 - "$file" "$theme" "$ICON_THEME" <<'PY'
+  python3 - "$file" "$theme" "$icon_theme" <<'PY'
 from pathlib import Path
 import sys
 
@@ -198,6 +202,10 @@ reload_apps() {
     alacritty msg config -r >/dev/null 2>&1 || true
   fi
 
+  if command -v herdr >/dev/null 2>&1; then
+    herdr server reload-config >/dev/null 2>&1 || true
+  fi
+
   if command -v tmux >/dev/null 2>&1 && tmux list-sessions >/dev/null 2>&1; then
     tmux source-file "$CONFIG_HOME/tmux/tmux.conf" >/dev/null 2>&1 || true
     tmux display-message "Theme switched" >/dev/null 2>&1 || true
@@ -206,17 +214,19 @@ reload_apps() {
 
 apply_theme() {
   local mode="$1"
-  local theme scheme prefer_dark label
+  local theme icon_theme scheme prefer_dark label
 
   case "$mode" in
     light)
       theme="$LIGHT_THEME"
+      icon_theme="$LIGHT_ICON_THEME"
       scheme="$COLOR_SCHEME_LIGHT"
       prefer_dark=0
       label="Light"
       ;;
     dark)
       theme="$DARK_THEME"
+      icon_theme="$DARK_ICON_THEME"
       scheme="$COLOR_SCHEME_DARK"
       prefer_dark=1
       label="Dark"
@@ -228,13 +238,13 @@ apply_theme() {
   esac
 
   gsettings set org.gnome.desktop.interface gtk-theme "$theme"
-  gsettings set org.gnome.desktop.interface icon-theme "$ICON_THEME"
+  gsettings set org.gnome.desktop.interface icon-theme "$icon_theme"
   gsettings set org.gnome.desktop.interface color-scheme "$scheme"
 
-  update_settings_ini "$CONFIG_HOME/gtk-3.0/settings.ini" "$theme" "$prefer_dark"
-  update_settings_ini "$CONFIG_HOME/gtk-4.0/settings.ini" "$theme" "$prefer_dark"
-  update_gtkrc_2 "$theme"
-  update_xsettingsd "$theme"
+  update_settings_ini "$CONFIG_HOME/gtk-3.0/settings.ini" "$theme" "$icon_theme" "$prefer_dark"
+  update_settings_ini "$CONFIG_HOME/gtk-4.0/settings.ini" "$theme" "$icon_theme" "$prefer_dark"
+  update_gtkrc_2 "$theme" "$icon_theme"
+  update_xsettingsd "$theme" "$icon_theme"
   update_theme_links "$mode"
   set_wallpaper "$mode"
   reload_apps
@@ -243,12 +253,17 @@ apply_theme() {
     notify-send "Desktop theme" "$label theme: $theme" --icon=preferences-desktop-theme >/dev/null 2>&1 || true
   fi
 
-  printf '%s theme enabled: %s (%s)\n' "$label" "$theme" "$scheme"
+  printf '%s theme enabled: %s / %s (%s)\n' "$label" "$theme" "$icon_theme" "$scheme"
 }
 
 show_status() {
   printf 'gtk-theme=%s\n' "$(current_theme)"
+  printf 'icon-theme=%s\n' "$(settings_get icon-theme || true)"
   printf 'color-scheme=%s\n' "$(current_scheme)"
+  if command -v herdr >/dev/null 2>&1; then
+    printf 'herdr-theme='
+    herdr config check >/dev/null 2>&1 && printf 'auto (host terminal)\n' || printf 'invalid config\n'
+  fi
   for item in \
     "$ROFI_THEME_DIR/current.rasi" \
     "$WAYBAR_THEME_DIR/current.css" \
