@@ -1,0 +1,12 @@
+session_name: rewrite
+startup_window: rewrite-desktop
+
+windows:
+  - window_name: claude
+    start_directory: /home/ex1te/Projects/Personal/Desktop/rewrite-desktop
+    panes:
+      - "zsh -ic 'claude; exec zsh -i'"
+  - window_name: rewrite-desktop
+    start_directory: /home/ex1te/Projects/Personal/Desktop/rewrite-desktop
+    panes:
+      - "zsh -i"
