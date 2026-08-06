@@ -206,6 +206,10 @@ reload_apps() {
     herdr server reload-config >/dev/null 2>&1 || true
   fi
 
+  if [ -x "$CONFIG_HOME/quickshell/scripts/sidecarctl" ]; then
+    "$CONFIG_HOME/quickshell/scripts/sidecarctl" theme >/dev/null 2>&1 || true
+  fi
+
   if command -v tmux >/dev/null 2>&1 && tmux list-sessions >/dev/null 2>&1; then
     tmux source-file "$CONFIG_HOME/tmux/tmux.conf" >/dev/null 2>&1 || true
     tmux display-message "Theme switched" >/dev/null 2>&1 || true

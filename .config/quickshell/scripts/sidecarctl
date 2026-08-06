@@ -1,0 +1,139 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+QS="${QS_BIN:-/usr/sbin/qs}"
+NIRI="${NIRI_BIN:-/usr/sbin/niri}"
+JQ="${JQ_BIN:-/usr/sbin/jq}"
+WPCTL="${WPCTL_BIN:-/usr/sbin/wpctl}"
+BRIGHTNESSCTL="${BRIGHTNESSCTL_BIN:-/usr/sbin/brightnessctl}"
+UPDATER="${NIRI_RENDERER_UPDATER:-$HOME/.config/niri/scripts/update-renderer-profile.sh}"
+ACTIVE_FILE="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/niri-renderer-profile-active"
+
+focused_screen() {
+    "$NIRI" msg --json focused-output 2>/dev/null | "$JQ" -r '.name // empty' 2>/dev/null || true
+}
+
+ipc() {
+    "$QS" ipc call sidecar "$@"
+}
+
+show_audio() {
+    local kind="$1"
+    local target="$2"
+    local output value muted screen
+
+    output="$($WPCTL get-volume "$target")"
+    if [[ "$output" =~ Volume:[[:space:]]+([0-9]+([.][0-9]+)?) ]]; then
+        value="${BASH_REMATCH[1]}"
+    else
+        value="0"
+    fi
+
+    if [[ "$output" == *"[MUTED]"* ]]; then
+        muted=true
+    else
+        muted=false
+    fi
+
+    screen="$(focused_screen)"
+    ipc showOsd "$kind" "$value" "$muted" "$screen"
+}
+
+show_brightness() {
+    local value screen
+    value="$($BRIGHTNESSCTL -m | "$JQ" -Rr 'split(",")[3] | sub("%"; "") | tonumber / 100')"
+    screen="$(focused_screen)"
+    ipc showOsd brightness "$value" false "$screen"
+}
+
+show_renderer() {
+    local wanted active renderer status warning screen
+
+    wanted="$($UPDATER)"
+    active="$(<"$ACTIVE_FILE" 2>/dev/null || printf 'unknown')"
+    screen="$(focused_screen)"
+
+    case "$active" in
+        external) renderer="NVIDIA" ;;
+        internal) renderer="Intel" ;;
+        *) renderer="Unknown" ;;
+    esac
+
+    if [[ "$wanted" == "$active" ]]; then
+        status="Profile matched"
+        warning=false
+    else
+        status="Relogin required"
+        warning=true
+    fi
+
+    ipc showRenderer "$active" "$renderer" "$status" "$screen" "$warning"
+}
+
+wait_ready() {
+    local attempt
+    for attempt in {1..30}; do
+        if "$QS" ipc call sidecar ping >/dev/null 2>&1; then
+            return 0
+        fi
+        sleep 0.1
+    done
+    return 1
+}
+
+usage() {
+    printf '%s\n' \
+        'Usage: sidecarctl <volume-up|volume-down|volume-mute|mic-up|mic-down|mic-mute|brightness-up|brightness-down|renderer|startup|hide|theme>' >&2
+    exit 2
+}
+
+case "${1:-}" in
+    volume-up)
+        "$WPCTL" set-volume -l 1 @DEFAULT_AUDIO_SINK@ 0.05+
+        show_audio volume @DEFAULT_AUDIO_SINK@
+        ;;
+    volume-down)
+        "$WPCTL" set-volume @DEFAULT_AUDIO_SINK@ 0.05-
+        show_audio volume @DEFAULT_AUDIO_SINK@
+        ;;
+    volume-mute)
+        "$WPCTL" set-mute @DEFAULT_AUDIO_SINK@ toggle
+        show_audio volume @DEFAULT_AUDIO_SINK@
+        ;;
+    mic-up)
+        "$WPCTL" set-volume -l 1 @DEFAULT_AUDIO_SOURCE@ 0.05+
+        show_audio microphone @DEFAULT_AUDIO_SOURCE@
+        ;;
+    mic-down)
+        "$WPCTL" set-volume @DEFAULT_AUDIO_SOURCE@ 0.05-
+        show_audio microphone @DEFAULT_AUDIO_SOURCE@
+        ;;
+    mic-mute)
+        "$WPCTL" set-mute @DEFAULT_AUDIO_SOURCE@ toggle
+        show_audio microphone @DEFAULT_AUDIO_SOURCE@
+        ;;
+    brightness-up)
+        "$BRIGHTNESSCTL" set 5%+
+        show_brightness
+        ;;
+    brightness-down)
+        "$BRIGHTNESSCTL" set 5%-
+        show_brightness
+        ;;
+    renderer)
+        show_renderer
+        ;;
+    startup)
+        wait_ready
+        show_renderer
+        ;;
+    hide)
+        ipc hide
+        ;;
+    theme)
+        ipc refreshTheme
+        ;;
+    *)
+        usage
+        ;;
+esac

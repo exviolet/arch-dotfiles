@@ -27,6 +27,10 @@ check_profile() {
             "Niri: внешний монитор отключён" \
             "Сейчас активен renderer NVIDIA. Перелогинься, чтобы вернуться на Intel."
     fi
+
+    if [[ -x "$HOME/.config/quickshell/scripts/sidecarctl" ]]; then
+        "$HOME/.config/quickshell/scripts/sidecarctl" renderer >/dev/null 2>&1 || true
+    fi
 }
 
 check_profile
