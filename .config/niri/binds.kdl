@@ -43,24 +43,24 @@ binds {
     // Note: the entire command goes as a single argument in the end.
     // Mod+T { spawn "bash" "-c" "notify-send hello && exec alacritty"; }
 
-    // Example volume keys mappings for PipeWire & WirePlumber.
-    // The allow-when-locked=true property makes them work even when the session is locked.
-    XF86AudioRaiseVolume allow-when-locked=true { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "0.05+"; }
-    XF86AudioLowerVolume allow-when-locked=true { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "0.05-"; }
-    XF86AudioMute        allow-when-locked=true { spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SINK@" "toggle"; }
-    XF86AudioMicMute     allow-when-locked=true { spawn "wpctl" "set-mute" "@DEFAULT_AUDIO_SOURCE@" "toggle"; }
+    // Audio and brightness changes are routed through the Quickshell sidecar so
+    // the hardware action and its OSD stay in sync.
+    XF86AudioRaiseVolume allow-when-locked=true { spawn "/home/ex1te/.config/quickshell/scripts/sidecarctl" "volume-up"; }
+    XF86AudioLowerVolume allow-when-locked=true { spawn "/home/ex1te/.config/quickshell/scripts/sidecarctl" "volume-down"; }
+    XF86AudioMute        allow-when-locked=true { spawn "/home/ex1te/.config/quickshell/scripts/sidecarctl" "volume-mute"; }
+    XF86AudioMicMute     allow-when-locked=true { spawn "/home/ex1te/.config/quickshell/scripts/sidecarctl" "mic-mute"; }
 
-    Alt+XF86AudioRaiseVolume allow-when-locked=true { spawn-sh "wpctl set-volume @DEFAULT_SOURCE@ 0.05+"; }
-    Alt+XF86AudioLowerVolume allow-when-locked=true { spawn-sh "wpctl set-volume @DEFAULT_SOURCE@ 0.05-"; }
-    Alt+XF86AudioMute        allow-when-locked=true { spawn-sh "wpctl set-mute @DEFAULT_SOURCE@ toggle"; }
+    Alt+XF86AudioRaiseVolume allow-when-locked=true { spawn "/home/ex1te/.config/quickshell/scripts/sidecarctl" "mic-up"; }
+    Alt+XF86AudioLowerVolume allow-when-locked=true { spawn "/home/ex1te/.config/quickshell/scripts/sidecarctl" "mic-down"; }
+    Alt+XF86AudioMute        allow-when-locked=true { spawn "/home/ex1te/.config/quickshell/scripts/sidecarctl" "mic-mute"; }
 
     XF86AudioPlay { spawn "playerctl" "play-pause"; }
     XF86AudioNext { spawn "playerctl" "next"; }
     XF86AudioPrev { spawn "playerctl" "previous"; }
     XF86AudioStop { spawn "playerctl" "stop"; }
 
-    XF86MonBrightnessUp   allow-when-locked=true { spawn "brightnessctl" "set" "5%+"; }
-    XF86MonBrightnessDown allow-when-locked=true { spawn "brightnessctl" "set" "5%-"; }
+    XF86MonBrightnessUp   allow-when-locked=true { spawn "/home/ex1te/.config/quickshell/scripts/sidecarctl" "brightness-up"; }
+    XF86MonBrightnessDown allow-when-locked=true { spawn "/home/ex1te/.config/quickshell/scripts/sidecarctl" "brightness-down"; }
     // Open/close the Overview: a zoomed-out view of workspaces and windows.
     // You can also move the mouse into the top-left hot corner,
     // or do a four-finger swipe up on a touchpad.
