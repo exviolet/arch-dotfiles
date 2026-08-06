@@ -9,6 +9,7 @@ ShellRoot {
     property bool windowVisible: false
     property bool presenting: false
     property bool dark: true
+    property bool railVisible: true
     property bool muted: false
     property bool warning: false
     property real value: 0
@@ -25,6 +26,10 @@ ShellRoot {
     readonly property color track: dark ? "#30322f" : "#dedbd4"
     readonly property color accent: "#d14d41"
     readonly property color warningAccent: "#d08a32"
+
+    NiriService {
+        id: niriService
+    }
 
     function code(): string {
         if (kind === "microphone") return "MIC"
@@ -108,6 +113,40 @@ ShellRoot {
         function getTheme(): string {
             return root.dark ? "dark" : "light"
         }
+
+        function setRailVisible(visible: bool): void {
+            root.railVisible = visible
+        }
+
+        function toggleRail(): bool {
+            root.railVisible = !root.railVisible
+            return root.railVisible
+        }
+
+        function getRailVisible(): bool {
+            return root.railVisible
+        }
+
+        function getNiriState(): string {
+            return niriService.ready ? "ready:" + niriService.focusedOutput : "waiting"
+        }
+
+        function getWorkspaces(): string {
+            return JSON.stringify(niriService.workspaces)
+        }
+
+        function getOsdState(): string {
+            return JSON.stringify({
+                "visible": root.windowVisible,
+                "presenting": root.presenting,
+                "kind": root.kind,
+                "profile": root.profile,
+                "renderer": root.renderer,
+                "status": root.statusText,
+                "warning": root.warning,
+                "screen": root.targetScreen
+            })
+        }
     }
 
     Process {
@@ -137,6 +176,19 @@ ShellRoot {
         interval: 170
         repeat: false
         onTriggered: root.windowVisible = false
+    }
+
+    Variants {
+        model: Quickshell.screens
+
+        Rail {
+            required property var modelData
+
+            outputScreen: modelData
+            niriState: niriService
+            shellDark: root.dark
+            railEnabled: root.railVisible
+        }
     }
 
     Variants {
