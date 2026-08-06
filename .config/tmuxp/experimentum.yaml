@@ -1,0 +1,20 @@
+session_name: experimentum
+startup_window: claude
+
+windows:
+  - window_name: claude
+    start_directory: /home/ex1te/Projects/Client_Work/STEAM.KZ/EXPERIMENTUM/experimentum
+    panes:
+      - "zsh -ic 'claude; exec zsh -i'"
+  - window_name: apk
+    start_directory: /home/ex1te/Projects/Client_Work/STEAM.KZ/EXPERIMENTUM/experimentum/client/android/app/build/outputs/apk/debug
+    panes:
+      - "zsh -ic"
+  - window_name: experimentum
+    start_directory: /home/ex1te/Projects/Client_Work/STEAM.KZ/EXPERIMENTUM/experimentum/
+    panes:
+      - "zsh -ic"
+  - window_name: experimentum-client
+    start_directory: /home/ex1te/Projects/Client_Work/STEAM.KZ/EXPERIMENTUM/experimentum/client/
+    panes:
+      - "zsh -ic"

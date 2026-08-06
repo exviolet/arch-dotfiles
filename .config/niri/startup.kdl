@@ -6,6 +6,7 @@ environment {
     export "LIBVA_DRIVER_NAME=nvidia"
     export "NVD_BACKEND=direct"
     export "__GLX_VENDOR_LIBRARY_NAME=nvidia"
+    // __GL_SYNC_TO_VBLANK "1"
 }
 
 spawn-at-startup "sh" "-c" "waybar & awww-daemon & swaync &"

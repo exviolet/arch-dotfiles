@@ -1,0 +1,23 @@
+session_name: steam_wp
+startup_window: claude
+
+windows:
+  - window_name: claude
+    start_directory: /home/ex1te/Projects/Client_Work/STEAM.KZ/STEAM-WP-PLUGIN/steam-client
+    panes:
+      - "zsh -ic 'claude; exec zsh -i'"
+
+  - window_name: steam-cl
+    start_directory: /home/ex1te/Projects/Client_Work/STEAM.KZ/STEAM-WP-PLUGIN/steam-client
+    panes:
+      - "zsh -i"
+
+  - window_name: codex
+    start_directory: /home/ex1te/Projects/Client_Work/STEAM.KZ/STEAM-WP-PLUGIN/steam-admin
+    panes:
+      - "zsh -ic 'codex; exec zsh -i'"
+
+  - window_name: steam-ad
+    start_directory: /home/ex1te/Projects/Client_Work/STEAM.KZ/STEAM-WP-PLUGIN/steam-admin
+    panes:
+      - "zsh -i"

@@ -1,0 +1,12 @@
+session_name: ex1te-personal
+startup_window: platform
+
+windows:
+  - window_name: platform
+    start_directory: /home/ex1te/Projects/Personal/ex1te-personal-platform
+    panes:
+      - "zsh -i"
+  - window_name: site
+    start_directory: /home/ex1te/Projects/Personal/ex1te-personal-platform/site
+    panes:
+      - "zsh -i"
