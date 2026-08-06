@@ -1,0 +1,13 @@
+[Unit]
+Description=Notify when Niri renderer profile no longer matches connected displays
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.config/niri/scripts/watch-renderer-profile.sh
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=graphical-session.target

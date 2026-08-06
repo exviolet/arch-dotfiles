@@ -26,10 +26,10 @@ overview {
     }
 }
 
-// Disable the hot corners.
+// Enable the top-left hot corner for Overview.
 gestures {
     hot-corners {
-        off
+        // off
     }
 }
 
@@ -63,3 +63,6 @@ screenshot-path "~/Pictures/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png"
 hotkey-overlay {
     skip-at-startup
 }
+
+// Generated before niri starts: NVIDIA profile with HDMI, Intel otherwise.
+include "~/.cache/niri/renderer-auto.kdl" optional=true
