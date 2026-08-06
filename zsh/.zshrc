@@ -11,6 +11,8 @@ fi
 # Path to your Oh My Zsh installation.
 export ZSH="$HOME/.oh-my-zsh"
 
+export DISABLE_AUTO_TITLE='true'
+
 # Set name of the theme to load --- if set to "random", it will
 # load a random theme each time Oh My Zsh is loaded, in which case,
 # to know which specific one was loaded, run: echo $RANDOM_THEME
@@ -193,6 +195,9 @@ alias cdx='codex'
 #hermes
 alias h='hermes'
 
+#orca-ide
+alias orca='orca-ide'
+
 #yazi 
 bindkey -s '^Y' 'yazi\n'
 export PATH="$PATH:/home/ex1te/.local/bin"
@@ -265,3 +270,7 @@ bindkey '^Wr' tmux_rename_bind
 if [[ $- == *i* ]] && [ -n "$NIRI_SOCKET" ] && command -v niri &> /dev/null; then
     niri msg action switch-layout 0 &> /dev/null
 fi
+
+# bun
+export BUN_INSTALL="$HOME/.bun"
+export PATH="$BUN_INSTALL/bin:$PATH"
