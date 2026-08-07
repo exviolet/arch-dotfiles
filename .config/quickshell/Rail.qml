@@ -67,6 +67,7 @@ PanelWindow {
 
     Process { id: workspaceAction }
     Process { id: rendererAction }
+    Process { id: layoutAction }
 
     Timer {
         id: previewTimer
@@ -119,6 +120,20 @@ PanelWindow {
                 return workspace.name !== "" ? workspace.name : String(workspace.idx)
         }
         return "—"
+    }
+
+    function keyboardLayoutCode(): string {
+        const name = String(niriState.keyboardLayout || "")
+        const normalized = name.toLowerCase()
+        if (normalized.indexOf("english") !== -1 && normalized.indexOf("us") !== -1) return "US"
+        if (normalized.indexOf("russian") !== -1) return "RU"
+        if (normalized.indexOf("kazakh") !== -1) return "KK"
+        return name.length >= 2 ? name.slice(0, 2).toUpperCase() : "--"
+    }
+
+    function switchKeyboardLayout(): void {
+        if (!layoutAction.running)
+            layoutAction.exec(["/usr/sbin/niri", "msg", "action", "switch-layout", "next"])
     }
 
     Rectangle {
@@ -504,6 +519,56 @@ PanelWindow {
                 font.pixelSize: 8
                 font.weight: Font.DemiBold
                 font.letterSpacing: 0.8
+            }
+        }
+
+        Item {
+            id: layoutBlock
+            visible: rail.niriState.keyboardLayout !== ""
+            anchors.bottom: batteryBlock.top
+            anchors.bottomMargin: 18
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: 32
+            height: 31
+            scale: layoutMouse.containsMouse ? 1.06 : 1
+
+            Behavior on scale {
+                NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
+            }
+
+            Text {
+                anchors.top: parent.top
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: rail.keyboardLayoutCode()
+                color: rail.foreground
+                font.family: "DejaVu Sans Mono"
+                font.pixelSize: 10
+                font.weight: Font.DemiBold
+
+                Behavior on color { ColorAnimation { duration: 120 } }
+            }
+
+            Rectangle {
+                anchors.bottom: parent.bottom
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: 20
+                height: 1
+                color: rail.border
+
+                Rectangle {
+                    anchors.left: parent.left
+                    width: 6
+                    height: 1
+                    color: rail.accent
+                }
+            }
+
+            MouseArea {
+                id: layoutMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: rail.switchKeyboardLayout()
             }
         }
 

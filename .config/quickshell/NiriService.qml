@@ -7,6 +7,8 @@ Scope {
 
     property var workspaces: []
     property string focusedOutput: ""
+    property var keyboardLayouts: []
+    property int keyboardLayoutIndex: -1
     property string keyboardLayout: ""
     property bool overviewOpen: false
     property bool ready: false
@@ -68,6 +70,18 @@ Scope {
         root.workspaces = next
     }
 
+    function replaceKeyboardLayouts(layouts: var): void {
+        if (!layouts || !layouts.names) return
+        root.keyboardLayouts = layouts.names.slice()
+        root.setKeyboardLayoutIndex(Number(layouts.current_idx))
+    }
+
+    function setKeyboardLayoutIndex(index: int): void {
+        if (index < 0 || index >= root.keyboardLayouts.length) return
+        root.keyboardLayoutIndex = index
+        root.keyboardLayout = String(root.keyboardLayouts[index])
+    }
+
     function handleLine(line: string): void {
         if (line.trim() === "") return
 
@@ -86,12 +100,9 @@ Scope {
         } else if (message.WorkspaceUrgencyChanged) {
             root.setUrgency(message.WorkspaceUrgencyChanged)
         } else if (message.KeyboardLayoutsChanged) {
-            const layouts = message.KeyboardLayoutsChanged.keyboard_layouts
-            if (layouts && layouts.names && layouts.names.length > layouts.current_idx)
-                root.keyboardLayout = layouts.names[layouts.current_idx]
+            root.replaceKeyboardLayouts(message.KeyboardLayoutsChanged.keyboard_layouts)
         } else if (message.KeyboardLayoutSwitched) {
-            const layout = message.KeyboardLayoutSwitched
-            if (layout.name) root.keyboardLayout = layout.name
+            root.setKeyboardLayoutIndex(Number(message.KeyboardLayoutSwitched.idx))
         } else if (message.OverviewOpenedOrClosed) {
             root.overviewOpen = Boolean(message.OverviewOpenedOrClosed.is_open)
         }

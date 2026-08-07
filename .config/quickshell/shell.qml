@@ -172,6 +172,10 @@ ShellRoot {
             return niriService.ready ? "ready:" + niriService.focusedOutput : "waiting"
         }
 
+        function getKeyboardLayout(): string {
+            return niriService.keyboardLayout
+        }
+
         function getWorkspaces(): string {
             return JSON.stringify(niriService.workspaces)
         }
