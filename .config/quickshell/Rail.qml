@@ -17,6 +17,8 @@ PanelWindow {
 
     readonly property int compactWidth: 46
     readonly property bool hasMedia: mediaPlayer !== null
+    readonly property string activeSurface: String(railController.activeSurface || "system")
+    readonly property bool showingMedia: activeSurface === "media" && hasMedia
     readonly property bool mediaPlaying: hasMedia && mediaPlayer.playbackState === MprisPlaybackState.Playing
     readonly property string mediaIdentity: hasMedia ? String(mediaPlayer.identity) : ""
     readonly property string mediaDesktopEntryId: hasMedia ? String(mediaPlayer.desktopEntry) : ""
@@ -39,7 +41,7 @@ PanelWindow {
     readonly property bool mediaCanToggle: hasMedia && mediaPlayer.canTogglePlaying
     readonly property bool mediaCanNext: hasMedia && mediaPlayer.canGoNext
     readonly property real mediaProgress: hasMedia && mediaPlayer.lengthSupported && mediaLength > 0 ? Math.max(0, Math.min(1, mediaPosition / mediaLength)) : 0
-    readonly property int drawerWidth: hasMedia ? 360 : 304
+    property real drawerWidth: showingMedia ? 360 : 304
     readonly property bool externallyPinned: railController.railPinned && railController.railExpansionScreen === outputScreen.name
     readonly property bool previewing: railController.railPreviewScreen === outputScreen.name
     readonly property bool expanded: externallyPinned || previewing
@@ -76,6 +78,13 @@ PanelWindow {
         left: true
         top: true
         bottom: true
+    }
+
+    Behavior on drawerWidth {
+        NumberAnimation {
+            duration: 180
+            easing.type: Easing.OutCubic
+        }
     }
 
     Behavior on revealProgress {
@@ -210,7 +219,7 @@ PanelWindow {
                 spacing: 6
 
                 Text {
-                    text: rail.hasMedia ? "MEDIA /" : "RAIL / " + rail.outputScreen.name
+                    text: rail.showingMedia ? "MEDIA /" : "RAIL / " + rail.outputScreen.name
                     color: rail.accent
                     font.family: "DejaVu Sans Mono"
                     font.pixelSize: 10
@@ -219,7 +228,7 @@ PanelWindow {
                 }
 
                 Image {
-                    visible: rail.hasMedia && rail.mediaIconSource !== ""
+                    visible: rail.showingMedia && rail.mediaIconSource !== ""
                     width: 13
                     height: 13
                     source: rail.mediaIconSource
@@ -228,7 +237,7 @@ PanelWindow {
                 }
 
                 Text {
-                    visible: rail.hasMedia
+                    visible: rail.showingMedia
                     text: rail.mediaApplicationName.toUpperCase()
                     color: rail.accent
                     font.family: "DejaVu Sans Mono"
@@ -243,7 +252,7 @@ PanelWindow {
                 anchors.right: parent.right
                 anchors.rightMargin: 22
                 y: 22
-                text: rail.hasMedia ? (rail.mediaPlaying ? "PLAYING" : "PAUSED") : (rail.externallyPinned ? "PINNED" : "PREVIEW")
+                text: rail.showingMedia ? (rail.mediaPlaying ? "PLAYING" : "PAUSED") : (rail.externallyPinned ? "PINNED" : "PREVIEW")
                 color: rail.externallyPinned ? rail.foreground : rail.mutedForeground
                 font.family: "DejaVu Sans Mono"
                 font.pixelSize: 9
@@ -268,7 +277,7 @@ PanelWindow {
                 x: 22
                 y: 74
                 width: parent.width - 44
-                text: rail.hasMedia ? rail.mediaTitle : "Open state"
+                text: rail.showingMedia ? rail.mediaTitle : "Open state"
                 elide: Text.ElideRight
                 color: rail.foreground
                 font.family: "DejaVu Sans"
@@ -280,7 +289,7 @@ PanelWindow {
                 x: 22
                 y: 108
                 width: parent.width - 44
-                text: rail.hasMedia ? (rail.mediaArtist || rail.mediaAlbum) : (rail.externallyPinned ? "The rail stays open." : "Move across the surface.")
+                text: rail.showingMedia ? (rail.mediaArtist || rail.mediaAlbum) : (rail.externallyPinned ? "The rail stays open." : "Move across the surface.")
                 elide: Text.ElideRight
                 color: rail.mutedForeground
                 font.family: "DejaVu Sans"
@@ -288,7 +297,7 @@ PanelWindow {
             }
 
             Column {
-                visible: !rail.hasMedia
+                visible: !rail.showingMedia
                 x: 22
                 y: 164
                 width: parent.width - 44
@@ -365,7 +374,7 @@ PanelWindow {
             }
 
             Rectangle {
-                visible: rail.hasMedia
+                visible: rail.showingMedia
                 x: 22
                 y: 504
                 width: parent.width - 44
@@ -521,7 +530,7 @@ PanelWindow {
             }
 
             Rectangle {
-                visible: rail.hasMedia
+                visible: rail.showingMedia
                 x: 22
                 y: 158
                 width: parent.width - 44
@@ -639,12 +648,16 @@ PanelWindow {
                 acceptedButtons: Qt.LeftButton | Qt.RightButton
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
+                onEntered: {
+                    if (!rail.externallyPinned)
+                        rail.railController.selectSurface("system")
+                }
                 onClicked: mouse => {
                     if (mouse.button === Qt.RightButton) {
                         rendererAction.exec(["/home/ex1te/.config/quickshell/scripts/sidecarctl", "renderer"])
                     } else {
                         rail.railController.setRailPreview(rail.outputScreen.name, false)
-                        rail.railController.toggleRailFor(rail.outputScreen.name)
+                        rail.railController.toggleRailSurface("system", rail.outputScreen.name)
                     }
                 }
             }
@@ -724,6 +737,79 @@ PanelWindow {
                         cursorShape: Qt.PointingHandCursor
                         onClicked: rail.focusWorkspace(rail.outputScreen.name, workspaceItem.modelData.idx)
                     }
+                }
+            }
+        }
+
+        Item {
+            id: mediaEntry
+            visible: rail.hasMedia
+            anchors.top: workspaceColumn.bottom
+            anchors.topMargin: 12
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: 32
+            height: 32
+            scale: mediaEntryMouse.containsMouse ? 1.06 : 1
+
+            Behavior on scale {
+                NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
+            }
+
+            Rectangle {
+                anchors.fill: parent
+                radius: 10
+                color: rail.activeSurface === "media" ? rail.surface : "transparent"
+                border.width: rail.activeSurface === "media" ? 1 : 0
+                border.color: rail.border
+
+                Behavior on color { ColorAnimation { duration: 120 } }
+            }
+
+            Rectangle {
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                width: 2
+                height: rail.activeSurface === "media" ? 15 : 0
+                radius: 1
+                color: rail.accent
+
+                Behavior on height {
+                    NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
+                }
+            }
+
+            Image {
+                visible: rail.mediaIconSource !== ""
+                anchors.centerIn: parent
+                width: 16
+                height: 16
+                source: rail.mediaIconSource
+                fillMode: Image.PreserveAspectFit
+                smooth: true
+            }
+
+            Text {
+                visible: rail.mediaIconSource === ""
+                anchors.centerIn: parent
+                text: "M"
+                color: rail.activeSurface === "media" ? rail.foreground : rail.mutedForeground
+                font.family: "DejaVu Sans Mono"
+                font.pixelSize: 10
+                font.weight: Font.DemiBold
+            }
+
+            MouseArea {
+                id: mediaEntryMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onEntered: {
+                    if (!rail.externallyPinned)
+                        rail.railController.selectSurface("media")
+                }
+                onClicked: {
+                    rail.railController.setRailPreview(rail.outputScreen.name, false)
+                    rail.railController.toggleRailSurface("media", rail.outputScreen.name)
                 }
             }
         }

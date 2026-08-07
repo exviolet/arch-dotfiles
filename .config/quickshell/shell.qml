@@ -14,6 +14,8 @@ ShellRoot {
     property bool railPinned: false
     property string railExpansionScreen: ""
     property string railPreviewScreen: ""
+    property string activeSurface: "system"
+    property bool surfaceInitialized: false
     property bool muted: false
     property bool warning: false
     property real value: 0
@@ -30,6 +32,15 @@ ShellRoot {
                 return players[index]
         }
         return players.length > 0 ? players[0] : null
+    }
+
+    onMediaPlayerChanged: {
+        if (mediaPlayer && !surfaceInitialized) {
+            activeSurface = "media"
+            surfaceInitialized = true
+        } else if (!mediaPlayer && activeSurface === "media") {
+            activeSurface = "system"
+        }
     }
 
     readonly property color background: dark ? "#171817" : "#f4f2ee"
@@ -107,6 +118,36 @@ ShellRoot {
         return shouldOpen
     }
 
+    function selectSurface(surface: string): string {
+        const requested = surface.trim().toLowerCase()
+        if (requested !== "system" && requested !== "media") return "unsupported:" + requested
+        if (requested === "media" && !mediaPlayer) return "unavailable:media"
+        activeSurface = requested
+        return activeSurface
+    }
+
+    function showRailSurface(surface: string, screen: string): string {
+        const selected = selectSurface(surface)
+        if (selected.indexOf(":") !== -1) return selected
+        const target = screen === "" ? niriService.focusedOutput : screen
+        setRailExpanded(true, target)
+        return "pinned:" + target + ":" + activeSurface
+    }
+
+    function toggleRailSurface(surface: string, screen: string): string {
+        const requested = surface.trim().toLowerCase()
+        const wasSamePinnedSurface = railPinned && railExpansionScreen === (screen === "" ? niriService.focusedOutput : screen) && activeSurface === requested
+        const selected = selectSurface(surface)
+        if (selected.indexOf(":") !== -1) return selected
+        const target = screen === "" ? niriService.focusedOutput : screen
+        if (wasSamePinnedSurface) {
+            setRailExpanded(false, target)
+            return "collapsed:" + activeSurface
+        }
+        setRailExpanded(true, target)
+        return "pinned:" + target + ":" + activeSurface
+    }
+
     IpcHandler {
         target: "sidecar"
 
@@ -176,6 +217,22 @@ ShellRoot {
             if (root.railPinned) return "pinned:" + root.railExpansionScreen
             if (root.railPreviewScreen !== "") return "preview:" + root.railPreviewScreen
             return "collapsed"
+        }
+
+        function getActiveSurface(): string {
+            return root.activeSurface
+        }
+
+        function setActiveSurface(surface: string): string {
+            return root.selectSurface(surface)
+        }
+
+        function showSurface(surface: string, screen: string): string {
+            return root.showRailSurface(surface, screen)
+        }
+
+        function toggleSurface(surface: string, screen: string): string {
+            return root.toggleRailSurface(surface, screen)
         }
 
         function getNiriState(): string {
