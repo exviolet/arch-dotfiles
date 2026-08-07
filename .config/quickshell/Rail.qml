@@ -1,5 +1,6 @@
 import Quickshell
 import Quickshell.Io
+import Quickshell.Services.Mpris
 import Quickshell.Services.UPower
 import Quickshell.Wayland
 import QtQuick
@@ -10,11 +11,35 @@ PanelWindow {
     required property var outputScreen
     required property var niriState
     required property var railController
+    required property var mediaPlayer
     required property bool shellDark
     required property bool railEnabled
 
     readonly property int compactWidth: 46
-    readonly property int drawerWidth: 304
+    readonly property bool hasMedia: mediaPlayer !== null
+    readonly property bool mediaPlaying: hasMedia && mediaPlayer.playbackState === MprisPlaybackState.Playing
+    readonly property string mediaIdentity: hasMedia ? String(mediaPlayer.identity) : ""
+    readonly property string mediaDesktopEntryId: hasMedia ? String(mediaPlayer.desktopEntry) : ""
+    readonly property var mediaApplication: hasMedia ? DesktopEntries.heuristicLookup(mediaDesktopEntryId || mediaIdentity) : null
+    readonly property string mediaApplicationName: mediaApplication ? String(mediaApplication.name).replace(" (Launcher)", "") : mediaIdentity
+    readonly property string mediaIconName: {
+        const key = (mediaDesktopEntryId + " " + mediaIdentity).toLowerCase()
+        if (key.indexOf("spotify") !== -1) return "spotify-launcher"
+        if (key.indexOf("helium") !== -1) return "helium-browser"
+        return mediaApplication ? String(mediaApplication.icon) : mediaDesktopEntryId
+    }
+    readonly property string mediaIconSource: mediaIconName !== "" ? Quickshell.iconPath(mediaIconName, true) : ""
+    readonly property string mediaTitle: hasMedia ? String(mediaPlayer.trackTitle) : ""
+    readonly property string mediaArtist: hasMedia ? String(mediaPlayer.trackArtist) : ""
+    readonly property string mediaAlbum: hasMedia ? String(mediaPlayer.trackAlbum) : ""
+    readonly property string mediaArtUrl: hasMedia ? String(mediaPlayer.trackArtUrl) : ""
+    readonly property real mediaPosition: hasMedia ? mediaPlayer.position : 0
+    readonly property real mediaLength: hasMedia ? mediaPlayer.length : 0
+    readonly property bool mediaCanPrevious: hasMedia && mediaPlayer.canGoPrevious
+    readonly property bool mediaCanToggle: hasMedia && mediaPlayer.canTogglePlaying
+    readonly property bool mediaCanNext: hasMedia && mediaPlayer.canGoNext
+    readonly property real mediaProgress: hasMedia && mediaPlayer.lengthSupported && mediaLength > 0 ? Math.max(0, Math.min(1, mediaPosition / mediaLength)) : 0
+    readonly property int drawerWidth: hasMedia ? 360 : 304
     readonly property bool externallyPinned: railController.railPinned && railController.railExpansionScreen === outputScreen.name
     readonly property bool previewing: railController.railPreviewScreen === outputScreen.name
     readonly property bool expanded: externallyPinned || previewing
@@ -136,6 +161,25 @@ PanelWindow {
             layoutAction.exec(["/usr/sbin/niri", "msg", "action", "switch-layout", "next"])
     }
 
+    function formatDuration(seconds: real): string {
+        if (!isFinite(seconds) || seconds < 0) return "--:--"
+        const minutes = Math.floor(seconds / 60)
+        const remainder = Math.floor(seconds % 60)
+        return String(minutes) + ":" + (remainder < 10 ? "0" : "") + String(remainder)
+    }
+
+    function previousMedia(): void {
+        if (mediaCanPrevious) mediaPlayer.previous()
+    }
+
+    function toggleMedia(): void {
+        if (mediaCanToggle) mediaPlayer.togglePlaying()
+    }
+
+    function nextMedia(): void {
+        if (mediaCanNext) mediaPlayer.next()
+    }
+
     Rectangle {
         id: drawer
         x: rail.compactWidth
@@ -159,16 +203,39 @@ PanelWindow {
                 NumberAnimation { duration: 155; easing.type: Easing.OutCubic }
             }
 
-            Text {
+            Row {
                 id: drawerEyebrow
                 x: 22
-                y: 22
-                text: "RAIL / " + rail.outputScreen.name
-                color: rail.accent
-                font.family: "DejaVu Sans Mono"
-                font.pixelSize: 10
-                font.weight: Font.DemiBold
-                font.letterSpacing: 1.1
+                y: 20
+                spacing: 6
+
+                Text {
+                    text: rail.hasMedia ? "MEDIA /" : "RAIL / " + rail.outputScreen.name
+                    color: rail.accent
+                    font.family: "DejaVu Sans Mono"
+                    font.pixelSize: 10
+                    font.weight: Font.DemiBold
+                    font.letterSpacing: 1.1
+                }
+
+                Image {
+                    visible: rail.hasMedia && rail.mediaIconSource !== ""
+                    width: 13
+                    height: 13
+                    source: rail.mediaIconSource
+                    fillMode: Image.PreserveAspectFit
+                    smooth: true
+                }
+
+                Text {
+                    visible: rail.hasMedia
+                    text: rail.mediaApplicationName.toUpperCase()
+                    color: rail.accent
+                    font.family: "DejaVu Sans Mono"
+                    font.pixelSize: 10
+                    font.weight: Font.DemiBold
+                    font.letterSpacing: 1.1
+                }
             }
 
             Text {
@@ -176,7 +243,7 @@ PanelWindow {
                 anchors.right: parent.right
                 anchors.rightMargin: 22
                 y: 22
-                text: rail.externallyPinned ? "PINNED" : "PREVIEW"
+                text: rail.hasMedia ? (rail.mediaPlaying ? "PLAYING" : "PAUSED") : (rail.externallyPinned ? "PINNED" : "PREVIEW")
                 color: rail.externallyPinned ? rail.foreground : rail.mutedForeground
                 font.family: "DejaVu Sans Mono"
                 font.pixelSize: 9
@@ -200,7 +267,9 @@ PanelWindow {
             Text {
                 x: 22
                 y: 74
-                text: "Open state"
+                width: parent.width - 44
+                text: rail.hasMedia ? rail.mediaTitle : "Open state"
+                elide: Text.ElideRight
                 color: rail.foreground
                 font.family: "DejaVu Sans"
                 font.pixelSize: 24
@@ -211,13 +280,15 @@ PanelWindow {
                 x: 22
                 y: 108
                 width: parent.width - 44
-                text: rail.externallyPinned ? "The rail stays open." : "Move across the surface."
+                text: rail.hasMedia ? (rail.mediaArtist || rail.mediaAlbum) : (rail.externallyPinned ? "The rail stays open." : "Move across the surface.")
+                elide: Text.ElideRight
                 color: rail.mutedForeground
                 font.family: "DejaVu Sans"
                 font.pixelSize: 12
             }
 
             Column {
+                visible: !rail.hasMedia
                 x: 22
                 y: 164
                 width: parent.width - 44
@@ -290,6 +361,193 @@ PanelWindow {
                         font.family: "DejaVu Sans"
                         font.pixelSize: 12
                     }
+                }
+            }
+
+            Rectangle {
+                visible: rail.hasMedia
+                x: 22
+                y: 504
+                width: parent.width - 44
+                height: 142
+                radius: 14
+                color: rail.raisedSurface
+                border.width: 1
+                border.color: rail.border
+
+                Text {
+                    x: 14
+                    y: 13
+                    text: rail.mediaAlbum || "NOW PLAYING"
+                    width: parent.width - 28
+                    elide: Text.ElideRight
+                    color: rail.mutedForeground
+                    font.family: "DejaVu Sans Mono"
+                    font.pixelSize: 9
+                    font.weight: Font.DemiBold
+                    font.letterSpacing: 0.8
+                }
+
+                Rectangle {
+                    id: mediaTrack
+                    x: 14
+                    y: 40
+                    width: parent.width - 28
+                    height: 2
+                    radius: 1
+                    color: rail.border
+
+                    Rectangle {
+                        width: parent.width * rail.mediaProgress
+                        height: parent.height
+                        radius: 1
+                        color: rail.accent
+
+                        Behavior on width {
+                            NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
+                        }
+                    }
+                }
+
+                Text {
+                    x: 14
+                    y: 49
+                    text: rail.formatDuration(rail.mediaPosition)
+                    color: rail.mutedForeground
+                    font.family: "DejaVu Sans Mono"
+                    font.pixelSize: 8
+                }
+
+                Text {
+                    anchors.right: parent.right
+                    anchors.rightMargin: 14
+                    y: 49
+                    text: rail.formatDuration(rail.mediaLength)
+                    color: rail.mutedForeground
+                    font.family: "DejaVu Sans Mono"
+                    font.pixelSize: 8
+                }
+
+                Row {
+                    x: 14
+                    y: 79
+                    spacing: 8
+
+                    Rectangle {
+                        width: 76
+                        height: 42
+                        radius: 10
+                        color: previousMouse.containsMouse ? rail.surface : "transparent"
+                        border.width: 1
+                        border.color: rail.border
+                        opacity: rail.mediaCanPrevious ? 1 : 0.35
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "PREV"
+                            color: rail.foreground
+                            font.family: "DejaVu Sans Mono"
+                            font.pixelSize: 9
+                            font.weight: Font.DemiBold
+                        }
+
+                        MouseArea {
+                            id: previousMouse
+                            anchors.fill: parent
+                            enabled: rail.mediaCanPrevious
+                            hoverEnabled: true
+                            cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                            onClicked: rail.previousMedia()
+                        }
+                    }
+
+                    Rectangle {
+                        width: 112
+                        height: 42
+                        radius: 10
+                        color: playMouse.containsMouse ? rail.accent : rail.surface
+                        border.width: 1
+                        border.color: playMouse.containsMouse ? rail.accent : rail.border
+                        opacity: rail.mediaCanToggle ? 1 : 0.35
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: rail.mediaPlaying ? "PAUSE" : "PLAY"
+                            color: rail.foreground
+                            font.family: "DejaVu Sans Mono"
+                            font.pixelSize: 9
+                            font.weight: Font.DemiBold
+                            font.letterSpacing: 0.5
+                        }
+
+                        MouseArea {
+                            id: playMouse
+                            anchors.fill: parent
+                            enabled: rail.mediaCanToggle
+                            hoverEnabled: true
+                            cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                            onClicked: rail.toggleMedia()
+                        }
+                    }
+
+                    Rectangle {
+                        width: 76
+                        height: 42
+                        radius: 10
+                        color: nextMouse.containsMouse ? rail.surface : "transparent"
+                        border.width: 1
+                        border.color: rail.border
+                        opacity: rail.mediaCanNext ? 1 : 0.35
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "NEXT"
+                            color: rail.foreground
+                            font.family: "DejaVu Sans Mono"
+                            font.pixelSize: 9
+                            font.weight: Font.DemiBold
+                        }
+
+                        MouseArea {
+                            id: nextMouse
+                            anchors.fill: parent
+                            enabled: rail.mediaCanNext
+                            hoverEnabled: true
+                            cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                            onClicked: rail.nextMedia()
+                        }
+                    }
+                }
+            }
+
+            Rectangle {
+                visible: rail.hasMedia
+                x: 22
+                y: 158
+                width: parent.width - 44
+                height: width
+                color: rail.raisedSurface
+                border.width: 1
+                border.color: rail.border
+
+                Text {
+                    anchors.centerIn: parent
+                    text: rail.mediaIdentity.toUpperCase()
+                    color: rail.mutedForeground
+                    font.family: "DejaVu Sans Mono"
+                    font.pixelSize: 10
+                    font.weight: Font.DemiBold
+                    font.letterSpacing: 1
+                }
+
+                Image {
+                    anchors.fill: parent
+                    anchors.margins: 1
+                    source: rail.mediaArtUrl
+                    fillMode: Image.PreserveAspectCrop
+                    asynchronous: true
+                    cache: true
+                    smooth: true
                 }
             }
 

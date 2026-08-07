@@ -1,5 +1,6 @@
 import Quickshell
 import Quickshell.Io
+import Quickshell.Services.Mpris
 import Quickshell.Wayland
 import QtQuick
 
@@ -21,6 +22,15 @@ ShellRoot {
     property string renderer: ""
     property string statusText: ""
     property string targetScreen: ""
+
+    readonly property var mediaPlayer: {
+        const players = Mpris.players.values
+        for (let index = 0; index < players.length; ++index) {
+            if (players[index].playbackState === MprisPlaybackState.Playing)
+                return players[index]
+        }
+        return players.length > 0 ? players[0] : null
+    }
 
     readonly property color background: dark ? "#171817" : "#f4f2ee"
     readonly property color foreground: dark ? "#f0efeb" : "#1d1e1c"
@@ -176,6 +186,37 @@ ShellRoot {
             return niriService.keyboardLayout
         }
 
+        function getMediaState(): string {
+            if (!root.mediaPlayer) return "unavailable"
+            return JSON.stringify({
+                "identity": root.mediaPlayer.identity,
+                "desktopEntry": root.mediaPlayer.desktopEntry,
+                "title": root.mediaPlayer.trackTitle,
+                "artist": root.mediaPlayer.trackArtist,
+                "playing": root.mediaPlayer.playbackState === MprisPlaybackState.Playing,
+                "position": root.mediaPlayer.position,
+                "length": root.mediaPlayer.length
+            })
+        }
+
+        function toggleMedia(): string {
+            if (!root.mediaPlayer || !root.mediaPlayer.canTogglePlaying) return "unavailable"
+            root.mediaPlayer.togglePlaying()
+            return "requested"
+        }
+
+        function previousMedia(): string {
+            if (!root.mediaPlayer || !root.mediaPlayer.canGoPrevious) return "unavailable"
+            root.mediaPlayer.previous()
+            return "requested"
+        }
+
+        function nextMedia(): string {
+            if (!root.mediaPlayer || !root.mediaPlayer.canGoNext) return "unavailable"
+            root.mediaPlayer.next()
+            return "requested"
+        }
+
         function getWorkspaces(): string {
             return JSON.stringify(niriService.workspaces)
         }
@@ -232,6 +273,7 @@ ShellRoot {
             outputScreen: modelData
             niriState: niriService
             railController: root
+            mediaPlayer: root.mediaPlayer
             shellDark: root.dark
             railEnabled: root.railVisible
         }
