@@ -85,6 +85,17 @@ Scope {
         return false
     }
 
+    function selectSource(id: int): bool {
+        for (let index = 0; index < sources.length; ++index) {
+            const candidate = sources[index]
+            if (candidate.id === id) {
+                Pipewire.preferredDefaultAudioSource = candidate
+                return true
+            }
+        }
+        return false
+    }
+
     function state(): var {
         const routes = []
         for (let index = 0; index < sinks.length; ++index) {

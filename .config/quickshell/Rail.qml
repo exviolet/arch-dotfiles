@@ -214,6 +214,10 @@ PanelWindow {
         audioState.selectSink(id)
     }
 
+    function selectMicrophoneSource(id: int): void {
+        audioState.selectSource(id)
+    }
+
     Rectangle {
         id: drawer
         x: rail.compactWidth
@@ -610,7 +614,7 @@ PanelWindow {
                 x: 22
                 y: 330 + 28 + rail.audioState.sinks.length * 44 + Math.max(0, rail.audioState.sinks.length - 1) * 7 + 22
                 width: parent.width - 44
-                height: 150
+                height: 182 + Math.ceil(rail.audioState.sources.length / 2) * 48
                 radius: 14
                 color: rail.raisedSurface
                 border.width: 1
@@ -730,6 +734,90 @@ PanelWindow {
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: rail.toggleMicrophoneMute()
+                    }
+                }
+
+                Text {
+                    x: 14
+                    y: 151
+                    text: "SOURCE ROUTES / " + String(rail.audioState.sources.length)
+                    color: rail.mutedForeground
+                    font.family: "DejaVu Sans Mono"
+                    font.pixelSize: 8
+                    font.weight: Font.DemiBold
+                    font.letterSpacing: 0.7
+                }
+
+                Grid {
+                    x: 14
+                    y: 173
+                    width: parent.width - 28
+                    columns: 2
+                    columnSpacing: 7
+                    rowSpacing: 6
+
+                    Repeater {
+                        model: rail.audioState.sources
+
+                        Rectangle {
+                            id: inputRouteItem
+                            required property var modelData
+                            readonly property bool active: rail.audioState.source !== null && modelData.id === rail.audioState.source.id
+                            width: (parent.width - 7) / 2
+                            height: 42
+                            radius: 9
+                            color: active ? rail.surface : (inputRouteMouse.containsMouse ? rail.surface : "transparent")
+                            border.width: 1
+                            border.color: active ? rail.border : Qt.rgba(0, 0, 0, 0)
+
+                            Rectangle {
+                                anchors.left: parent.left
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 2
+                                height: 14
+                                radius: 1
+                                color: rail.accent
+                                opacity: inputRouteItem.active ? 1 : 0
+
+                                Behavior on opacity {
+                                    NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
+                                }
+                            }
+
+                            Text {
+                                x: 11
+                                y: 6
+                                width: parent.width - 20
+                                text: rail.audioState.label(inputRouteItem.modelData)
+                                elide: Text.ElideRight
+                                color: inputRouteItem.active ? rail.foreground : rail.mutedForeground
+                                font.family: "DejaVu Sans"
+                                font.pixelSize: 10
+                                font.weight: inputRouteItem.active ? Font.DemiBold : Font.Medium
+                            }
+
+                            Text {
+                                x: 11
+                                y: 24
+                                text: inputRouteItem.active ? "ACTIVE" : rail.audioState.kind(inputRouteItem.modelData)
+                                color: inputRouteItem.active ? rail.accent : rail.mutedForeground
+                                font.family: "DejaVu Sans Mono"
+                                font.pixelSize: 7
+                                font.weight: Font.DemiBold
+                                font.letterSpacing: 0.4
+                            }
+
+                            MouseArea {
+                                id: inputRouteMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    if (!inputRouteItem.active)
+                                        rail.selectMicrophoneSource(inputRouteItem.modelData.id)
+                                }
+                            }
+                        }
                     }
                 }
             }

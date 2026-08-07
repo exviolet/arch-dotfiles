@@ -294,6 +294,10 @@ ShellRoot {
             return audioService.selectSink(id) ? "requested:" + String(id) : "unavailable:" + String(id)
         }
 
+        function selectMicrophoneSource(id: int): string {
+            return audioService.selectSource(id) ? "requested:" + String(id) : "unavailable:" + String(id)
+        }
+
         function toggleMedia(): string {
             if (!root.mediaPlayer || !root.mediaPlayer.canTogglePlaying) return "unavailable"
             root.mediaPlayer.togglePlaying()
