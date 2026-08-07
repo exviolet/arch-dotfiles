@@ -282,6 +282,14 @@ ShellRoot {
             return audioService.toggleMute() ? "requested" : "unavailable"
         }
 
+        function setMicrophoneVolume(value: real): string {
+            return audioService.setSourceVolume(value) ? "requested" : "unavailable"
+        }
+
+        function toggleMicrophoneMute(): string {
+            return audioService.toggleSourceMute() ? "requested" : "unavailable"
+        }
+
         function selectAudioSink(id: int): string {
             return audioService.selectSink(id) ? "requested:" + String(id) : "unavailable:" + String(id)
         }

@@ -202,6 +202,14 @@ PanelWindow {
         audioState.toggleMute()
     }
 
+    function setMicrophoneVolume(value: real): void {
+        audioState.setSourceVolume(value)
+    }
+
+    function toggleMicrophoneMute(): void {
+        audioState.toggleSourceMute()
+    }
+
     function selectAudioSink(id: int): void {
         audioState.selectSink(id)
     }
@@ -593,6 +601,135 @@ PanelWindow {
                                 onClicked: rail.selectAudioSink(routeItem.modelData.id)
                             }
                         }
+                    }
+                }
+            }
+
+            Rectangle {
+                visible: rail.showingAudio && rail.audioState.sourceReady
+                x: 22
+                y: 330 + 28 + rail.audioState.sinks.length * 44 + Math.max(0, rail.audioState.sinks.length - 1) * 7 + 22
+                width: parent.width - 44
+                height: 150
+                radius: 14
+                color: rail.raisedSurface
+                border.width: 1
+                border.color: rail.border
+
+                Text {
+                    x: 14
+                    y: 12
+                    text: "INPUT / " + rail.audioState.kind(rail.audioState.source)
+                    color: rail.mutedForeground
+                    font.family: "DejaVu Sans Mono"
+                    font.pixelSize: 9
+                    font.weight: Font.DemiBold
+                    font.letterSpacing: 0.8
+                }
+
+                Text {
+                    anchors.right: parent.right
+                    anchors.rightMargin: 14
+                    y: 10
+                    text: rail.audioState.sourceMuted ? "MUTED" : String(rail.audioState.sourceVolumePercent) + "%"
+                    color: rail.audioState.sourceMuted ? rail.warningAccent : rail.foreground
+                    font.family: "DejaVu Sans Mono"
+                    font.pixelSize: 13
+                    font.weight: Font.DemiBold
+                }
+
+                Text {
+                    x: 14
+                    y: 34
+                    width: parent.width - 28
+                    text: rail.audioState.label(rail.audioState.source)
+                    elide: Text.ElideRight
+                    color: rail.foreground
+                    font.family: "DejaVu Sans"
+                    font.pixelSize: 12
+                    font.weight: Font.DemiBold
+                }
+
+                Rectangle {
+                    id: microphoneTrack
+                    x: 14
+                    y: 69
+                    width: parent.width - 28
+                    height: 4
+                    radius: 2
+                    color: rail.border
+
+                    Rectangle {
+                        width: parent.width * Math.max(0, Math.min(1, rail.audioState.sourceVolume / rail.audioState.maxSourceVolume))
+                        height: parent.height
+                        radius: 2
+                        color: rail.audioState.sourceMuted ? rail.mutedForeground : rail.accent
+
+                        Behavior on width {
+                            NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
+                        }
+                    }
+
+                    Rectangle {
+                        x: Math.max(0, Math.min(parent.width - width, parent.width * rail.audioState.sourceVolume / rail.audioState.maxSourceVolume - width / 2))
+                        y: -3
+                        width: 10
+                        height: 10
+                        radius: 5
+                        color: rail.foreground
+
+                        Behavior on x {
+                            NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
+                        }
+                    }
+
+                    Rectangle {
+                        x: Math.round(parent.width / rail.audioState.maxSourceVolume) - 1
+                        y: -3
+                        width: 1
+                        height: 10
+                        color: rail.mutedForeground
+                        opacity: 0.55
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        anchors.topMargin: -12
+                        anchors.bottomMargin: -12
+                        cursorShape: Qt.PointingHandCursor
+                        onPressed: mouse => rail.setMicrophoneVolume(mouse.x / width * rail.audioState.maxSourceVolume)
+                        onPositionChanged: mouse => {
+                            if (pressed) rail.setMicrophoneVolume(mouse.x / width * rail.audioState.maxSourceVolume)
+                        }
+                    }
+                }
+
+                Rectangle {
+                    x: 14
+                    y: 96
+                    width: parent.width - 28
+                    height: 40
+                    radius: 10
+                    color: microphoneMuteMouse.containsMouse ? rail.surface : "transparent"
+                    border.width: 1
+                    border.color: rail.audioState.sourceMuted ? rail.warningAccent : rail.border
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: rail.audioState.sourceMuted ? "ENABLE INPUT" : "MUTE INPUT"
+                        color: rail.audioState.sourceMuted ? rail.warningAccent : rail.foreground
+                        font.family: "DejaVu Sans Mono"
+                        font.pixelSize: 9
+                        font.weight: Font.DemiBold
+                        font.letterSpacing: 0.5
+                    }
+
+                    MouseArea {
+                        id: microphoneMuteMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: rail.toggleMicrophoneMute()
                     }
                 }
             }
