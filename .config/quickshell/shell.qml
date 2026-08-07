@@ -10,6 +10,9 @@ ShellRoot {
     property bool presenting: false
     property bool dark: true
     property bool railVisible: true
+    property bool railPinned: false
+    property string railExpansionScreen: ""
+    property string railPreviewScreen: ""
     property bool muted: false
     property bool warning: false
     property real value: 0
@@ -74,6 +77,26 @@ ShellRoot {
         closeTimer.restart()
     }
 
+    function setRailPreview(screen: string, active: bool): void {
+        if (active) {
+            railPreviewScreen = screen
+        } else if (railPreviewScreen === screen) {
+            railPreviewScreen = ""
+        }
+    }
+
+    function setRailExpanded(expanded: bool, screen: string): void {
+        railPinned = expanded
+        railExpansionScreen = expanded ? screen : ""
+        if (expanded) railPreviewScreen = ""
+    }
+
+    function toggleRailFor(screen: string): bool {
+        const shouldOpen = !railPinned || railExpansionScreen !== screen
+        setRailExpanded(shouldOpen, screen)
+        return shouldOpen
+    }
+
     IpcHandler {
         target: "sidecar"
 
@@ -125,6 +148,24 @@ ShellRoot {
 
         function getRailVisible(): bool {
             return root.railVisible
+        }
+
+        function setRailExpanded(expanded: bool, screen: string): string {
+            const target = screen === "" ? niriService.focusedOutput : screen
+            root.setRailExpanded(expanded, target)
+            return root.railPinned ? "pinned:" + root.railExpansionScreen : "collapsed"
+        }
+
+        function toggleRailExpanded(screen: string): string {
+            const target = screen === "" ? niriService.focusedOutput : screen
+            root.toggleRailFor(target)
+            return root.railPinned ? "pinned:" + root.railExpansionScreen : "collapsed"
+        }
+
+        function getRailExpansion(): string {
+            if (root.railPinned) return "pinned:" + root.railExpansionScreen
+            if (root.railPreviewScreen !== "") return "preview:" + root.railPreviewScreen
+            return "collapsed"
         }
 
         function getNiriState(): string {
@@ -186,6 +227,7 @@ ShellRoot {
 
             outputScreen: modelData
             niriState: niriService
+            railController: root
             shellDark: root.dark
             railEnabled: root.railVisible
         }
