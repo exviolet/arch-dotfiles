@@ -12,6 +12,7 @@ PanelWindow {
     required property var niriState
     required property var railController
     required property var mediaPlayer
+    required property var audioState
     required property bool shellDark
     required property bool railEnabled
 
@@ -19,6 +20,10 @@ PanelWindow {
     readonly property bool hasMedia: mediaPlayer !== null
     readonly property string activeSurface: String(railController.activeSurface || "system")
     readonly property bool showingMedia: activeSurface === "media" && hasMedia
+    readonly property bool showingAudio: activeSurface === "audio" && audioState.sinkReady
+    readonly property string audioSinkLabel: audioState.label(audioState.sink)
+    readonly property string audioSinkKind: audioState.kind(audioState.sink)
+    readonly property url audioIconSource: Qt.resolvedUrl(audioState.muted ? "icons/iconoir/sound-off.svg" : "icons/iconoir/sound-high.svg")
     readonly property bool mediaPlaying: hasMedia && mediaPlayer.playbackState === MprisPlaybackState.Playing
     readonly property string mediaIdentity: hasMedia ? String(mediaPlayer.identity) : ""
     readonly property string mediaDesktopEntryId: hasMedia ? String(mediaPlayer.desktopEntry) : ""
@@ -41,7 +46,7 @@ PanelWindow {
     readonly property bool mediaCanToggle: hasMedia && mediaPlayer.canTogglePlaying
     readonly property bool mediaCanNext: hasMedia && mediaPlayer.canGoNext
     readonly property real mediaProgress: hasMedia && mediaPlayer.lengthSupported && mediaLength > 0 ? Math.max(0, Math.min(1, mediaPosition / mediaLength)) : 0
-    property real drawerWidth: showingMedia ? 360 : 304
+    property real drawerWidth: showingAudio ? 394 : (showingMedia ? 360 : 304)
     readonly property bool externallyPinned: railController.railPinned && railController.railExpansionScreen === outputScreen.name
     readonly property bool previewing: railController.railPreviewScreen === outputScreen.name
     readonly property bool expanded: externallyPinned || previewing
@@ -189,6 +194,18 @@ PanelWindow {
         if (mediaCanNext) mediaPlayer.next()
     }
 
+    function setAudioVolume(value: real): void {
+        audioState.setVolume(value)
+    }
+
+    function toggleAudioMute(): void {
+        audioState.toggleMute()
+    }
+
+    function selectAudioSink(id: int): void {
+        audioState.selectSink(id)
+    }
+
     Rectangle {
         id: drawer
         x: rail.compactWidth
@@ -219,7 +236,7 @@ PanelWindow {
                 spacing: 6
 
                 Text {
-                    text: rail.showingMedia ? "MEDIA /" : "RAIL / " + rail.outputScreen.name
+                    text: rail.showingAudio ? "AUDIO /" : (rail.showingMedia ? "MEDIA /" : "RAIL / " + rail.outputScreen.name)
                     color: rail.accent
                     font.family: "DejaVu Sans Mono"
                     font.pixelSize: 10
@@ -228,17 +245,17 @@ PanelWindow {
                 }
 
                 Image {
-                    visible: rail.showingMedia && rail.mediaIconSource !== ""
+                    visible: rail.showingAudio || (rail.showingMedia && rail.mediaIconSource !== "")
                     width: 13
                     height: 13
-                    source: rail.mediaIconSource
+                    source: rail.showingAudio ? rail.audioIconSource : rail.mediaIconSource
                     fillMode: Image.PreserveAspectFit
                     smooth: true
                 }
 
                 Text {
-                    visible: rail.showingMedia
-                    text: rail.mediaApplicationName.toUpperCase()
+                    visible: rail.showingMedia || rail.showingAudio
+                    text: rail.showingAudio ? "PIPEWIRE" : rail.mediaApplicationName.toUpperCase()
                     color: rail.accent
                     font.family: "DejaVu Sans Mono"
                     font.pixelSize: 10
@@ -252,7 +269,7 @@ PanelWindow {
                 anchors.right: parent.right
                 anchors.rightMargin: 22
                 y: 22
-                text: rail.showingMedia ? (rail.mediaPlaying ? "PLAYING" : "PAUSED") : (rail.externallyPinned ? "PINNED" : "PREVIEW")
+                text: rail.showingAudio ? (rail.audioState.muted ? "MUTED" : String(rail.audioState.volumePercent) + "%") : (rail.showingMedia ? (rail.mediaPlaying ? "PLAYING" : "PAUSED") : (rail.externallyPinned ? "PINNED" : "PREVIEW"))
                 color: rail.externallyPinned ? rail.foreground : rail.mutedForeground
                 font.family: "DejaVu Sans Mono"
                 font.pixelSize: 9
@@ -277,7 +294,7 @@ PanelWindow {
                 x: 22
                 y: 74
                 width: parent.width - 44
-                text: rail.showingMedia ? rail.mediaTitle : "Open state"
+                text: rail.showingAudio ? rail.audioSinkLabel : (rail.showingMedia ? rail.mediaTitle : "Open state")
                 elide: Text.ElideRight
                 color: rail.foreground
                 font.family: "DejaVu Sans"
@@ -289,7 +306,7 @@ PanelWindow {
                 x: 22
                 y: 108
                 width: parent.width - 44
-                text: rail.showingMedia ? (rail.mediaArtist || rail.mediaAlbum) : (rail.externallyPinned ? "The rail stays open." : "Move across the surface.")
+                text: rail.showingAudio ? rail.audioSinkKind + " / DEFAULT OUTPUT" : (rail.showingMedia ? (rail.mediaArtist || rail.mediaAlbum) : (rail.externallyPinned ? "The rail stays open." : "Move across the surface."))
                 elide: Text.ElideRight
                 color: rail.mutedForeground
                 font.family: "DejaVu Sans"
@@ -297,7 +314,7 @@ PanelWindow {
             }
 
             Column {
-                visible: !rail.showingMedia
+                visible: !rail.showingMedia && !rail.showingAudio
                 x: 22
                 y: 164
                 width: parent.width - 44
@@ -369,6 +386,213 @@ PanelWindow {
                         color: rail.foreground
                         font.family: "DejaVu Sans"
                         font.pixelSize: 12
+                    }
+                }
+            }
+
+            Rectangle {
+                visible: rail.showingAudio
+                x: 22
+                y: 158
+                width: parent.width - 44
+                height: 144
+                radius: 14
+                color: rail.raisedSurface
+                border.width: 1
+                border.color: rail.border
+
+                Text {
+                    x: 14
+                    y: 14
+                    text: "OUTPUT LEVEL"
+                    color: rail.mutedForeground
+                    font.family: "DejaVu Sans Mono"
+                    font.pixelSize: 9
+                    font.weight: Font.DemiBold
+                    font.letterSpacing: 0.8
+                }
+
+                Text {
+                    anchors.right: parent.right
+                    anchors.rightMargin: 14
+                    y: 10
+                    text: rail.audioState.muted ? "MUTED" : String(rail.audioState.volumePercent) + "%"
+                    color: rail.audioState.muted ? rail.warningAccent : rail.foreground
+                    font.family: "DejaVu Sans Mono"
+                    font.pixelSize: 15
+                    font.weight: Font.DemiBold
+                }
+
+                Rectangle {
+                    id: audioTrack
+                    x: 14
+                    y: 50
+                    width: parent.width - 28
+                    height: 4
+                    radius: 2
+                    color: rail.border
+
+                    Rectangle {
+                        width: parent.width * Math.max(0, Math.min(1, rail.audioState.volume / rail.audioState.maxVolume))
+                        height: parent.height
+                        radius: 2
+                        color: rail.audioState.muted ? rail.mutedForeground : rail.accent
+
+                        Behavior on width {
+                            NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
+                        }
+                    }
+
+                    Rectangle {
+                        x: Math.max(0, Math.min(parent.width - width, parent.width * rail.audioState.volume / rail.audioState.maxVolume - width / 2))
+                        y: -3
+                        width: 10
+                        height: 10
+                        radius: 5
+                        color: rail.foreground
+
+                        Behavior on x {
+                            NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
+                        }
+                    }
+
+                    Rectangle {
+                        x: Math.round(parent.width / rail.audioState.maxVolume) - 1
+                        y: -3
+                        width: 1
+                        height: 10
+                        color: rail.mutedForeground
+                        opacity: 0.55
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        anchors.topMargin: -12
+                        anchors.bottomMargin: -12
+                        cursorShape: Qt.PointingHandCursor
+                        onPressed: mouse => rail.setAudioVolume(mouse.x / width * rail.audioState.maxVolume)
+                        onPositionChanged: mouse => {
+                            if (pressed) rail.setAudioVolume(mouse.x / width * rail.audioState.maxVolume)
+                        }
+                    }
+                }
+
+                Rectangle {
+                    x: 14
+                    y: 82
+                    width: parent.width - 28
+                    height: 44
+                    radius: 10
+                    color: audioMuteMouse.containsMouse ? rail.surface : "transparent"
+                    border.width: 1
+                    border.color: rail.audioState.muted ? rail.warningAccent : rail.border
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: rail.audioState.muted ? "UNMUTE OUTPUT" : "MUTE OUTPUT"
+                        color: rail.audioState.muted ? rail.warningAccent : rail.foreground
+                        font.family: "DejaVu Sans Mono"
+                        font.pixelSize: 9
+                        font.weight: Font.DemiBold
+                        font.letterSpacing: 0.5
+                    }
+
+                    MouseArea {
+                        id: audioMuteMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: rail.toggleAudioMute()
+                    }
+                }
+            }
+
+            Item {
+                visible: rail.showingAudio
+                x: 22
+                y: 330
+                width: parent.width - 44
+                height: 330
+
+                Text {
+                    x: 0
+                    y: 0
+                    text: "OUTPUT ROUTES / " + String(rail.audioState.sinks.length)
+                    color: rail.mutedForeground
+                    font.family: "DejaVu Sans Mono"
+                    font.pixelSize: 9
+                    font.weight: Font.DemiBold
+                    font.letterSpacing: 0.8
+                }
+
+                Column {
+                    x: 0
+                    y: 28
+                    width: parent.width
+                    spacing: 7
+
+                    Repeater {
+                        model: rail.audioState.sinks
+
+                        Rectangle {
+                            id: routeItem
+                            required property var modelData
+                            readonly property bool active: rail.audioState.sink !== null && modelData.id === rail.audioState.sink.id
+                            width: parent.width
+                            height: 44
+                            radius: 10
+                            color: active ? rail.raisedSurface : (routeMouse.containsMouse ? rail.surface : "transparent")
+                            border.width: active ? 1 : 0
+                            border.color: rail.border
+
+                            Rectangle {
+                                anchors.left: parent.left
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 2
+                                height: 16
+                                radius: 1
+                                color: rail.accent
+                                opacity: routeItem.active ? 1 : 0
+
+                                Behavior on opacity {
+                                    NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
+                                }
+                            }
+
+                            Text {
+                                x: 14
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: parent.width - 112
+                                text: rail.audioState.label(routeItem.modelData)
+                                elide: Text.ElideRight
+                                color: routeItem.active ? rail.foreground : rail.mutedForeground
+                                font.family: "DejaVu Sans"
+                                font.pixelSize: 12
+                                font.weight: routeItem.active ? Font.DemiBold : Font.Medium
+                            }
+
+                            Text {
+                                anchors.right: parent.right
+                                anchors.rightMargin: 14
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 82
+                                horizontalAlignment: Text.AlignRight
+                                text: routeItem.active ? "ACTIVE" : rail.audioState.kind(routeItem.modelData)
+                                color: routeItem.active ? rail.accent : rail.mutedForeground
+                                font.family: "DejaVu Sans Mono"
+                                font.pixelSize: 8
+                                font.weight: Font.DemiBold
+                                font.letterSpacing: 0.5
+                            }
+
+                            MouseArea {
+                                id: routeMouse
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: rail.selectAudioSink(routeItem.modelData.id)
+                            }
+                        }
                     }
                 }
             }
@@ -810,6 +1034,68 @@ PanelWindow {
                 onClicked: {
                     rail.railController.setRailPreview(rail.outputScreen.name, false)
                     rail.railController.toggleRailSurface("media", rail.outputScreen.name)
+                }
+            }
+        }
+
+        Item {
+            id: audioEntry
+            visible: rail.audioState.sinkReady
+            anchors.top: mediaEntry.visible ? mediaEntry.bottom : workspaceColumn.bottom
+            anchors.topMargin: mediaEntry.visible ? 7 : 12
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: 32
+            height: 32
+            scale: audioEntryMouse.containsMouse ? 1.06 : 1
+
+            Behavior on scale {
+                NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
+            }
+
+            Rectangle {
+                anchors.fill: parent
+                radius: 10
+                color: rail.activeSurface === "audio" ? rail.surface : "transparent"
+                border.width: rail.activeSurface === "audio" ? 1 : 0
+                border.color: rail.border
+
+                Behavior on color { ColorAnimation { duration: 120 } }
+            }
+
+            Rectangle {
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                width: 2
+                height: rail.activeSurface === "audio" ? 15 : 0
+                radius: 1
+                color: rail.accent
+
+                Behavior on height {
+                    NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
+                }
+            }
+
+            Image {
+                anchors.centerIn: parent
+                width: 17
+                height: 17
+                source: rail.audioIconSource
+                fillMode: Image.PreserveAspectFit
+                smooth: true
+            }
+
+            MouseArea {
+                id: audioEntryMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onEntered: {
+                    if (!rail.externallyPinned)
+                        rail.railController.selectSurface("audio")
+                }
+                onClicked: {
+                    rail.railController.setRailPreview(rail.outputScreen.name, false)
+                    rail.railController.toggleRailSurface("audio", rail.outputScreen.name)
                 }
             }
         }

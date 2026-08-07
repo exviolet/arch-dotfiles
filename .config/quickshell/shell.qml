@@ -55,6 +55,19 @@ ShellRoot {
         id: niriService
     }
 
+    AudioService {
+        id: audioService
+    }
+
+    Connections {
+        target: audioService
+
+        function onSinkReadyChanged(): void {
+            if (!audioService.sinkReady && root.activeSurface === "audio")
+                root.activeSurface = "system"
+        }
+    }
+
     function code(): string {
         if (kind === "microphone") return "MIC"
         if (kind === "brightness") return "BRT"
@@ -120,8 +133,9 @@ ShellRoot {
 
     function selectSurface(surface: string): string {
         const requested = surface.trim().toLowerCase()
-        if (requested !== "system" && requested !== "media") return "unsupported:" + requested
+        if (requested !== "system" && requested !== "media" && requested !== "audio") return "unsupported:" + requested
         if (requested === "media" && !mediaPlayer) return "unavailable:media"
+        if (requested === "audio" && !audioService.sinkReady) return "unavailable:audio"
         activeSurface = requested
         return activeSurface
     }
@@ -256,6 +270,22 @@ ShellRoot {
             })
         }
 
+        function getAudioState(): string {
+            return JSON.stringify(audioService.state())
+        }
+
+        function setAudioVolume(value: real): string {
+            return audioService.setVolume(value) ? "requested" : "unavailable"
+        }
+
+        function toggleAudioMute(): string {
+            return audioService.toggleMute() ? "requested" : "unavailable"
+        }
+
+        function selectAudioSink(id: int): string {
+            return audioService.selectSink(id) ? "requested:" + String(id) : "unavailable:" + String(id)
+        }
+
         function toggleMedia(): string {
             if (!root.mediaPlayer || !root.mediaPlayer.canTogglePlaying) return "unavailable"
             root.mediaPlayer.togglePlaying()
@@ -331,6 +361,7 @@ ShellRoot {
             niriState: niriService
             railController: root
             mediaPlayer: root.mediaPlayer
+            audioState: audioService
             shellDark: root.dark
             railEnabled: root.railVisible
         }
