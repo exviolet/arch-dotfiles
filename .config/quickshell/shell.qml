@@ -7,6 +7,8 @@ import QtQuick
 ShellRoot {
     id: root
 
+    signal trayInlineMenuRequested(int index, string screen)
+
     property bool windowVisible: false
     property bool presenting: false
     property bool dark: true
@@ -59,11 +61,24 @@ ShellRoot {
         id: audioService
     }
 
+    TrayService {
+        id: trayService
+    }
+
     Connections {
         target: audioService
 
         function onSinkReadyChanged(): void {
             if (!audioService.sinkReady && root.activeSurface === "audio")
+                root.activeSurface = "system"
+        }
+    }
+
+    Connections {
+        target: trayService
+
+        function onItemCountChanged(): void {
+            if (trayService.itemCount === 0 && root.activeSurface === "tray")
                 root.activeSurface = "system"
         }
     }
@@ -133,9 +148,10 @@ ShellRoot {
 
     function selectSurface(surface: string): string {
         const requested = surface.trim().toLowerCase()
-        if (requested !== "system" && requested !== "media" && requested !== "audio") return "unsupported:" + requested
+        if (requested !== "system" && requested !== "media" && requested !== "audio" && requested !== "tray") return "unsupported:" + requested
         if (requested === "media" && !mediaPlayer) return "unavailable:media"
         if (requested === "audio" && !audioService.sinkReady) return "unavailable:audio"
+        if (requested === "tray" && trayService.itemCount === 0) return "unavailable:tray"
         activeSurface = requested
         return activeSurface
     }
@@ -298,6 +314,26 @@ ShellRoot {
             return audioService.selectSource(id) ? "requested:" + String(id) : "unavailable:" + String(id)
         }
 
+        function getTrayState(): string {
+            return JSON.stringify(trayService.snapshot())
+        }
+
+        function activateTrayItem(index: int): string {
+            return trayService.activate(index) ? "requested:" + String(index) : "unavailable:" + String(index)
+        }
+
+        function secondaryActivateTrayItem(index: int): string {
+            return trayService.secondaryActivate(index) ? "requested:" + String(index) : "unavailable:" + String(index)
+        }
+
+        function openTrayItemMenu(index: int, screen: string): string {
+            const item = trayService.itemAt(index)
+            if (!item || !item.hasMenu) return "unavailable:" + String(index)
+            const target = screen === "" ? niriService.focusedOutput : screen
+            root.trayInlineMenuRequested(index, target)
+            return "requested:" + String(index) + ":" + target
+        }
+
         function toggleMedia(): string {
             if (!root.mediaPlayer || !root.mediaPlayer.canTogglePlaying) return "unavailable"
             root.mediaPlayer.togglePlaying()
@@ -374,6 +410,7 @@ ShellRoot {
             railController: root
             mediaPlayer: root.mediaPlayer
             audioState: audioService
+            trayState: trayService
             shellDark: root.dark
             railEnabled: root.railVisible
         }
