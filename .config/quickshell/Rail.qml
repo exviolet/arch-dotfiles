@@ -518,7 +518,7 @@ PanelWindow {
                                 anchors.verticalCenter: parent.verticalCenter
                                 width: 28
                                 height: 28
-                                source: String(trayItem.modelData.icon || "")
+                                source: rail.trayState.iconSource(trayItem.modelData)
                                 fillMode: Image.PreserveAspectFit
                                 smooth: true
                             }

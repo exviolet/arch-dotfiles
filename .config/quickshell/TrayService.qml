@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 import Quickshell.Services.SystemTray
 
 Item {
@@ -26,6 +27,7 @@ Item {
         if (id.indexOf("blueman") !== -1) return "Bluetooth"
         if (id.indexOf("spotify") !== -1) return "Spotify"
         if (id.indexOf("telegram") !== -1) return "Telegram"
+        if (id.indexOf("claude") !== -1) return "Claude"
         const title = String(item.title || item.tooltipTitle || item.id || "Service").trim()
         return title === "" ? "Service" : title
     }
@@ -37,6 +39,7 @@ Item {
         if (id.indexOf("blueman") !== -1) return "Bluetooth enabled"
         if (id.indexOf("spotify") !== -1) return "Playback and app controls"
         if (id.indexOf("telegram") !== -1) return "Messages and app controls"
+        if (id.indexOf("claude") !== -1) return "Desktop app controls"
         const description = String(item.tooltipDescription || "").trim()
         if (description !== "") return description
         const tooltip = String(item.tooltipTitle || "").trim()
@@ -59,6 +62,13 @@ Item {
         if (item.status === Status.NeedsAttention) return "ATTENTION"
         if (item.status === Status.Passive) return "PASSIVE"
         return "ACTIVE"
+    }
+
+    function iconSource(item: var): string {
+        if (!item) return ""
+        const id = String(item.id || "").toLowerCase()
+        if (id.indexOf("claude") !== -1) return Quickshell.iconPath("claude-desktop", true)
+        return String(item.icon || "")
     }
 
     function itemAt(index: int): var {
@@ -92,7 +102,7 @@ Item {
                 "category": categoryLabel(item),
                 "hasMenu": item.hasMenu,
                 "onlyMenu": item.onlyMenu,
-                "icon": String(item.icon || "")
+                "icon": iconSource(item)
             })
         }
         return {

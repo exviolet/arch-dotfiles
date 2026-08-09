@@ -9,7 +9,8 @@ environment {
     // __GL_SYNC_TO_VBLANK "1"
 }
 
-spawn-at-startup "sh" "-c" "waybar & awww-daemon & swaync &"
+spawn-at-startup "awww-daemon"
+spawn-at-startup "swaync"
 spawn-at-startup "sh" "-c" "wl-paste --type text --watch cliphist store"
 spawn-at-startup "sh" "-c" "wl-paste --type image --watch cliphist store"
 spawn-at-startup "sh" "-c" "wl-paste --watch cliphist store"
