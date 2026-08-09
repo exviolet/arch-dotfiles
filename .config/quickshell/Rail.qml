@@ -20,6 +20,7 @@ PanelWindow {
     required property bool railEnabled
 
     readonly property int compactWidth: 46
+    readonly property int maxDrawerWidth: 394
     readonly property bool hasMedia: mediaPlayer !== null
     readonly property string activeSurface: String(railController.activeSurface || "system")
     readonly property bool showingMedia: activeSurface === "media" && hasMedia
@@ -79,7 +80,7 @@ PanelWindow {
 
     screen: outputScreen
     visible: railEnabled
-    implicitWidth: compactWidth + drawerWidth
+    implicitWidth: compactWidth + maxDrawerWidth
     color: "transparent"
     exclusiveZone: compactWidth
     focusable: false
@@ -300,7 +301,7 @@ PanelWindow {
     Rectangle {
         id: drawer
         width: rail.drawerWidth * rail.revealProgress
-        x: rail.drawerWidth - width
+        x: rail.maxDrawerWidth - width
         height: parent.height
         color: rail.surface
         clip: true
@@ -1440,7 +1441,7 @@ PanelWindow {
 
     Rectangle {
         id: railBase
-        x: rail.drawerWidth
+        x: rail.maxDrawerWidth
         width: rail.compactWidth
         height: parent.height
         color: rail.background
