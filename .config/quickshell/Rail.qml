@@ -86,12 +86,13 @@ PanelWindow {
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
     mask: Region {
+        x: Math.floor(rail.width - rail.interactiveWidth)
         width: Math.ceil(rail.interactiveWidth)
         height: rail.height
     }
 
     anchors {
-        left: true
+        right: true
         top: true
         bottom: true
     }
@@ -298,20 +299,22 @@ PanelWindow {
 
     Rectangle {
         id: drawer
-        x: rail.compactWidth
         width: rail.drawerWidth * rail.revealProgress
+        x: rail.drawerWidth - width
         height: parent.height
         color: rail.surface
         clip: true
 
         Item {
             id: drawerContent
+            property real slideOffset: rail.expanded ? 0 : 14
+
             width: rail.drawerWidth
             height: parent.height
-            x: rail.expanded ? 0 : -14
+            x: parent.width - width + slideOffset
             opacity: rail.revealProgress
 
-            Behavior on x {
+            Behavior on slideOffset {
                 NumberAnimation { duration: 250; easing.type: Easing.OutCubic }
             }
 
@@ -1437,7 +1440,7 @@ PanelWindow {
 
     Rectangle {
         id: railBase
-        x: 0
+        x: rail.drawerWidth
         width: rail.compactWidth
         height: parent.height
         color: rail.background
@@ -1940,7 +1943,7 @@ PanelWindow {
     }
 
     Rectangle {
-        x: Math.max(rail.compactWidth - 1, rail.interactiveWidth - 1)
+        x: Math.floor(rail.width - rail.interactiveWidth)
         width: 1
         height: parent.height
         color: rail.border
