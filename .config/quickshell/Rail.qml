@@ -273,6 +273,11 @@ PanelWindow {
     }
 
     QsMenuOpener {
+        id: trayRootMenuOpener
+        menu: rail.showingTrayMenu && rail.trayMenuOwner ? rail.trayMenuOwner.menu : null
+    }
+
+    QsMenuOpener {
         id: trayMenuOpener
         menu: rail.showingTrayMenu ? rail.trayMenuHandle : null
     }
@@ -746,6 +751,16 @@ PanelWindow {
                             smooth: true
                         }
 
+                        Timer {
+                            id: traySubmenuHoverTimer
+                            interval: 180
+                            repeat: false
+                            onTriggered: {
+                                if (trayActionMouse.containsMouse && trayAction.modelData.hasChildren)
+                                    rail.enterTraySubmenu(trayAction.modelData)
+                            }
+                        }
+
                         MouseArea {
                             id: trayActionMouse
                             visible: !trayAction.modelData.isSeparator
@@ -753,7 +768,15 @@ PanelWindow {
                             enabled: trayAction.modelData.enabled
                             hoverEnabled: true
                             cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
-                            onClicked: rail.triggerTrayMenuEntry(trayAction.modelData)
+                            onEntered: {
+                                if (trayAction.modelData.hasChildren)
+                                    traySubmenuHoverTimer.start()
+                            }
+                            onExited: traySubmenuHoverTimer.stop()
+                            onClicked: {
+                                traySubmenuHoverTimer.stop()
+                                rail.triggerTrayMenuEntry(trayAction.modelData)
+                            }
                         }
                     }
                 }
