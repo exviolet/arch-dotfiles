@@ -26,6 +26,8 @@ ShellRoot {
     property string renderer: ""
     property string statusText: ""
     property string targetScreen: ""
+    property bool keyboardFeedbackReady: false
+    property string keyboardLayoutName: ""
 
     readonly property var mediaPlayer: {
         const players = Mpris.players.values
@@ -83,10 +85,53 @@ ShellRoot {
         }
     }
 
+    Connections {
+        target: niriService
+
+        function onKeyboardLayoutChanged(): void {
+            if (niriService.keyboardLayout === "") return
+            root.keyboardLayoutName = niriService.keyboardLayout
+            if (!root.keyboardFeedbackReady) {
+                root.keyboardFeedbackReady = true
+                return
+            }
+            root.presentKeyboardLayout("")
+        }
+    }
+
+    function keyboardLayoutCode(name: string): string {
+        const normalized = name.toLowerCase()
+        if (normalized.indexOf("english") !== -1 && normalized.indexOf("us") !== -1) return "US"
+        if (normalized.indexOf("russian") !== -1) return "RU"
+        if (normalized.indexOf("kazakh") !== -1) return "KK"
+        return name.length >= 2 ? name.slice(0, 2).toUpperCase() : "--"
+    }
+
+    function keyboardLayoutLabel(name: string): string {
+        const normalized = name.toLowerCase()
+        if (normalized.indexOf("english") !== -1) return "English"
+        if (normalized.indexOf("russian") !== -1) return "Русский"
+        if (normalized.indexOf("kazakh") !== -1) return "Қазақша"
+        return name
+    }
+
+    function presentKeyboardLayout(screen: string): string {
+        if (niriService.keyboardLayout === "") return "unavailable"
+        root.kind = "keyboard"
+        root.keyboardLayoutName = niriService.keyboardLayout
+        root.muted = false
+        root.warning = false
+        root.value = 1
+        root.targetScreen = screen === "" ? niriService.focusedOutput : screen
+        root.reveal(1100)
+        return root.keyboardLayoutCode(root.keyboardLayoutName)
+    }
+
     function code(): string {
         if (kind === "microphone") return "MIC"
         if (kind === "brightness") return "BRT"
         if (kind === "renderer") return "GPU"
+        if (kind === "keyboard") return "KEY"
         return "VOL"
     }
 
@@ -94,17 +139,20 @@ ShellRoot {
         if (kind === "microphone") return "Microphone"
         if (kind === "brightness") return "Display brightness"
         if (kind === "renderer") return renderer
+        if (kind === "keyboard") return "Input source"
         return "System volume"
     }
 
     function valueLabel(): string {
         if (kind === "renderer") return profile
+        if (kind === "keyboard") return keyboardLayoutCode(keyboardLayoutName)
         if (muted) return "Muted"
         return Math.round(value * 100) + "%"
     }
 
     function detail(): string {
         if (kind === "renderer") return statusText
+        if (kind === "keyboard") return keyboardLayoutLabel(keyboardLayoutName)
         if (kind === "microphone") return muted ? "Input disabled" : "Input level"
         if (kind === "brightness") return "Built-in display"
         return muted ? "Output disabled" : "Default output"
@@ -271,6 +319,10 @@ ShellRoot {
 
         function getKeyboardLayout(): string {
             return niriService.keyboardLayout
+        }
+
+        function showKeyboardLayout(screen: string): string {
+            return root.presentKeyboardLayout(screen)
         }
 
         function getMediaState(): string {
@@ -526,6 +578,7 @@ ShellRoot {
 
                     Rectangle {
                         id: progressTrack
+                        visible: root.kind !== "keyboard"
                         x: 72
                         y: 67
                         width: parent.width - 94
@@ -555,6 +608,36 @@ ShellRoot {
 
                             Behavior on x {
                                 NumberAnimation { duration: 110; easing.type: Easing.OutCubic }
+                            }
+                        }
+                    }
+
+                    Row {
+                        id: layoutOptions
+                        visible: root.kind === "keyboard"
+                        x: 72
+                        y: 62
+                        spacing: 7
+
+                        Repeater {
+                            model: niriService.keyboardLayouts
+
+                            Rectangle {
+                                required property string modelData
+                                readonly property bool active: modelData === root.keyboardLayoutName
+                                width: 48
+                                height: 18
+                                radius: 5
+                                color: active ? root.accent : root.track
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: root.keyboardLayoutCode(parent.modelData)
+                                    color: parent.active ? root.foreground : root.mutedForeground
+                                    font.family: "GeistMono Nerd Font"
+                                    font.pixelSize: 9
+                                    font.weight: Font.DemiBold
+                                }
                             }
                         }
                     }

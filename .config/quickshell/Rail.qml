@@ -64,6 +64,8 @@ PanelWindow {
     readonly property bool expanded: externallyPinned || previewing
     property real revealProgress: expanded ? 1 : 0
     readonly property real interactiveWidth: compactWidth + drawerWidth * revealProgress
+    readonly property bool outputFocused: niriState.focusedOutput === outputScreen.name
+    property real outputFocusPulse: 0
 
     readonly property color background: shellDark ? "#171817" : "#f4f2ee"
     readonly property color surface: shellDark ? "#222321" : "#e9e6df"
@@ -141,6 +143,34 @@ PanelWindow {
         }
     }
 
+    SequentialAnimation {
+        id: outputFocusPulseAnimation
+
+        NumberAnimation {
+            target: rail
+            property: "outputFocusPulse"
+            from: 0
+            to: 1
+            duration: 110
+            easing.type: Easing.OutCubic
+        }
+
+        PauseAnimation { duration: 90 }
+
+        NumberAnimation {
+            target: rail
+            property: "outputFocusPulse"
+            to: 0
+            duration: 220
+            easing.type: Easing.OutCubic
+        }
+    }
+
+    onOutputFocusedChanged: {
+        if (outputFocused)
+            outputFocusPulseAnimation.restart()
+    }
+
     HoverHandler {
         id: railHover
         onHoveredChanged: {
@@ -172,6 +202,13 @@ PanelWindow {
                 return workspace.name !== "" ? workspace.name : String(workspace.idx)
         }
         return "—"
+    }
+
+    function outputIdentity(): string {
+        if (outputScreen.name === "eDP-1") return "LAP"
+        if (outputScreen.name.indexOf("HDMI") === 0) return "EXT"
+        const name = String(outputScreen.name || "OUT")
+        return name.slice(0, 3).toUpperCase()
     }
 
     function keyboardLayoutCode(): string {
@@ -1513,10 +1550,28 @@ PanelWindow {
             }
         }
 
+        Text {
+            id: outputIdentityLabel
+            anchors.top: upperRule.bottom
+            anchors.topMargin: 8
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: rail.outputIdentity()
+            color: rail.outputFocused ? rail.accent : rail.mutedForeground
+            opacity: rail.outputFocused ? 1 : 0.64
+            scale: 1 + rail.outputFocusPulse * 0.08
+            font.family: "DejaVu Sans Mono"
+            font.pixelSize: 8
+            font.weight: Font.DemiBold
+            font.letterSpacing: 0.8
+
+            Behavior on color { ColorAnimation { duration: 140 } }
+            Behavior on opacity { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
+        }
+
         Column {
             id: workspaceColumn
-            anchors.top: upperRule.bottom
-            anchors.topMargin: 14
+            anchors.top: outputIdentityLabel.bottom
+            anchors.topMargin: 10
             anchors.horizontalCenter: parent.horizontalCenter
             spacing: 8
 
@@ -1528,6 +1583,11 @@ PanelWindow {
                     required property var modelData
                     width: 32
                     height: 32
+                    opacity: rail.outputFocused || modelData.is_urgent ? 1 : 0.58
+
+                    Behavior on opacity {
+                        NumberAnimation { duration: 170; easing.type: Easing.OutCubic }
+                    }
 
                     Rectangle {
                         anchors.fill: parent
@@ -1571,6 +1631,21 @@ PanelWindow {
                         onClicked: rail.focusWorkspace(rail.outputScreen.name, workspaceItem.modelData.idx)
                     }
                 }
+            }
+        }
+
+        Rectangle {
+            id: outputFocusSpine
+            anchors.left: parent.left
+            y: outputIdentityLabel.y - 4
+            width: 2 + rail.outputFocusPulse
+            height: outputIdentityLabel.height + 8 + workspaceColumn.height
+            radius: 1
+            color: rail.accent
+            opacity: rail.outputFocused ? 0.72 + rail.outputFocusPulse * 0.28 : 0
+
+            Behavior on opacity {
+                NumberAnimation { duration: 170; easing.type: Easing.OutCubic }
             }
         }
 
