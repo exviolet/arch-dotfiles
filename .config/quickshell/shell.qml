@@ -63,6 +63,10 @@ ShellRoot {
         id: audioService
     }
 
+    BrightnessService {
+        id: brightnessService
+    }
+
     TrayService {
         id: trayService
     }
@@ -73,6 +77,19 @@ ShellRoot {
         function onSinkReadyChanged(): void {
             if (!audioService.sinkReady && root.activeSurface === "audio")
                 root.activeSurface = "system"
+        }
+    }
+
+    Connections {
+        target: brightnessService
+
+        function onFeedbackRequested(value: real, screen: string): void {
+            root.kind = "brightness"
+            root.value = value
+            root.muted = false
+            root.warning = false
+            root.targetScreen = screen
+            root.reveal(1800)
         }
     }
 
@@ -125,6 +142,29 @@ ShellRoot {
         root.targetScreen = screen === "" ? niriService.focusedOutput : screen
         root.reveal(1100)
         return root.keyboardLayoutCode(root.keyboardLayoutName)
+    }
+
+    function presentAudioFeedback(value: real, muted: bool, screen: string): void {
+        root.kind = "volume"
+        root.value = Math.max(0, Math.min(audioService.maxVolume, value))
+        root.muted = muted
+        root.warning = false
+        root.targetScreen = screen === "" ? niriService.focusedOutput : screen
+        root.reveal(1800)
+    }
+
+    function adjustAudioVolume(delta: real, screen: string): string {
+        const requested = Math.max(0, Math.min(audioService.maxVolume, audioService.volume + delta))
+        if (!audioService.setVolume(requested)) return "unavailable"
+        root.presentAudioFeedback(requested, audioService.muted, screen)
+        return String(Math.round(requested * 100))
+    }
+
+    function toggleAudioMuteWithFeedback(screen: string): string {
+        const requestedMuted = !audioService.muted
+        if (!audioService.toggleMute()) return "unavailable"
+        root.presentAudioFeedback(audioService.volume, requestedMuted, screen)
+        return requestedMuted ? "muted" : "unmuted"
     }
 
     function code(): string {
@@ -232,6 +272,7 @@ ShellRoot {
         function showOsd(kind: string, value: real, muted: bool, screen: string): void {
             root.kind = kind
             root.value = Math.max(0, Math.min(1, value))
+            if (kind === "brightness") brightnessService.acceptValue(root.value)
             root.muted = muted
             root.warning = false
             root.targetScreen = screen
@@ -350,6 +391,22 @@ ShellRoot {
             return audioService.toggleMute() ? "requested" : "unavailable"
         }
 
+        function adjustAudioVolume(delta: real, screen: string): string {
+            return root.adjustAudioVolume(delta, screen)
+        }
+
+        function toggleAudioMuteWithFeedback(screen: string): string {
+            return root.toggleAudioMuteWithFeedback(screen)
+        }
+
+        function getBrightnessState(): string {
+            return brightnessService.ready ? String(brightnessService.percent) : "unavailable"
+        }
+
+        function adjustBrightness(step: int, screen: string): string {
+            return brightnessService.adjust(step, screen) ? "requested" : "busy"
+        }
+
         function setMicrophoneVolume(value: real): string {
             return audioService.setSourceVolume(value) ? "requested" : "unavailable"
         }
@@ -462,6 +519,7 @@ ShellRoot {
             railController: root
             mediaPlayer: root.mediaPlayer
             audioState: audioService
+            brightnessState: brightnessService
             trayState: trayService
             shellDark: root.dark
             railEnabled: root.railVisible

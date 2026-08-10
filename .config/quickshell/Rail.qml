@@ -15,6 +15,7 @@ PanelWindow {
     required property var railController
     required property var mediaPlayer
     required property var audioState
+    required property var brightnessState
     required property var trayState
     required property bool shellDark
     required property bool railEnabled
@@ -1771,15 +1772,26 @@ PanelWindow {
             MouseArea {
                 id: audioEntryMouse
                 anchors.fill: parent
+                acceptedButtons: Qt.LeftButton | Qt.MiddleButton
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 onEntered: {
                     if (!rail.externallyPinned)
                         rail.railController.selectSurface("audio")
                 }
-                onClicked: {
+                onClicked: mouse => {
+                    if (mouse.button === Qt.MiddleButton) {
+                        rail.railController.toggleAudioMuteWithFeedback(rail.outputScreen.name)
+                        return
+                    }
                     rail.railController.setRailPreview(rail.outputScreen.name, false)
                     rail.railController.toggleRailSurface("audio", rail.outputScreen.name)
+                }
+                onWheel: wheel => {
+                    const delta = wheel.angleDelta.y !== 0 ? wheel.angleDelta.y : wheel.pixelDelta.y
+                    if (delta !== 0)
+                        rail.railController.adjustAudioVolume(delta > 0 ? 0.05 : -0.05, rail.outputScreen.name)
+                    wheel.accepted = true
                 }
             }
         }
@@ -1916,6 +1928,65 @@ PanelWindow {
                 font.pixelSize: 8
                 font.weight: Font.DemiBold
                 font.letterSpacing: 0.8
+            }
+        }
+
+        Item {
+            id: brightnessBlock
+            visible: rail.brightnessState.ready
+            anchors.bottom: layoutBlock.top
+            anchors.bottomMargin: 14
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: 32
+            height: 31
+            scale: brightnessMouse.containsMouse ? 1.06 : 1
+
+            Behavior on scale {
+                NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
+            }
+
+            Text {
+                anchors.top: parent.top
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: brightnessMouse.containsMouse ? String(rail.brightnessState.percent) : "BRT"
+                color: rail.foreground
+                font.family: "DejaVu Sans Mono"
+                font.pixelSize: 9
+                font.weight: Font.DemiBold
+            }
+
+            Rectangle {
+                anchors.bottom: parent.bottom
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: 20
+                height: 2
+                radius: 1
+                color: rail.border
+
+                Rectangle {
+                    width: parent.width * rail.brightnessState.value
+                    height: parent.height
+                    radius: 1
+                    color: rail.accent
+
+                    Behavior on width {
+                        NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
+                    }
+                }
+            }
+
+            MouseArea {
+                id: brightnessMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: rail.brightnessState.show(rail.outputScreen.name)
+                onWheel: wheel => {
+                    const delta = wheel.angleDelta.y !== 0 ? wheel.angleDelta.y : wheel.pixelDelta.y
+                    if (delta !== 0)
+                        rail.brightnessState.adjust(delta > 0 ? 5 : -5, rail.outputScreen.name)
+                    wheel.accepted = true
+                }
             }
         }
 
