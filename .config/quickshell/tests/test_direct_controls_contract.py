@@ -40,7 +40,10 @@ class DirectControlContractTests(unittest.TestCase):
         self.assertIn('readonly property color layoutUs:', RAIL)
         self.assertIn('readonly property color layoutRu:', RAIL)
         self.assertIn('readonly property color layoutKk:', RAIL)
+        self.assertIn('id: layoutTile', RAIL)
         self.assertIn('color: rail.keyboardLayoutColor()', RAIL)
+        self.assertIn('keyboardLayoutCode() === "KK" ? "#171817" : "#ffffff"', RAIL)
+        self.assertNotIn('id: layoutMarker', RAIL)
 
 
 if __name__ == "__main__":

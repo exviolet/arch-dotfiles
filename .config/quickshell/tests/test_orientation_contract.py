@@ -30,6 +30,14 @@ class OrientationContractTests(unittest.TestCase):
         self.assertIn('screen === "" ? niriService.focusedOutput : screen', SHELL)
         self.assertIn('keyboardFeedbackReady', SHELL)
 
+    def test_keyboard_feedback_uses_matching_active_tile_colors(self):
+        self.assertIn('readonly property color layoutUs:', SHELL)
+        self.assertIn('readonly property color layoutRu:', SHELL)
+        self.assertIn('readonly property color layoutKk:', SHELL)
+        self.assertIn('function keyboardLayoutColor(name: string): color', SHELL)
+        self.assertIn('color: active ? root.keyboardLayoutColor(modelData) : root.track', SHELL)
+        self.assertIn('keyboardLayoutCode(name) === "KK" ? "#171817" : "#ffffff"', SHELL)
+
 
 if __name__ == "__main__":
     unittest.main()

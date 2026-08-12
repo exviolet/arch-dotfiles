@@ -77,9 +77,9 @@ PanelWindow {
     readonly property color border: shellDark ? "#343633" : "#d6d3cc"
     readonly property color accent: "#d14d41"
     readonly property color warningAccent: "#d08a32"
-    readonly property color layoutUs: shellDark ? "#6fa8dc" : "#356ea3"
-    readonly property color layoutRu: shellDark ? "#e07167" : "#b53f37"
-    readonly property color layoutKk: shellDark ? "#56b8ad" : "#247f76"
+    readonly property color layoutUs: "#356ea3"
+    readonly property color layoutRu: shellDark ? "#b53f37" : "#a93832"
+    readonly property color layoutKk: shellDark ? "#d0a13c" : "#bd841e"
     readonly property var screenWorkspaces: niriState.workspaces.filter(workspace => workspace.output === outputScreen.name)
     readonly property var battery: UPower.displayDevice
     readonly property int batteryPercentage: battery.ready ? Math.round(battery.percentage * 100) : 0
@@ -231,6 +231,10 @@ PanelWindow {
         if (code === "RU") return layoutRu
         if (code === "KK") return layoutKk
         return foreground
+    }
+
+    function keyboardLayoutForeground(): color {
+        return keyboardLayoutCode() === "KK" ? "#171817" : "#ffffff"
     }
 
     function switchKeyboardLayout(): void {
@@ -2028,30 +2032,21 @@ PanelWindow {
                 NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
             }
 
-            Text {
-                anchors.top: parent.top
-                anchors.horizontalCenter: parent.horizontalCenter
-                text: rail.keyboardLayoutCode()
-                color: rail.keyboardLayoutColor()
-                font.family: "DejaVu Sans Mono"
-                font.pixelSize: 10
-                font.weight: Font.DemiBold
-
-                Behavior on color { ColorAnimation { duration: 120 } }
-            }
-
             Rectangle {
-                anchors.bottom: parent.bottom
-                anchors.horizontalCenter: parent.horizontalCenter
-                width: 20
-                height: 1
-                color: rail.border
+                id: layoutTile
+                anchors.fill: parent
+                radius: 10
+                color: rail.keyboardLayoutColor()
 
-                Rectangle {
-                    anchors.left: parent.left
-                    width: 6
-                    height: 1
-                    color: rail.keyboardLayoutColor()
+                Behavior on color { ColorAnimation { duration: 140 } }
+
+                Text {
+                    anchors.centerIn: parent
+                    text: rail.keyboardLayoutCode()
+                    color: rail.keyboardLayoutForeground()
+                    font.family: "DejaVu Sans Mono"
+                    font.pixelSize: 10
+                    font.weight: Font.DemiBold
 
                     Behavior on color { ColorAnimation { duration: 120 } }
                 }

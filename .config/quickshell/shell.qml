@@ -54,6 +54,9 @@ ShellRoot {
     readonly property color track: dark ? "#30322f" : "#dedbd4"
     readonly property color accent: "#d14d41"
     readonly property color warningAccent: "#d08a32"
+    readonly property color layoutUs: "#356ea3"
+    readonly property color layoutRu: dark ? "#b53f37" : "#a93832"
+    readonly property color layoutKk: dark ? "#d0a13c" : "#bd841e"
 
     NiriService {
         id: niriService
@@ -122,6 +125,18 @@ ShellRoot {
         if (normalized.indexOf("russian") !== -1) return "RU"
         if (normalized.indexOf("kazakh") !== -1) return "KK"
         return name.length >= 2 ? name.slice(0, 2).toUpperCase() : "--"
+    }
+
+    function keyboardLayoutColor(name: string): color {
+        const code = keyboardLayoutCode(name)
+        if (code === "US") return layoutUs
+        if (code === "RU") return layoutRu
+        if (code === "KK") return layoutKk
+        return accent
+    }
+
+    function keyboardLayoutForeground(name: string): color {
+        return keyboardLayoutCode(name) === "KK" ? "#171817" : "#ffffff"
     }
 
     function keyboardLayoutLabel(name: string): string {
@@ -686,12 +701,14 @@ ShellRoot {
                                 width: 48
                                 height: 18
                                 radius: 5
-                                color: active ? root.accent : root.track
+                                color: active ? root.keyboardLayoutColor(modelData) : root.track
+
+                                Behavior on color { ColorAnimation { duration: 120 } }
 
                                 Text {
                                     anchors.centerIn: parent
                                     text: root.keyboardLayoutCode(parent.modelData)
-                                    color: parent.active ? root.foreground : root.mutedForeground
+                                    color: parent.active ? root.keyboardLayoutForeground(parent.modelData) : root.mutedForeground
                                     font.family: "GeistMono Nerd Font"
                                     font.pixelSize: 9
                                     font.weight: Font.DemiBold
