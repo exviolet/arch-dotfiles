@@ -28,6 +28,20 @@ class DirectControlContractTests(unittest.TestCase):
         self.assertIn('function onFeedbackRequested(value: real, screen: string): void', SHELL)
         self.assertIn('brightnessState: brightnessService', SHELL)
 
+    def test_brightness_compact_state_uses_iconoir_icon(self):
+        icon = ROOT / "icons" / "iconoir" / "brightness.svg"
+        self.assertTrue(icon.exists())
+        self.assertIn('readonly property url brightnessIconSource:', RAIL)
+        self.assertIn('source: rail.brightnessIconSource', RAIL)
+        self.assertNotIn(': "BRT"', RAIL)
+
+    def test_keyboard_layout_has_stable_semantic_colors(self):
+        self.assertIn('function keyboardLayoutColor(): color', RAIL)
+        self.assertIn('readonly property color layoutUs:', RAIL)
+        self.assertIn('readonly property color layoutRu:', RAIL)
+        self.assertIn('readonly property color layoutKk:', RAIL)
+        self.assertIn('color: rail.keyboardLayoutColor()', RAIL)
+
 
 if __name__ == "__main__":
     unittest.main()

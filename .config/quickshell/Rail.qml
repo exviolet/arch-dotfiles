@@ -30,6 +30,7 @@ PanelWindow {
     readonly property string audioSinkLabel: audioState.label(audioState.sink)
     readonly property string audioSinkKind: audioState.kind(audioState.sink)
     readonly property url audioIconSource: Qt.resolvedUrl(audioState.muted ? "icons/iconoir/sound-off.svg" : "icons/iconoir/sound-high.svg")
+    readonly property url brightnessIconSource: Qt.resolvedUrl("icons/iconoir/brightness.svg")
     readonly property bool mediaPlaying: hasMedia && mediaPlayer.playbackState === MprisPlaybackState.Playing
     readonly property string mediaIdentity: hasMedia ? String(mediaPlayer.identity) : ""
     readonly property string mediaDesktopEntryId: hasMedia ? String(mediaPlayer.desktopEntry) : ""
@@ -76,6 +77,9 @@ PanelWindow {
     readonly property color border: shellDark ? "#343633" : "#d6d3cc"
     readonly property color accent: "#d14d41"
     readonly property color warningAccent: "#d08a32"
+    readonly property color layoutUs: shellDark ? "#6fa8dc" : "#356ea3"
+    readonly property color layoutRu: shellDark ? "#e07167" : "#b53f37"
+    readonly property color layoutKk: shellDark ? "#56b8ad" : "#247f76"
     readonly property var screenWorkspaces: niriState.workspaces.filter(workspace => workspace.output === outputScreen.name)
     readonly property var battery: UPower.displayDevice
     readonly property int batteryPercentage: battery.ready ? Math.round(battery.percentage * 100) : 0
@@ -219,6 +223,14 @@ PanelWindow {
         if (normalized.indexOf("russian") !== -1) return "RU"
         if (normalized.indexOf("kazakh") !== -1) return "KK"
         return name.length >= 2 ? name.slice(0, 2).toUpperCase() : "--"
+    }
+
+    function keyboardLayoutColor(): color {
+        const code = keyboardLayoutCode()
+        if (code === "US") return layoutUs
+        if (code === "RU") return layoutRu
+        if (code === "KK") return layoutKk
+        return foreground
     }
 
     function switchKeyboardLayout(): void {
@@ -1945,10 +1957,22 @@ PanelWindow {
                 NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
             }
 
+            Image {
+                anchors.top: parent.top
+                anchors.horizontalCenter: parent.horizontalCenter
+                visible: !brightnessMouse.containsMouse
+                width: 16
+                height: 16
+                source: rail.brightnessIconSource
+                fillMode: Image.PreserveAspectFit
+                smooth: true
+            }
+
             Text {
                 anchors.top: parent.top
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: brightnessMouse.containsMouse ? String(rail.brightnessState.percent) : "BRT"
+                visible: brightnessMouse.containsMouse
+                text: String(rail.brightnessState.percent)
                 color: rail.foreground
                 font.family: "DejaVu Sans Mono"
                 font.pixelSize: 9
@@ -2008,7 +2032,7 @@ PanelWindow {
                 anchors.top: parent.top
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: rail.keyboardLayoutCode()
-                color: rail.foreground
+                color: rail.keyboardLayoutColor()
                 font.family: "DejaVu Sans Mono"
                 font.pixelSize: 10
                 font.weight: Font.DemiBold
@@ -2027,7 +2051,9 @@ PanelWindow {
                     anchors.left: parent.left
                     width: 6
                     height: 1
-                    color: rail.accent
+                    color: rail.keyboardLayoutColor()
+
+                    Behavior on color { ColorAnimation { duration: 120 } }
                 }
             }
 
