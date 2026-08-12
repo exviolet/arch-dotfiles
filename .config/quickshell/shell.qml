@@ -626,7 +626,30 @@ ShellRoot {
                         font.weight: Font.DemiBold
                     }
 
+                    Rectangle {
+                        id: keyboardValueTile
+                        visible: root.kind === "keyboard"
+                        x: parent.width - 66
+                        y: 11
+                        width: 46
+                        height: 22
+                        radius: 6
+                        color: root.keyboardLayoutColor(root.keyboardLayoutName)
+
+                        Behavior on color { ColorAnimation { duration: 120 } }
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: root.valueLabel()
+                            color: root.keyboardLayoutForeground(root.keyboardLayoutName)
+                            font.family: "GeistMono Nerd Font"
+                            font.pixelSize: 10
+                            font.weight: Font.DemiBold
+                        }
+                    }
+
                     Text {
+                        visible: root.kind !== "keyboard"
                         x: parent.width - 82
                         y: 15
                         width: 62

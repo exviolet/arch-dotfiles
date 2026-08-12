@@ -38,6 +38,12 @@ class OrientationContractTests(unittest.TestCase):
         self.assertIn('color: active ? root.keyboardLayoutColor(modelData) : root.track', SHELL)
         self.assertIn('keyboardLayoutCode(name) === "KK" ? "#171817" : "#ffffff"', SHELL)
 
+    def test_keyboard_feedback_colors_the_top_right_value_tile(self):
+        self.assertIn('id: keyboardValueTile', SHELL)
+        self.assertIn('visible: root.kind === "keyboard"', SHELL)
+        self.assertIn('color: root.keyboardLayoutColor(root.keyboardLayoutName)', SHELL)
+        self.assertIn('color: root.keyboardLayoutForeground(root.keyboardLayoutName)', SHELL)
+
 
 if __name__ == "__main__":
     unittest.main()
