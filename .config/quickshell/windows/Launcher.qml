@@ -5,6 +5,7 @@ import Quickshell.Wayland
 import QtQuick
 
 import "../services"
+import "../components"
 
 PanelWindow {
     id: launcher
@@ -340,20 +341,19 @@ PanelWindow {
             border.width: 1
             border.color: queryInput.activeFocus ? Theme.accent : Theme.border
 
-            Rectangle {
-                width: 3
-                height: 20
-                x: 14
+            ThemeIcon {
+                x: 16
                 anchors.verticalCenter: parent.verticalCenter
-                radius: 1.5
-                color: Theme.accent
+                size: 18
+                name: "search"
+                color: queryInput.activeFocus ? Theme.accent : Theme.subtleForeground
             }
 
             TextInput {
                 id: queryInput
 
-                x: 30
-                width: parent.width - 150
+                x: 46
+                width: parent.width - 166
                 anchors.verticalCenter: parent.verticalCenter
                 // Deliberately not bound to launcher.query: typing assigns
                 // text directly and would break the binding. The query is a
@@ -407,11 +407,20 @@ PanelWindow {
             }
         }
 
+        ThemeIcon {
+            visible: launcher.windowResults.length > 0
+            x: launcher.cardPadding + 4
+            y: queryField.y + queryField.height + 12
+            size: 11
+            name: "app-window"
+            color: Theme.subtleForeground
+        }
+
         Text {
             id: windowsHeader
 
             visible: launcher.windowResults.length > 0
-            x: launcher.cardPadding + 4
+            x: launcher.cardPadding + 20
             y: queryField.y + queryField.height + 12
             text: "OPEN WINDOWS"
             color: Theme.subtleForeground
@@ -541,10 +550,18 @@ PanelWindow {
             }
         }
 
+        ThemeIcon {
+            x: launcher.cardPadding + 4
+            y: appsHeader.y
+            size: 11
+            name: "view-grid"
+            color: Theme.subtleForeground
+        }
+
         Text {
             id: appsHeader
 
-            x: launcher.cardPadding + 4
+            x: launcher.cardPadding + 20
             y: launcher.windowResults.length === 0
                 ? queryField.y + queryField.height + 12
                 : windowList.y + windowList.height + 10

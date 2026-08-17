@@ -5,6 +5,7 @@ import Quickshell.Wayland
 import QtQuick
 
 import "../services"
+import "../components"
 
 PanelWindow {
     id: clipboard
@@ -170,20 +171,19 @@ PanelWindow {
             border.width: 1
             border.color: queryInput.activeFocus ? Theme.accent : Theme.border
 
-            Rectangle {
-                width: 3
-                height: 20
-                x: 14
+            ThemeIcon {
+                x: 16
                 anchors.verticalCenter: parent.verticalCenter
-                radius: 1.5
-                color: Theme.accent
+                size: 18
+                name: "search"
+                color: queryInput.activeFocus ? Theme.accent : Theme.subtleForeground
             }
 
             TextInput {
                 id: queryInput
 
-                x: 30
-                width: parent.width - 320
+                x: 46
+                width: parent.width - 336
                 anchors.verticalCenter: parent.verticalCenter
                 color: Theme.foreground
                 selectionColor: Theme.accent
