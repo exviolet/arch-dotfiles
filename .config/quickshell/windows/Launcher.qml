@@ -34,17 +34,23 @@ PanelWindow {
             if (entry.noDisplay) continue
 
             const name = String(entry.name || "")
+            const score = AppUsageService.score(String(entry.id || ""))
+
             if (needle === "") {
-                matches.push({ "entry": entry, "rank": 2, "name": name })
+                matches.push({ "entry": entry, "rank": 2, "name": name, "score": score })
                 continue
             }
 
             const rank = launcher.rankEntry(entry, name, needle)
-            if (rank >= 0) matches.push({ "entry": entry, "rank": rank, "name": name })
+            if (rank >= 0) matches.push({ "entry": entry, "rank": rank, "name": name, "score": score })
         }
 
+        // Frecency breaks ties inside a rank tier but never jumps a tier, so
+        // typing the start of a name still wins over a well-used entry that
+        // only matches on metadata.
         matches.sort((left, right) => {
             if (left.rank !== right.rank) return left.rank - right.rank
+            if (left.score !== right.score) return right.score - left.score
             return left.name.localeCompare(right.name)
         })
 
@@ -61,7 +67,8 @@ PanelWindow {
         const haystack = [
             String(entry.genericName || ""),
             String(entry.comment || ""),
-            (entry.keywords || []).join(" ")
+            (entry.keywords || []).join(" "),
+            (entry.categories || []).join(" ")
         ].join(" ").toLowerCase()
 
         return haystack.indexOf(needle) !== -1 ? 2 : -1
@@ -83,6 +90,7 @@ PanelWindow {
     function activateSelected(): void {
         const entry = launcher.results[launcher.selectedIndex]
         if (!entry) return
+        AppUsageService.record(String(entry.id || ""))
         entry.execute()
         launcher.launcherController.hideLauncher()
     }
