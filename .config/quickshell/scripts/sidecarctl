@@ -91,7 +91,7 @@ wait_ready() {
 
 usage() {
     printf '%s\n' \
-        'Usage: sidecarctl <volume-up|volume-down|volume-mute|mic-up|mic-down|mic-mute|brightness-up|brightness-down|renderer|startup|hide|theme|launcher-toggle|clipboard-toggle>' >&2
+        'Usage: sidecarctl <volume-up|volume-down|volume-mute|mic-up|mic-down|mic-mute|brightness-up|brightness-down|renderer|startup|hide|theme|launcher-toggle|clipboard-toggle|powermenu-toggle>' >&2
     exit 2
 }
 
@@ -146,6 +146,9 @@ case "${1:-}" in
         ;;
     clipboard-toggle)
         ipc toggleClipboard "$(focused_screen)"
+        ;;
+    powermenu-toggle)
+        ipc togglePowermenu "$(focused_screen)"
         ;;
     *)
         usage

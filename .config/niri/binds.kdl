@@ -37,7 +37,7 @@ binds {
     Mod+Shift+T hotkey-overlay-title="Toggle desktop theme" { spawn "bash" "-c" "$HOME/.config/rofi/scripts/toggle-gtk-theme.sh toggle"; }
     Mod+Shift+C { spawn "sh" "-c" "rofi -show calc -theme ~/.config/rofi/launchers/calc.rasi"; }
     Mod+Shift+B { spawn "bash" "-c" "$HOME/.config/rofi/scripts/bluetoothctlmenu.sh"; }
-    Mod+Shift+W { spawn "bash" "-c" "$HOME/.config/rofi/scripts/powermenu.sh"; }
+    Mod+Shift+W hotkey-overlay-title="Session controls" { spawn "/home/ex1te/.config/quickshell/scripts/sidecarctl" "powermenu-toggle"; }
 
     // You can also use a shell. Do this if you need pipes, multiple commands, etc.
     // Note: the entire command goes as a single argument in the end.

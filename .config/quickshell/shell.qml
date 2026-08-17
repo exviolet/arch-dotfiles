@@ -35,6 +35,8 @@ ShellRoot {
     property string launcherScreen: ""
     property bool clipboardVisible: false
     property string clipboardScreen: ""
+    property bool powermenuVisible: false
+    property string powermenuScreen: ""
 
     readonly property var mediaPlayer: {
         const players = Mpris.players.values
@@ -219,6 +221,7 @@ ShellRoot {
         const target = screen === "" ? NiriService.focusedOutput : screen
         // Only one keyboard-grabbing overlay at a time.
         clipboardVisible = false
+        powermenuVisible = false
         launcherScreen = target
         launcherVisible = true
         return "shown:" + target
@@ -236,9 +239,31 @@ ShellRoot {
         return showLauncher(target)
     }
 
+    function showPowermenu(screen: string): string {
+        const target = screen === "" ? NiriService.focusedOutput : screen
+        launcherVisible = false
+        clipboardVisible = false
+        powermenuScreen = target
+        powermenuVisible = true
+        return "shown:" + target
+    }
+
+    function hidePowermenu(): string {
+        powermenuVisible = false
+        powermenuScreen = ""
+        return "hidden"
+    }
+
+    function togglePowermenu(screen: string): string {
+        const target = screen === "" ? NiriService.focusedOutput : screen
+        if (powermenuVisible && powermenuScreen === target) return hidePowermenu()
+        return showPowermenu(target)
+    }
+
     function showClipboard(screen: string): string {
         const target = screen === "" ? NiriService.focusedOutput : screen
         launcherVisible = false
+        powermenuVisible = false
         clipboardScreen = target
         clipboardVisible = true
         return "shown:" + target
@@ -379,6 +404,22 @@ ShellRoot {
 
         function getClipboardState(): string {
             return root.clipboardVisible ? "shown:" + root.clipboardScreen : "hidden"
+        }
+
+        function showPowermenu(screen: string): string {
+            return root.showPowermenu(screen)
+        }
+
+        function hidePowermenu(): string {
+            return root.hidePowermenu()
+        }
+
+        function togglePowermenu(screen: string): string {
+            return root.togglePowermenu(screen)
+        }
+
+        function getPowermenuState(): string {
+            return root.powermenuVisible ? "shown:" + root.powermenuScreen : "hidden"
         }
 
         function setRailVisible(visible: bool): void {
@@ -617,6 +658,17 @@ ShellRoot {
 
             outputScreen: modelData
             clipboardController: root
+        }
+    }
+
+    Variants {
+        model: Quickshell.screens
+
+        Powermenu {
+            required property var modelData
+
+            outputScreen: modelData
+            powerController: root
         }
     }
 
