@@ -1,8 +1,10 @@
+pragma Singleton
+
 import Quickshell
 import Quickshell.Io
 import QtQuick
 
-Scope {
+Singleton {
     id: root
 
     signal feedbackRequested(real value, string screen)

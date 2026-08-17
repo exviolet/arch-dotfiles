@@ -7,30 +7,26 @@ import Quickshell.Services.UPower
 import Quickshell.Wayland
 import QtQuick
 
+import "../services"
+
 PanelWindow {
     id: rail
 
     required property var outputScreen
-    required property var niriState
     required property var railController
     required property var mediaPlayer
-    required property var audioState
-    required property var brightnessState
-    required property var trayState
-    required property bool shellDark
-    required property bool railEnabled
 
     readonly property int compactWidth: 46
     readonly property int maxDrawerWidth: 394
     readonly property bool hasMedia: mediaPlayer !== null
     readonly property string activeSurface: String(railController.activeSurface || "system")
     readonly property bool showingMedia: activeSurface === "media" && hasMedia
-    readonly property bool showingAudio: activeSurface === "audio" && audioState.sinkReady
-    readonly property bool showingTray: activeSurface === "tray" && trayState.itemCount > 0
-    readonly property string audioSinkLabel: audioState.label(audioState.sink)
-    readonly property string audioSinkKind: audioState.kind(audioState.sink)
-    readonly property url audioIconSource: Qt.resolvedUrl(audioState.muted ? "icons/iconoir/sound-off.svg" : "icons/iconoir/sound-high.svg")
-    readonly property url brightnessIconSource: Qt.resolvedUrl("icons/iconoir/brightness.svg")
+    readonly property bool showingAudio: activeSurface === "audio" && AudioService.sinkReady
+    readonly property bool showingTray: activeSurface === "tray" && TrayService.itemCount > 0
+    readonly property string audioSinkLabel: AudioService.label(AudioService.sink)
+    readonly property string audioSinkKind: AudioService.kind(AudioService.sink)
+    readonly property url audioIconSource: Qt.resolvedUrl(AudioService.muted ? "../icons/iconoir/sound-off.svg" : "../icons/iconoir/sound-high.svg")
+    readonly property url brightnessIconSource: Qt.resolvedUrl("../icons/iconoir/brightness.svg")
     readonly property bool mediaPlaying: hasMedia && mediaPlayer.playbackState === MprisPlaybackState.Playing
     readonly property string mediaIdentity: hasMedia ? String(mediaPlayer.identity) : ""
     readonly property string mediaDesktopEntryId: hasMedia ? String(mediaPlayer.desktopEntry) : ""
@@ -43,9 +39,9 @@ PanelWindow {
         return mediaApplication ? String(mediaApplication.icon) : mediaDesktopEntryId
     }
     readonly property string mediaIconSource: mediaIconName !== "" ? Quickshell.iconPath(mediaIconName, true) : ""
-    readonly property url trayIconSource: Qt.resolvedUrl("icons/iconoir/app-notification.svg")
-    readonly property url trayBackIconSource: Qt.resolvedUrl("icons/iconoir/nav-arrow-left.svg")
-    readonly property url trayForwardIconSource: Qt.resolvedUrl("icons/iconoir/nav-arrow-right.svg")
+    readonly property url trayIconSource: Qt.resolvedUrl("../icons/iconoir/app-notification.svg")
+    readonly property url trayBackIconSource: Qt.resolvedUrl("../icons/iconoir/nav-arrow-left.svg")
+    readonly property url trayForwardIconSource: Qt.resolvedUrl("../icons/iconoir/nav-arrow-right.svg")
     property var trayMenuOwner: null
     property var trayMenuHandle: null
     property var trayMenuStack: []
@@ -66,27 +62,16 @@ PanelWindow {
     readonly property bool expanded: externallyPinned || previewing
     property real revealProgress: expanded ? 1 : 0
     readonly property real interactiveWidth: compactWidth + drawerWidth * revealProgress
-    readonly property bool outputFocused: niriState.focusedOutput === outputScreen.name
+    readonly property bool outputFocused: NiriService.focusedOutput === outputScreen.name
     property real outputFocusPulse: 0
 
-    readonly property color background: shellDark ? "#171817" : "#f4f2ee"
-    readonly property color surface: shellDark ? "#222321" : "#e9e6df"
-    readonly property color raisedSurface: shellDark ? "#292a28" : "#dfdcd5"
-    readonly property color foreground: shellDark ? "#f0efeb" : "#1d1e1c"
-    readonly property color mutedForeground: shellDark ? "#8f918b" : "#6e706a"
-    readonly property color border: shellDark ? "#343633" : "#d6d3cc"
-    readonly property color accent: "#d14d41"
-    readonly property color warningAccent: "#d08a32"
-    readonly property color layoutUs: "#356ea3"
-    readonly property color layoutRu: shellDark ? "#b53f37" : "#a93832"
-    readonly property color layoutKk: shellDark ? "#d0a13c" : "#bd841e"
-    readonly property var screenWorkspaces: niriState.workspaces.filter(workspace => workspace.output === outputScreen.name)
+    readonly property var screenWorkspaces: NiriService.workspaces.filter(workspace => workspace.output === outputScreen.name)
     readonly property var battery: UPower.displayDevice
     readonly property int batteryPercentage: battery.ready ? Math.round(battery.percentage * 100) : 0
     readonly property bool charging: battery.ready && battery.state === UPowerDeviceState.Charging
 
     screen: outputScreen
-    visible: railEnabled
+    visible: railController.railVisible
     implicitWidth: compactWidth + maxDrawerWidth
     color: "transparent"
     exclusiveZone: compactWidth
@@ -217,7 +202,7 @@ PanelWindow {
     }
 
     function keyboardLayoutCode(): string {
-        const name = String(niriState.keyboardLayout || "")
+        const name = String(NiriService.keyboardLayout || "")
         const normalized = name.toLowerCase()
         if (normalized.indexOf("english") !== -1 && normalized.indexOf("us") !== -1) return "US"
         if (normalized.indexOf("russian") !== -1) return "RU"
@@ -227,10 +212,10 @@ PanelWindow {
 
     function keyboardLayoutColor(): color {
         const code = keyboardLayoutCode()
-        if (code === "US") return layoutUs
-        if (code === "RU") return layoutRu
-        if (code === "KK") return layoutKk
-        return foreground
+        if (code === "US") return Theme.layoutUs
+        if (code === "RU") return Theme.layoutRu
+        if (code === "KK") return Theme.layoutKk
+        return Theme.foreground
     }
 
     function keyboardLayoutForeground(): color {
@@ -262,31 +247,31 @@ PanelWindow {
     }
 
     function setAudioVolume(value: real): void {
-        audioState.setVolume(value)
+        AudioService.setVolume(value)
     }
 
     function toggleAudioMute(): void {
-        audioState.toggleMute()
+        AudioService.toggleMute()
     }
 
     function setMicrophoneVolume(value: real): void {
-        audioState.setSourceVolume(value)
+        AudioService.setSourceVolume(value)
     }
 
     function toggleMicrophoneMute(): void {
-        audioState.toggleSourceMute()
+        AudioService.toggleSourceMute()
     }
 
     function selectAudioSink(id: int): void {
-        audioState.selectSink(id)
+        AudioService.selectSink(id)
     }
 
     function selectMicrophoneSource(id: int): void {
-        audioState.selectSource(id)
+        AudioService.selectSource(id)
     }
 
     function activateTrayItem(index: int): void {
-        trayState.activate(index)
+        TrayService.activate(index)
     }
 
     function openTrayMenu(item: var): void {
@@ -343,7 +328,7 @@ PanelWindow {
 
         function onTrayInlineMenuRequested(index: int, screen: string): void {
             if (screen === rail.outputScreen.name)
-                rail.openTrayMenu(rail.trayState.itemAt(index))
+                rail.openTrayMenu(rail.TrayService.itemAt(index))
         }
 
         function onActiveSurfaceChanged(): void {
@@ -357,7 +342,7 @@ PanelWindow {
         width: rail.drawerWidth * rail.revealProgress
         x: rail.maxDrawerWidth - width
         height: parent.height
-        color: rail.surface
+        color: Theme.surface
         clip: true
 
         Item {
@@ -385,7 +370,7 @@ PanelWindow {
 
                 Text {
                     text: rail.showingAudio ? "AUDIO /" : (rail.showingMedia ? "MEDIA /" : (rail.showingTray ? "TRAY /" : "RAIL / " + rail.outputScreen.name))
-                    color: rail.accent
+                    color: Theme.accent
                     font.family: "DejaVu Sans Mono"
                     font.pixelSize: 10
                     font.weight: Font.DemiBold
@@ -404,7 +389,7 @@ PanelWindow {
                 Text {
                     visible: rail.showingMedia || rail.showingAudio || rail.showingTray
                     text: rail.showingAudio ? "PIPEWIRE" : (rail.showingTray ? "SERVICES" : rail.mediaApplicationName.toUpperCase())
-                    color: rail.accent
+                    color: Theme.accent
                     font.family: "DejaVu Sans Mono"
                     font.pixelSize: 10
                     font.weight: Font.DemiBold
@@ -417,8 +402,8 @@ PanelWindow {
                 anchors.right: parent.right
                 anchors.rightMargin: 22
                 y: 22
-                text: rail.showingAudio ? (rail.audioState.muted ? "MUTED" : String(rail.audioState.volumePercent) + "%") : (rail.showingMedia ? (rail.mediaPlaying ? "PLAYING" : "PAUSED") : (rail.showingTray ? (rail.showingTrayMenu ? "MENU" : String(rail.trayState.itemCount) + " LIVE") : (rail.externallyPinned ? "PINNED" : "PREVIEW")))
-                color: rail.externallyPinned ? rail.foreground : rail.mutedForeground
+                text: rail.showingAudio ? (rail.AudioService.muted ? "MUTED" : String(rail.AudioService.volumePercent) + "%") : (rail.showingMedia ? (rail.mediaPlaying ? "PLAYING" : "PAUSED") : (rail.showingTray ? (rail.showingTrayMenu ? "MENU" : String(rail.TrayService.itemCount) + " LIVE") : (rail.externallyPinned ? "PINNED" : "PREVIEW")))
+                color: rail.externallyPinned ? Theme.foreground : Theme.subtleForeground
                 font.family: "DejaVu Sans Mono"
                 font.pixelSize: 9
                 font.weight: Font.DemiBold
@@ -431,7 +416,7 @@ PanelWindow {
                 width: rail.expanded ? 92 : 18
                 height: 2
                 radius: 1
-                color: rail.accent
+                color: Theme.accent
 
                 Behavior on width {
                     NumberAnimation { duration: 310; easing.type: Easing.OutCubic }
@@ -442,9 +427,9 @@ PanelWindow {
                 x: 22
                 y: 74
                 width: parent.width - 44
-                text: rail.showingAudio ? rail.audioSinkLabel : (rail.showingMedia ? rail.mediaTitle : (rail.showingTray ? (rail.showingTrayMenu ? rail.trayState.label(rail.trayMenuOwner) : "Background services") : "Open state"))
+                text: rail.showingAudio ? rail.audioSinkLabel : (rail.showingMedia ? rail.mediaTitle : (rail.showingTray ? (rail.showingTrayMenu ? rail.TrayService.label(rail.trayMenuOwner) : "Background services") : "Open state"))
                 elide: Text.ElideRight
-                color: rail.foreground
+                color: Theme.foreground
                 font.family: "DejaVu Sans"
                 font.pixelSize: 24
                 font.weight: Font.DemiBold
@@ -456,7 +441,7 @@ PanelWindow {
                 width: parent.width - 44
                 text: rail.showingAudio ? rail.audioSinkKind + " / DEFAULT OUTPUT" : (rail.showingMedia ? (rail.mediaArtist || rail.mediaAlbum) : (rail.showingTray ? (rail.showingTrayMenu ? "Application actions" : "Native app actions and menus") : (rail.externallyPinned ? "The rail stays open." : "Move across the surface.")))
                 elide: Text.ElideRight
-                color: rail.mutedForeground
+                color: Theme.subtleForeground
                 font.family: "DejaVu Sans"
                 font.pixelSize: 12
             }
@@ -472,15 +457,15 @@ PanelWindow {
                     width: parent.width
                     height: 58
                     radius: 12
-                    color: rail.raisedSurface
+                    color: Theme.raisedSurface
                     border.width: 1
-                    border.color: rail.border
+                    border.color: Theme.border
 
                     Text {
                         x: 14
                         y: 12
                         text: "NIRI"
-                        color: rail.niriState.ready ? rail.accent : rail.warningAccent
+                        color: rail.NiriService.ready ? Theme.accent : Theme.warningAccent
                         font.family: "DejaVu Sans Mono"
                         font.pixelSize: 9
                         font.weight: Font.DemiBold
@@ -490,8 +475,8 @@ PanelWindow {
                     Text {
                         x: 14
                         y: 30
-                        text: rail.niriState.ready ? "Event stream connected" : "Waiting for compositor"
-                        color: rail.foreground
+                        text: rail.NiriService.ready ? "Event stream connected" : "Waiting for compositor"
+                        color: Theme.foreground
                         font.family: "DejaVu Sans"
                         font.pixelSize: 12
                     }
@@ -501,7 +486,7 @@ PanelWindow {
                         anchors.rightMargin: 14
                         y: 21
                         text: rail.focusedWorkspaceLabel()
-                        color: rail.foreground
+                        color: Theme.foreground
                         font.family: "DejaVu Sans Mono"
                         font.pixelSize: 15
                         font.weight: Font.DemiBold
@@ -514,13 +499,13 @@ PanelWindow {
                     radius: 12
                     color: "transparent"
                     border.width: 1
-                    border.color: rail.border
+                    border.color: Theme.border
 
                     Text {
                         x: 14
                         y: 12
                         text: "MOTION"
-                        color: rail.mutedForeground
+                        color: Theme.subtleForeground
                         font.family: "DejaVu Sans Mono"
                         font.pixelSize: 9
                         font.weight: Font.DemiBold
@@ -531,7 +516,7 @@ PanelWindow {
                         x: 14
                         y: 30
                         text: rail.externallyPinned ? "Click signal to release" : "Click signal to keep open"
-                        color: rail.foreground
+                        color: Theme.foreground
                         font.family: "DejaVu Sans"
                         font.pixelSize: 12
                     }
@@ -543,7 +528,7 @@ PanelWindow {
                 x: 22
                 y: 158
                 width: parent.width - 44
-                height: Math.max(0, rail.trayState.itemCount * 74)
+                height: Math.max(0, rail.TrayService.itemCount * 74)
 
                 Column {
                     width: parent.width
@@ -551,13 +536,13 @@ PanelWindow {
 
                     Repeater {
                         id: trayRepeater
-                        model: rail.trayState.items
+                        model: rail.TrayService.items
 
                         Rectangle {
                             id: trayItem
                             required property var modelData
                             required property int index
-                            readonly property bool attention: rail.trayState.statusLabel(modelData) === "ATTENTION"
+                            readonly property bool attention: rail.TrayService.statusLabel(modelData) === "ATTENTION"
 
                             function openMenu(): void {
                                 rail.openTrayMenu(modelData)
@@ -566,9 +551,9 @@ PanelWindow {
                             width: parent.width
                             height: 66
                             radius: 12
-                            color: trayItemMouse.containsMouse ? rail.surface : rail.raisedSurface
+                            color: trayItemMouse.containsMouse ? Theme.surface : Theme.raisedSurface
                             border.width: 1
-                            border.color: attention ? rail.warningAccent : rail.border
+                            border.color: attention ? Theme.warningAccent : Theme.border
 
                             Image {
                                 id: trayAppIcon
@@ -576,7 +561,7 @@ PanelWindow {
                                 anchors.verticalCenter: parent.verticalCenter
                                 width: 28
                                 height: 28
-                                source: rail.trayState.iconSource(trayItem.modelData)
+                                source: rail.TrayService.iconSource(trayItem.modelData)
                                 fillMode: Image.PreserveAspectFit
                                 smooth: true
                             }
@@ -587,8 +572,8 @@ PanelWindow {
                                 anchors.verticalCenter: parent.verticalCenter
                                 width: 28
                                 horizontalAlignment: Text.AlignHCenter
-                                text: rail.trayState.label(trayItem.modelData).slice(0, 1).toUpperCase()
-                                color: rail.accent
+                                text: rail.TrayService.label(trayItem.modelData).slice(0, 1).toUpperCase()
+                                color: Theme.accent
                                 font.family: "DejaVu Sans Mono"
                                 font.pixelSize: 12
                                 font.weight: Font.DemiBold
@@ -598,9 +583,9 @@ PanelWindow {
                                 x: 56
                                 y: 12
                                 width: parent.width - 146
-                                text: rail.trayState.label(trayItem.modelData)
+                                text: rail.TrayService.label(trayItem.modelData)
                                 elide: Text.ElideRight
-                                color: rail.foreground
+                                color: Theme.foreground
                                 font.family: "DejaVu Sans"
                                 font.pixelSize: 13
                                 font.weight: Font.DemiBold
@@ -610,9 +595,9 @@ PanelWindow {
                                 x: 56
                                 y: 35
                                 width: parent.width - 146
-                                text: rail.trayState.detail(trayItem.modelData)
+                                text: rail.TrayService.detail(trayItem.modelData)
                                 elide: Text.ElideRight
-                                color: rail.mutedForeground
+                                color: Theme.subtleForeground
                                 font.family: "DejaVu Sans"
                                 font.pixelSize: 10
                             }
@@ -621,8 +606,8 @@ PanelWindow {
                                 anchors.right: parent.right
                                 anchors.rightMargin: 13
                                 y: 10
-                                text: trayItem.attention ? "ATTENTION" : rail.trayState.categoryLabel(trayItem.modelData)
-                                color: trayItem.attention ? rail.warningAccent : rail.mutedForeground
+                                text: trayItem.attention ? "ATTENTION" : rail.TrayService.categoryLabel(trayItem.modelData)
+                                color: trayItem.attention ? Theme.warningAccent : Theme.subtleForeground
                                 font.family: "DejaVu Sans Mono"
                                 font.pixelSize: 7
                                 font.weight: Font.DemiBold
@@ -652,14 +637,14 @@ PanelWindow {
                                 width: 56
                                 height: 25
                                 radius: 8
-                                color: trayMenuMouse.containsMouse ? rail.background : "transparent"
+                                color: trayMenuMouse.containsMouse ? Theme.background : "transparent"
                                 border.width: 1
-                                border.color: rail.border
+                                border.color: Theme.border
 
                                 Text {
                                     anchors.centerIn: parent
                                     text: "MENU"
-                                    color: rail.foreground
+                                    color: Theme.foreground
                                     font.family: "DejaVu Sans Mono"
                                     font.pixelSize: 8
                                     font.weight: Font.DemiBold
@@ -691,9 +676,9 @@ PanelWindow {
                     width: parent.width
                     height: 34
                     radius: 10
-                    color: trayMenuBackMouse.containsMouse ? rail.raisedSurface : "transparent"
+                    color: trayMenuBackMouse.containsMouse ? Theme.raisedSurface : "transparent"
                     border.width: 1
-                    border.color: rail.border
+                    border.color: Theme.border
 
                     Image {
                         x: 10
@@ -709,7 +694,7 @@ PanelWindow {
                         x: 32
                         anchors.verticalCenter: parent.verticalCenter
                         text: rail.trayMenuStack.length > 0 ? "BACK" : "SERVICES"
-                        color: rail.foreground
+                        color: Theme.foreground
                         font.family: "DejaVu Sans Mono"
                         font.pixelSize: 9
                         font.weight: Font.DemiBold
@@ -751,16 +736,16 @@ PanelWindow {
                             anchors.centerIn: parent
                             width: parent.width
                             height: 1
-                            color: rail.border
+                            color: Theme.border
                         }
 
                         Rectangle {
                             visible: !trayAction.modelData.isSeparator
                             anchors.fill: parent
                             radius: 9
-                            color: trayActionMouse.containsMouse ? rail.raisedSurface : "transparent"
+                            color: trayActionMouse.containsMouse ? Theme.raisedSurface : "transparent"
                             border.width: trayAction.modelData.hasChildren ? 1 : 0
-                            border.color: rail.border
+                            border.color: Theme.border
                         }
 
                         Rectangle {
@@ -770,9 +755,9 @@ PanelWindow {
                             width: 13
                             height: 13
                             radius: Number(trayAction.modelData.buttonType) === 2 ? 7 : 4
-                            color: trayAction.checked ? rail.accent : "transparent"
+                            color: trayAction.checked ? Theme.accent : "transparent"
                             border.width: 1
-                            border.color: trayAction.checked ? rail.accent : rail.mutedForeground
+                            border.color: trayAction.checked ? Theme.accent : Theme.subtleForeground
 
                             Rectangle {
                                 visible: trayAction.checked
@@ -780,7 +765,7 @@ PanelWindow {
                                 width: 5
                                 height: 5
                                 radius: 3
-                                color: rail.background
+                                color: Theme.background
                             }
                         }
 
@@ -791,7 +776,7 @@ PanelWindow {
                             width: parent.width - (trayAction.modelData.hasChildren ? 64 : 44)
                             text: String(trayAction.modelData.text || "")
                             elide: Text.ElideRight
-                            color: rail.foreground
+                            color: Theme.foreground
                             font.family: "DejaVu Sans"
                             font.pixelSize: 11
                             font.weight: trayAction.modelData.hasChildren ? Font.DemiBold : Font.Normal
@@ -847,15 +832,15 @@ PanelWindow {
                 width: parent.width - 44
                 height: 144
                 radius: 14
-                color: rail.raisedSurface
+                color: Theme.raisedSurface
                 border.width: 1
-                border.color: rail.border
+                border.color: Theme.border
 
                 Text {
                     x: 14
                     y: 14
                     text: "OUTPUT LEVEL"
-                    color: rail.mutedForeground
+                    color: Theme.subtleForeground
                     font.family: "DejaVu Sans Mono"
                     font.pixelSize: 9
                     font.weight: Font.DemiBold
@@ -866,8 +851,8 @@ PanelWindow {
                     anchors.right: parent.right
                     anchors.rightMargin: 14
                     y: 10
-                    text: rail.audioState.muted ? "MUTED" : String(rail.audioState.volumePercent) + "%"
-                    color: rail.audioState.muted ? rail.warningAccent : rail.foreground
+                    text: rail.AudioService.muted ? "MUTED" : String(rail.AudioService.volumePercent) + "%"
+                    color: rail.AudioService.muted ? Theme.warningAccent : Theme.foreground
                     font.family: "DejaVu Sans Mono"
                     font.pixelSize: 15
                     font.weight: Font.DemiBold
@@ -880,13 +865,13 @@ PanelWindow {
                     width: parent.width - 28
                     height: 4
                     radius: 2
-                    color: rail.border
+                    color: Theme.border
 
                     Rectangle {
-                        width: parent.width * Math.max(0, Math.min(1, rail.audioState.volume / rail.audioState.maxVolume))
+                        width: parent.width * Math.max(0, Math.min(1, rail.AudioService.volume / rail.AudioService.maxVolume))
                         height: parent.height
                         radius: 2
-                        color: rail.audioState.muted ? rail.mutedForeground : rail.accent
+                        color: rail.AudioService.muted ? Theme.subtleForeground : Theme.accent
 
                         Behavior on width {
                             NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
@@ -894,12 +879,12 @@ PanelWindow {
                     }
 
                     Rectangle {
-                        x: Math.max(0, Math.min(parent.width - width, parent.width * rail.audioState.volume / rail.audioState.maxVolume - width / 2))
+                        x: Math.max(0, Math.min(parent.width - width, parent.width * rail.AudioService.volume / rail.AudioService.maxVolume - width / 2))
                         y: -3
                         width: 10
                         height: 10
                         radius: 5
-                        color: rail.foreground
+                        color: Theme.foreground
 
                         Behavior on x {
                             NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
@@ -907,11 +892,11 @@ PanelWindow {
                     }
 
                     Rectangle {
-                        x: Math.round(parent.width / rail.audioState.maxVolume) - 1
+                        x: Math.round(parent.width / rail.AudioService.maxVolume) - 1
                         y: -3
                         width: 1
                         height: 10
-                        color: rail.mutedForeground
+                        color: Theme.subtleForeground
                         opacity: 0.55
                     }
 
@@ -920,9 +905,9 @@ PanelWindow {
                         anchors.topMargin: -12
                         anchors.bottomMargin: -12
                         cursorShape: Qt.PointingHandCursor
-                        onPressed: mouse => rail.setAudioVolume(mouse.x / width * rail.audioState.maxVolume)
+                        onPressed: mouse => rail.setAudioVolume(mouse.x / width * rail.AudioService.maxVolume)
                         onPositionChanged: mouse => {
-                            if (pressed) rail.setAudioVolume(mouse.x / width * rail.audioState.maxVolume)
+                            if (pressed) rail.setAudioVolume(mouse.x / width * rail.AudioService.maxVolume)
                         }
                     }
                 }
@@ -933,14 +918,14 @@ PanelWindow {
                     width: parent.width - 28
                     height: 44
                     radius: 10
-                    color: audioMuteMouse.containsMouse ? rail.surface : "transparent"
+                    color: audioMuteMouse.containsMouse ? Theme.surface : "transparent"
                     border.width: 1
-                    border.color: rail.audioState.muted ? rail.warningAccent : rail.border
+                    border.color: rail.AudioService.muted ? Theme.warningAccent : Theme.border
 
                     Text {
                         anchors.centerIn: parent
-                        text: rail.audioState.muted ? "UNMUTE OUTPUT" : "MUTE OUTPUT"
-                        color: rail.audioState.muted ? rail.warningAccent : rail.foreground
+                        text: rail.AudioService.muted ? "UNMUTE OUTPUT" : "MUTE OUTPUT"
+                        color: rail.AudioService.muted ? Theme.warningAccent : Theme.foreground
                         font.family: "DejaVu Sans Mono"
                         font.pixelSize: 9
                         font.weight: Font.DemiBold
@@ -967,8 +952,8 @@ PanelWindow {
                 Text {
                     x: 0
                     y: 0
-                    text: "OUTPUT ROUTES / " + String(rail.audioState.sinks.length)
-                    color: rail.mutedForeground
+                    text: "OUTPUT ROUTES / " + String(rail.AudioService.sinks.length)
+                    color: Theme.subtleForeground
                     font.family: "DejaVu Sans Mono"
                     font.pixelSize: 9
                     font.weight: Font.DemiBold
@@ -982,18 +967,18 @@ PanelWindow {
                     spacing: 7
 
                     Repeater {
-                        model: rail.audioState.sinks
+                        model: rail.AudioService.sinks
 
                         Rectangle {
                             id: routeItem
                             required property var modelData
-                            readonly property bool active: rail.audioState.sink !== null && modelData.id === rail.audioState.sink.id
+                            readonly property bool active: rail.AudioService.sink !== null && modelData.id === rail.AudioService.sink.id
                             width: parent.width
                             height: 44
                             radius: 10
-                            color: active ? rail.raisedSurface : (routeMouse.containsMouse ? rail.surface : "transparent")
+                            color: active ? Theme.raisedSurface : (routeMouse.containsMouse ? Theme.surface : "transparent")
                             border.width: active ? 1 : 0
-                            border.color: rail.border
+                            border.color: Theme.border
 
                             Rectangle {
                                 anchors.left: parent.left
@@ -1001,7 +986,7 @@ PanelWindow {
                                 width: 2
                                 height: 16
                                 radius: 1
-                                color: rail.accent
+                                color: Theme.accent
                                 opacity: routeItem.active ? 1 : 0
 
                                 Behavior on opacity {
@@ -1013,9 +998,9 @@ PanelWindow {
                                 x: 14
                                 anchors.verticalCenter: parent.verticalCenter
                                 width: parent.width - 112
-                                text: rail.audioState.label(routeItem.modelData)
+                                text: rail.AudioService.label(routeItem.modelData)
                                 elide: Text.ElideRight
-                                color: routeItem.active ? rail.foreground : rail.mutedForeground
+                                color: routeItem.active ? Theme.foreground : Theme.subtleForeground
                                 font.family: "DejaVu Sans"
                                 font.pixelSize: 12
                                 font.weight: routeItem.active ? Font.DemiBold : Font.Medium
@@ -1027,8 +1012,8 @@ PanelWindow {
                                 anchors.verticalCenter: parent.verticalCenter
                                 width: 82
                                 horizontalAlignment: Text.AlignRight
-                                text: routeItem.active ? "ACTIVE" : rail.audioState.kind(routeItem.modelData)
-                                color: routeItem.active ? rail.accent : rail.mutedForeground
+                                text: routeItem.active ? "ACTIVE" : rail.AudioService.kind(routeItem.modelData)
+                                color: routeItem.active ? Theme.accent : Theme.subtleForeground
                                 font.family: "DejaVu Sans Mono"
                                 font.pixelSize: 8
                                 font.weight: Font.DemiBold
@@ -1048,21 +1033,21 @@ PanelWindow {
             }
 
             Rectangle {
-                visible: rail.showingAudio && rail.audioState.sourceReady
+                visible: rail.showingAudio && rail.AudioService.sourceReady
                 x: 22
-                y: 330 + 28 + rail.audioState.sinks.length * 44 + Math.max(0, rail.audioState.sinks.length - 1) * 7 + 22
+                y: 330 + 28 + rail.AudioService.sinks.length * 44 + Math.max(0, rail.AudioService.sinks.length - 1) * 7 + 22
                 width: parent.width - 44
-                height: 182 + Math.ceil(rail.audioState.sources.length / 2) * 48
+                height: 182 + Math.ceil(rail.AudioService.sources.length / 2) * 48
                 radius: 14
-                color: rail.raisedSurface
+                color: Theme.raisedSurface
                 border.width: 1
-                border.color: rail.border
+                border.color: Theme.border
 
                 Text {
                     x: 14
                     y: 12
-                    text: "INPUT / " + rail.audioState.kind(rail.audioState.source)
-                    color: rail.mutedForeground
+                    text: "INPUT / " + rail.AudioService.kind(rail.AudioService.source)
+                    color: Theme.subtleForeground
                     font.family: "DejaVu Sans Mono"
                     font.pixelSize: 9
                     font.weight: Font.DemiBold
@@ -1073,8 +1058,8 @@ PanelWindow {
                     anchors.right: parent.right
                     anchors.rightMargin: 14
                     y: 10
-                    text: rail.audioState.sourceMuted ? "MUTED" : String(rail.audioState.sourceVolumePercent) + "%"
-                    color: rail.audioState.sourceMuted ? rail.warningAccent : rail.foreground
+                    text: rail.AudioService.sourceMuted ? "MUTED" : String(rail.AudioService.sourceVolumePercent) + "%"
+                    color: rail.AudioService.sourceMuted ? Theme.warningAccent : Theme.foreground
                     font.family: "DejaVu Sans Mono"
                     font.pixelSize: 13
                     font.weight: Font.DemiBold
@@ -1084,9 +1069,9 @@ PanelWindow {
                     x: 14
                     y: 34
                     width: parent.width - 28
-                    text: rail.audioState.label(rail.audioState.source)
+                    text: rail.AudioService.label(rail.AudioService.source)
                     elide: Text.ElideRight
-                    color: rail.foreground
+                    color: Theme.foreground
                     font.family: "DejaVu Sans"
                     font.pixelSize: 12
                     font.weight: Font.DemiBold
@@ -1099,13 +1084,13 @@ PanelWindow {
                     width: parent.width - 28
                     height: 4
                     radius: 2
-                    color: rail.border
+                    color: Theme.border
 
                     Rectangle {
-                        width: parent.width * Math.max(0, Math.min(1, rail.audioState.sourceVolume / rail.audioState.maxSourceVolume))
+                        width: parent.width * Math.max(0, Math.min(1, rail.AudioService.sourceVolume / rail.AudioService.maxSourceVolume))
                         height: parent.height
                         radius: 2
-                        color: rail.audioState.sourceMuted ? rail.mutedForeground : rail.accent
+                        color: rail.AudioService.sourceMuted ? Theme.subtleForeground : Theme.accent
 
                         Behavior on width {
                             NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
@@ -1113,12 +1098,12 @@ PanelWindow {
                     }
 
                     Rectangle {
-                        x: Math.max(0, Math.min(parent.width - width, parent.width * rail.audioState.sourceVolume / rail.audioState.maxSourceVolume - width / 2))
+                        x: Math.max(0, Math.min(parent.width - width, parent.width * rail.AudioService.sourceVolume / rail.AudioService.maxSourceVolume - width / 2))
                         y: -3
                         width: 10
                         height: 10
                         radius: 5
-                        color: rail.foreground
+                        color: Theme.foreground
 
                         Behavior on x {
                             NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
@@ -1126,11 +1111,11 @@ PanelWindow {
                     }
 
                     Rectangle {
-                        x: Math.round(parent.width / rail.audioState.maxSourceVolume) - 1
+                        x: Math.round(parent.width / rail.AudioService.maxSourceVolume) - 1
                         y: -3
                         width: 1
                         height: 10
-                        color: rail.mutedForeground
+                        color: Theme.subtleForeground
                         opacity: 0.55
                     }
 
@@ -1139,9 +1124,9 @@ PanelWindow {
                         anchors.topMargin: -12
                         anchors.bottomMargin: -12
                         cursorShape: Qt.PointingHandCursor
-                        onPressed: mouse => rail.setMicrophoneVolume(mouse.x / width * rail.audioState.maxSourceVolume)
+                        onPressed: mouse => rail.setMicrophoneVolume(mouse.x / width * rail.AudioService.maxSourceVolume)
                         onPositionChanged: mouse => {
-                            if (pressed) rail.setMicrophoneVolume(mouse.x / width * rail.audioState.maxSourceVolume)
+                            if (pressed) rail.setMicrophoneVolume(mouse.x / width * rail.AudioService.maxSourceVolume)
                         }
                     }
                 }
@@ -1152,14 +1137,14 @@ PanelWindow {
                     width: parent.width - 28
                     height: 40
                     radius: 10
-                    color: microphoneMuteMouse.containsMouse ? rail.surface : "transparent"
+                    color: microphoneMuteMouse.containsMouse ? Theme.surface : "transparent"
                     border.width: 1
-                    border.color: rail.audioState.sourceMuted ? rail.warningAccent : rail.border
+                    border.color: rail.AudioService.sourceMuted ? Theme.warningAccent : Theme.border
 
                     Text {
                         anchors.centerIn: parent
-                        text: rail.audioState.sourceMuted ? "ENABLE INPUT" : "MUTE INPUT"
-                        color: rail.audioState.sourceMuted ? rail.warningAccent : rail.foreground
+                        text: rail.AudioService.sourceMuted ? "ENABLE INPUT" : "MUTE INPUT"
+                        color: rail.AudioService.sourceMuted ? Theme.warningAccent : Theme.foreground
                         font.family: "DejaVu Sans Mono"
                         font.pixelSize: 9
                         font.weight: Font.DemiBold
@@ -1178,8 +1163,8 @@ PanelWindow {
                 Text {
                     x: 14
                     y: 151
-                    text: "SOURCE ROUTES / " + String(rail.audioState.sources.length)
-                    color: rail.mutedForeground
+                    text: "SOURCE ROUTES / " + String(rail.AudioService.sources.length)
+                    color: Theme.subtleForeground
                     font.family: "DejaVu Sans Mono"
                     font.pixelSize: 8
                     font.weight: Font.DemiBold
@@ -1195,18 +1180,18 @@ PanelWindow {
                     rowSpacing: 6
 
                     Repeater {
-                        model: rail.audioState.sources
+                        model: rail.AudioService.sources
 
                         Rectangle {
                             id: inputRouteItem
                             required property var modelData
-                            readonly property bool active: rail.audioState.source !== null && modelData.id === rail.audioState.source.id
+                            readonly property bool active: rail.AudioService.source !== null && modelData.id === rail.AudioService.source.id
                             width: (parent.width - 7) / 2
                             height: 42
                             radius: 9
-                            color: active ? rail.surface : (inputRouteMouse.containsMouse ? rail.surface : "transparent")
+                            color: active ? Theme.surface : (inputRouteMouse.containsMouse ? Theme.surface : "transparent")
                             border.width: 1
-                            border.color: active ? rail.border : Qt.rgba(0, 0, 0, 0)
+                            border.color: active ? Theme.border : Qt.rgba(0, 0, 0, 0)
 
                             Rectangle {
                                 anchors.left: parent.left
@@ -1214,7 +1199,7 @@ PanelWindow {
                                 width: 2
                                 height: 14
                                 radius: 1
-                                color: rail.accent
+                                color: Theme.accent
                                 opacity: inputRouteItem.active ? 1 : 0
 
                                 Behavior on opacity {
@@ -1226,9 +1211,9 @@ PanelWindow {
                                 x: 11
                                 y: 6
                                 width: parent.width - 20
-                                text: rail.audioState.label(inputRouteItem.modelData)
+                                text: rail.AudioService.label(inputRouteItem.modelData)
                                 elide: Text.ElideRight
-                                color: inputRouteItem.active ? rail.foreground : rail.mutedForeground
+                                color: inputRouteItem.active ? Theme.foreground : Theme.subtleForeground
                                 font.family: "DejaVu Sans"
                                 font.pixelSize: 10
                                 font.weight: inputRouteItem.active ? Font.DemiBold : Font.Medium
@@ -1237,8 +1222,8 @@ PanelWindow {
                             Text {
                                 x: 11
                                 y: 24
-                                text: inputRouteItem.active ? "ACTIVE" : rail.audioState.kind(inputRouteItem.modelData)
-                                color: inputRouteItem.active ? rail.accent : rail.mutedForeground
+                                text: inputRouteItem.active ? "ACTIVE" : rail.AudioService.kind(inputRouteItem.modelData)
+                                color: inputRouteItem.active ? Theme.accent : Theme.subtleForeground
                                 font.family: "DejaVu Sans Mono"
                                 font.pixelSize: 7
                                 font.weight: Font.DemiBold
@@ -1267,9 +1252,9 @@ PanelWindow {
                 width: parent.width - 44
                 height: 142
                 radius: 14
-                color: rail.raisedSurface
+                color: Theme.raisedSurface
                 border.width: 1
-                border.color: rail.border
+                border.color: Theme.border
 
                 Text {
                     x: 14
@@ -1277,7 +1262,7 @@ PanelWindow {
                     text: rail.mediaAlbum || "NOW PLAYING"
                     width: parent.width - 28
                     elide: Text.ElideRight
-                    color: rail.mutedForeground
+                    color: Theme.subtleForeground
                     font.family: "DejaVu Sans Mono"
                     font.pixelSize: 9
                     font.weight: Font.DemiBold
@@ -1291,13 +1276,13 @@ PanelWindow {
                     width: parent.width - 28
                     height: 2
                     radius: 1
-                    color: rail.border
+                    color: Theme.border
 
                     Rectangle {
                         width: parent.width * rail.mediaProgress
                         height: parent.height
                         radius: 1
-                        color: rail.accent
+                        color: Theme.accent
 
                         Behavior on width {
                             NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
@@ -1309,7 +1294,7 @@ PanelWindow {
                     x: 14
                     y: 49
                     text: rail.formatDuration(rail.mediaPosition)
-                    color: rail.mutedForeground
+                    color: Theme.subtleForeground
                     font.family: "DejaVu Sans Mono"
                     font.pixelSize: 8
                 }
@@ -1319,7 +1304,7 @@ PanelWindow {
                     anchors.rightMargin: 14
                     y: 49
                     text: rail.formatDuration(rail.mediaLength)
-                    color: rail.mutedForeground
+                    color: Theme.subtleForeground
                     font.family: "DejaVu Sans Mono"
                     font.pixelSize: 8
                 }
@@ -1333,15 +1318,15 @@ PanelWindow {
                         width: 76
                         height: 42
                         radius: 10
-                        color: previousMouse.containsMouse ? rail.surface : "transparent"
+                        color: previousMouse.containsMouse ? Theme.surface : "transparent"
                         border.width: 1
-                        border.color: rail.border
+                        border.color: Theme.border
                         opacity: rail.mediaCanPrevious ? 1 : 0.35
 
                         Text {
                             anchors.centerIn: parent
                             text: "PREV"
-                            color: rail.foreground
+                            color: Theme.foreground
                             font.family: "DejaVu Sans Mono"
                             font.pixelSize: 9
                             font.weight: Font.DemiBold
@@ -1361,15 +1346,15 @@ PanelWindow {
                         width: 112
                         height: 42
                         radius: 10
-                        color: playMouse.containsMouse ? rail.accent : rail.surface
+                        color: playMouse.containsMouse ? Theme.accent : Theme.surface
                         border.width: 1
-                        border.color: playMouse.containsMouse ? rail.accent : rail.border
+                        border.color: playMouse.containsMouse ? Theme.accent : Theme.border
                         opacity: rail.mediaCanToggle ? 1 : 0.35
 
                         Text {
                             anchors.centerIn: parent
                             text: rail.mediaPlaying ? "PAUSE" : "PLAY"
-                            color: rail.foreground
+                            color: Theme.foreground
                             font.family: "DejaVu Sans Mono"
                             font.pixelSize: 9
                             font.weight: Font.DemiBold
@@ -1390,15 +1375,15 @@ PanelWindow {
                         width: 76
                         height: 42
                         radius: 10
-                        color: nextMouse.containsMouse ? rail.surface : "transparent"
+                        color: nextMouse.containsMouse ? Theme.surface : "transparent"
                         border.width: 1
-                        border.color: rail.border
+                        border.color: Theme.border
                         opacity: rail.mediaCanNext ? 1 : 0.35
 
                         Text {
                             anchors.centerIn: parent
                             text: "NEXT"
-                            color: rail.foreground
+                            color: Theme.foreground
                             font.family: "DejaVu Sans Mono"
                             font.pixelSize: 9
                             font.weight: Font.DemiBold
@@ -1422,14 +1407,14 @@ PanelWindow {
                 y: 158
                 width: parent.width - 44
                 height: width
-                color: rail.raisedSurface
+                color: Theme.raisedSurface
                 border.width: 1
-                border.color: rail.border
+                border.color: Theme.border
 
                 Text {
                     anchors.centerIn: parent
                     text: rail.mediaIdentity.toUpperCase()
-                    color: rail.mutedForeground
+                    color: Theme.subtleForeground
                     font.family: "DejaVu Sans Mono"
                     font.pixelSize: 10
                     font.weight: Font.DemiBold
@@ -1460,12 +1445,12 @@ PanelWindow {
                     anchors.top: parent.top
                     width: parent.width
                     height: 1
-                    color: rail.border
+                    color: Theme.border
 
                     Rectangle {
                         width: 24
                         height: 1
-                        color: rail.accent
+                        color: Theme.accent
                     }
                 }
 
@@ -1473,7 +1458,7 @@ PanelWindow {
                     anchors.left: parent.left
                     anchors.bottom: parent.bottom
                     text: rail.externallyPinned ? "CLICK TO CLOSE" : "LEAVE TO COLLAPSE"
-                    color: rail.mutedForeground
+                    color: Theme.subtleForeground
                     font.family: "DejaVu Sans Mono"
                     font.pixelSize: 9
                     font.weight: Font.Medium
@@ -1484,7 +1469,7 @@ PanelWindow {
                     anchors.right: parent.right
                     anchors.bottom: parent.bottom
                     text: String(Math.round(rail.interactiveWidth)) + " PX"
-                    color: rail.mutedForeground
+                    color: Theme.subtleForeground
                     font.family: "DejaVu Sans Mono"
                     font.pixelSize: 9
                     font.weight: Font.Medium
@@ -1498,7 +1483,7 @@ PanelWindow {
         x: rail.maxDrawerWidth
         width: rail.compactWidth
         height: parent.height
-        color: rail.background
+        color: Theme.background
 
         Item {
             id: signal
@@ -1520,8 +1505,8 @@ PanelWindow {
                         width: rail.expanded ? modelData + 3 : modelData
                         height: 2
                         radius: 1
-                        color: rail.niriState.ready ? rail.accent : rail.warningAccent
-                        opacity: rail.niriState.connected ? 1 : 0.45
+                        color: rail.NiriService.ready ? Theme.accent : Theme.warningAccent
+                        opacity: rail.NiriService.connected ? 1 : 0.45
 
                         Behavior on width {
                             NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
@@ -1557,13 +1542,13 @@ PanelWindow {
             anchors.horizontalCenter: parent.horizontalCenter
             width: 22
             height: 1
-            color: rail.border
+            color: Theme.border
 
             Rectangle {
                 anchors.left: parent.left
                 width: 6
                 height: 1
-                color: rail.accent
+                color: Theme.accent
             }
         }
 
@@ -1573,7 +1558,7 @@ PanelWindow {
             anchors.topMargin: 8
             anchors.horizontalCenter: parent.horizontalCenter
             text: rail.outputIdentity()
-            color: rail.outputFocused ? rail.accent : rail.mutedForeground
+            color: rail.outputFocused ? Theme.accent : Theme.subtleForeground
             opacity: rail.outputFocused ? 1 : 0.64
             scale: 1 + rail.outputFocusPulse * 0.08
             font.family: "DejaVu Sans Mono"
@@ -1609,9 +1594,9 @@ PanelWindow {
                     Rectangle {
                         anchors.fill: parent
                         radius: 10
-                        color: workspaceItem.modelData.is_active ? rail.surface : "transparent"
+                        color: workspaceItem.modelData.is_active ? Theme.surface : "transparent"
                         border.width: workspaceItem.modelData.is_active ? 1 : 0
-                        border.color: rail.border
+                        border.color: Theme.border
                         scale: workspaceMouse.containsMouse ? 1.06 : 1
 
                         Behavior on color { ColorAnimation { duration: 120 } }
@@ -1624,7 +1609,7 @@ PanelWindow {
                         width: 2
                         height: workspaceItem.modelData.is_focused ? 15 : (workspaceItem.modelData.is_urgent ? 8 : 0)
                         radius: 1
-                        color: workspaceItem.modelData.is_urgent ? rail.warningAccent : rail.accent
+                        color: workspaceItem.modelData.is_urgent ? Theme.warningAccent : Theme.accent
 
                         Behavior on height {
                             NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
@@ -1634,7 +1619,7 @@ PanelWindow {
                     Text {
                         anchors.centerIn: parent
                         text: workspaceItem.modelData.name !== "" ? workspaceItem.modelData.name.slice(0, 2) : String(workspaceItem.modelData.idx)
-                        color: workspaceItem.modelData.is_active ? rail.foreground : rail.mutedForeground
+                        color: workspaceItem.modelData.is_active ? Theme.foreground : Theme.subtleForeground
                         font.family: "DejaVu Sans Mono"
                         font.pixelSize: 11
                         font.weight: workspaceItem.modelData.is_active ? Font.DemiBold : Font.Medium
@@ -1658,7 +1643,7 @@ PanelWindow {
             width: 2 + rail.outputFocusPulse
             height: outputIdentityLabel.height + 8 + workspaceColumn.height
             radius: 1
-            color: rail.accent
+            color: Theme.accent
             opacity: rail.outputFocused ? 0.72 + rail.outputFocusPulse * 0.28 : 0
 
             Behavior on opacity {
@@ -1683,9 +1668,9 @@ PanelWindow {
             Rectangle {
                 anchors.fill: parent
                 radius: 10
-                color: rail.activeSurface === "media" ? rail.surface : "transparent"
+                color: rail.activeSurface === "media" ? Theme.surface : "transparent"
                 border.width: rail.activeSurface === "media" ? 1 : 0
-                border.color: rail.border
+                border.color: Theme.border
 
                 Behavior on color { ColorAnimation { duration: 120 } }
             }
@@ -1696,7 +1681,7 @@ PanelWindow {
                 width: 2
                 height: rail.activeSurface === "media" ? 15 : 0
                 radius: 1
-                color: rail.accent
+                color: Theme.accent
 
                 Behavior on height {
                     NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
@@ -1717,7 +1702,7 @@ PanelWindow {
                 visible: rail.mediaIconSource === ""
                 anchors.centerIn: parent
                 text: "M"
-                color: rail.activeSurface === "media" ? rail.foreground : rail.mutedForeground
+                color: rail.activeSurface === "media" ? Theme.foreground : Theme.subtleForeground
                 font.family: "DejaVu Sans Mono"
                 font.pixelSize: 10
                 font.weight: Font.DemiBold
@@ -1741,7 +1726,7 @@ PanelWindow {
 
         Item {
             id: audioEntry
-            visible: rail.audioState.sinkReady
+            visible: rail.AudioService.sinkReady
             anchors.top: mediaEntry.visible ? mediaEntry.bottom : workspaceColumn.bottom
             anchors.topMargin: mediaEntry.visible ? 7 : 12
             anchors.horizontalCenter: parent.horizontalCenter
@@ -1756,9 +1741,9 @@ PanelWindow {
             Rectangle {
                 anchors.fill: parent
                 radius: 10
-                color: rail.activeSurface === "audio" ? rail.surface : "transparent"
+                color: rail.activeSurface === "audio" ? Theme.surface : "transparent"
                 border.width: rail.activeSurface === "audio" ? 1 : 0
-                border.color: rail.border
+                border.color: Theme.border
 
                 Behavior on color { ColorAnimation { duration: 120 } }
             }
@@ -1769,7 +1754,7 @@ PanelWindow {
                 width: 2
                 height: rail.activeSurface === "audio" ? 15 : 0
                 radius: 1
-                color: rail.accent
+                color: Theme.accent
 
                 Behavior on height {
                     NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
@@ -1814,7 +1799,7 @@ PanelWindow {
 
         Item {
             id: trayEntry
-            visible: rail.trayState.itemCount > 0
+            visible: rail.TrayService.itemCount > 0
             anchors.top: audioEntry.visible ? audioEntry.bottom : (mediaEntry.visible ? mediaEntry.bottom : workspaceColumn.bottom)
             anchors.topMargin: 7
             anchors.horizontalCenter: parent.horizontalCenter
@@ -1829,9 +1814,9 @@ PanelWindow {
             Rectangle {
                 anchors.fill: parent
                 radius: 10
-                color: rail.activeSurface === "tray" ? rail.surface : "transparent"
+                color: rail.activeSurface === "tray" ? Theme.surface : "transparent"
                 border.width: rail.activeSurface === "tray" ? 1 : 0
-                border.color: rail.border
+                border.color: Theme.border
 
                 Behavior on color { ColorAnimation { duration: 120 } }
             }
@@ -1842,7 +1827,7 @@ PanelWindow {
                 width: 2
                 height: rail.activeSurface === "tray" ? 15 : 0
                 radius: 1
-                color: rail.accent
+                color: Theme.accent
 
                 Behavior on height {
                     NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
@@ -1859,20 +1844,20 @@ PanelWindow {
             }
 
             Rectangle {
-                visible: rail.trayState.itemCount > 1
+                visible: rail.TrayService.itemCount > 1
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 width: 12
                 height: 12
                 radius: 6
-                color: rail.raisedSurface
+                color: Theme.raisedSurface
                 border.width: 1
-                border.color: rail.border
+                border.color: Theme.border
 
                 Text {
                     anchors.centerIn: parent
-                    text: String(rail.trayState.itemCount)
-                    color: rail.foreground
+                    text: String(rail.TrayService.itemCount)
+                    color: Theme.foreground
                     font.family: "DejaVu Sans Mono"
                     font.pixelSize: 7
                     font.weight: Font.DemiBold
@@ -1903,7 +1888,7 @@ PanelWindow {
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: Qt.formatDateTime(clock.date, "HH")
-                color: rail.foreground
+                color: Theme.foreground
                 font.family: "DejaVu Sans Mono"
                 font.pixelSize: 14
                 font.weight: Font.DemiBold
@@ -1913,13 +1898,13 @@ PanelWindow {
                 anchors.horizontalCenter: parent.horizontalCenter
                 width: 12
                 height: 1
-                color: rail.accent
+                color: Theme.accent
             }
 
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: Qt.formatDateTime(clock.date, "mm")
-                color: rail.foreground
+                color: Theme.foreground
                 font.family: "DejaVu Sans Mono"
                 font.pixelSize: 14
                 font.weight: Font.DemiBold
@@ -1930,7 +1915,7 @@ PanelWindow {
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: Qt.formatDateTime(clock.date, "dd")
-                color: rail.mutedForeground
+                color: Theme.subtleForeground
                 font.family: "DejaVu Sans Mono"
                 font.pixelSize: 10
                 font.weight: Font.Medium
@@ -1939,7 +1924,7 @@ PanelWindow {
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: Qt.formatDateTime(clock.date, "MMM").toUpperCase()
-                color: rail.mutedForeground
+                color: Theme.subtleForeground
                 font.family: "DejaVu Sans"
                 font.pixelSize: 8
                 font.weight: Font.DemiBold
@@ -1949,7 +1934,7 @@ PanelWindow {
 
         Item {
             id: brightnessBlock
-            visible: rail.brightnessState.ready
+            visible: rail.BrightnessService.ready
             anchors.bottom: layoutBlock.top
             anchors.bottomMargin: 14
             anchors.horizontalCenter: parent.horizontalCenter
@@ -1976,8 +1961,8 @@ PanelWindow {
                 anchors.top: parent.top
                 anchors.horizontalCenter: parent.horizontalCenter
                 visible: brightnessMouse.containsMouse
-                text: String(rail.brightnessState.percent)
-                color: rail.foreground
+                text: String(rail.BrightnessService.percent)
+                color: Theme.foreground
                 font.family: "DejaVu Sans Mono"
                 font.pixelSize: 9
                 font.weight: Font.DemiBold
@@ -1989,13 +1974,13 @@ PanelWindow {
                 width: 20
                 height: 2
                 radius: 1
-                color: rail.border
+                color: Theme.border
 
                 Rectangle {
-                    width: parent.width * rail.brightnessState.value
+                    width: parent.width * rail.BrightnessService.value
                     height: parent.height
                     radius: 1
-                    color: rail.accent
+                    color: Theme.accent
 
                     Behavior on width {
                         NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
@@ -2008,11 +1993,11 @@ PanelWindow {
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onClicked: rail.brightnessState.show(rail.outputScreen.name)
+                onClicked: rail.BrightnessService.show(rail.outputScreen.name)
                 onWheel: wheel => {
                     const delta = wheel.angleDelta.y !== 0 ? wheel.angleDelta.y : wheel.pixelDelta.y
                     if (delta !== 0)
-                        rail.brightnessState.adjust(delta > 0 ? 5 : -5, rail.outputScreen.name)
+                        rail.BrightnessService.adjust(delta > 0 ? 5 : -5, rail.outputScreen.name)
                     wheel.accepted = true
                 }
             }
@@ -2020,7 +2005,7 @@ PanelWindow {
 
         Item {
             id: layoutBlock
-            visible: rail.niriState.keyboardLayout !== ""
+            visible: rail.NiriService.keyboardLayout !== ""
             anchors.bottom: batteryBlock.top
             anchors.bottomMargin: 18
             anchors.horizontalCenter: parent.horizontalCenter
@@ -2072,7 +2057,7 @@ PanelWindow {
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: String(rail.batteryPercentage)
-                color: rail.batteryPercentage <= 15 ? rail.warningAccent : rail.foreground
+                color: rail.batteryPercentage <= 15 ? Theme.warningAccent : Theme.foreground
                 font.family: "DejaVu Sans Mono"
                 font.pixelSize: 10
                 font.weight: Font.DemiBold
@@ -2083,7 +2068,7 @@ PanelWindow {
                 width: 4
                 height: 25
                 radius: 2
-                color: rail.border
+                color: Theme.border
 
                 Rectangle {
                     anchors.left: parent.left
@@ -2091,7 +2076,7 @@ PanelWindow {
                     anchors.bottom: parent.bottom
                     height: Math.max(2, parent.height * Math.min(1, rail.batteryPercentage / 100))
                     radius: 2
-                    color: rail.batteryPercentage <= 15 ? rail.warningAccent : rail.foreground
+                    color: rail.batteryPercentage <= 15 ? Theme.warningAccent : Theme.foreground
 
                     Behavior on height {
                         NumberAnimation { duration: 240; easing.type: Easing.OutCubic }
@@ -2105,7 +2090,7 @@ PanelWindow {
                 width: 12
                 height: 2
                 radius: 1
-                color: rail.accent
+                color: Theme.accent
             }
         }
     }
@@ -2114,6 +2099,6 @@ PanelWindow {
         x: Math.floor(rail.width - rail.interactiveWidth)
         width: 1
         height: parent.height
-        color: rail.border
+        color: Theme.border
     }
 }

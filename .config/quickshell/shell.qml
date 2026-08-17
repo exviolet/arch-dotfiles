@@ -4,6 +4,9 @@ import Quickshell.Services.Mpris
 import Quickshell.Wayland
 import QtQuick
 
+import "services"
+import "windows"
+
 ShellRoot {
     id: root
 
@@ -47,44 +50,23 @@ ShellRoot {
         }
     }
 
-    readonly property color background: dark ? "#171817" : "#f4f2ee"
-    readonly property color foreground: dark ? "#f0efeb" : "#1d1e1c"
-    readonly property color mutedForeground: dark ? "#9c9d98" : "#666862"
-    readonly property color border: dark ? "#343633" : "#d6d3cc"
-    readonly property color track: dark ? "#30322f" : "#dedbd4"
-    readonly property color accent: "#d14d41"
-    readonly property color warningAccent: "#d08a32"
-    readonly property color layoutUs: "#356ea3"
-    readonly property color layoutRu: dark ? "#b53f37" : "#a93832"
-    readonly property color layoutKk: dark ? "#d0a13c" : "#bd841e"
-
-    NiriService {
-        id: niriService
-    }
-
-    AudioService {
-        id: audioService
-    }
-
-    BrightnessService {
-        id: brightnessService
-    }
-
-    TrayService {
-        id: trayService
+    Binding {
+        target: Theme
+        property: "dark"
+        value: root.dark
     }
 
     Connections {
-        target: audioService
+        target: AudioService
 
         function onSinkReadyChanged(): void {
-            if (!audioService.sinkReady && root.activeSurface === "audio")
+            if (!AudioService.sinkReady && root.activeSurface === "audio")
                 root.activeSurface = "system"
         }
     }
 
     Connections {
-        target: brightnessService
+        target: BrightnessService
 
         function onFeedbackRequested(value: real, screen: string): void {
             root.kind = "brightness"
@@ -97,20 +79,20 @@ ShellRoot {
     }
 
     Connections {
-        target: trayService
+        target: TrayService
 
         function onItemCountChanged(): void {
-            if (trayService.itemCount === 0 && root.activeSurface === "tray")
+            if (TrayService.itemCount === 0 && root.activeSurface === "tray")
                 root.activeSurface = "system"
         }
     }
 
     Connections {
-        target: niriService
+        target: NiriService
 
         function onKeyboardLayoutChanged(): void {
-            if (niriService.keyboardLayout === "") return
-            root.keyboardLayoutName = niriService.keyboardLayout
+            if (NiriService.keyboardLayout === "") return
+            root.keyboardLayoutName = NiriService.keyboardLayout
             if (!root.keyboardFeedbackReady) {
                 root.keyboardFeedbackReady = true
                 return
@@ -129,10 +111,10 @@ ShellRoot {
 
     function keyboardLayoutColor(name: string): color {
         const code = keyboardLayoutCode(name)
-        if (code === "US") return layoutUs
-        if (code === "RU") return layoutRu
-        if (code === "KK") return layoutKk
-        return accent
+        if (code === "US") return Theme.layoutUs
+        if (code === "RU") return Theme.layoutRu
+        if (code === "KK") return Theme.layoutKk
+        return Theme.accent
     }
 
     function keyboardLayoutForeground(name: string): color {
@@ -148,37 +130,37 @@ ShellRoot {
     }
 
     function presentKeyboardLayout(screen: string): string {
-        if (niriService.keyboardLayout === "") return "unavailable"
+        if (NiriService.keyboardLayout === "") return "unavailable"
         root.kind = "keyboard"
-        root.keyboardLayoutName = niriService.keyboardLayout
+        root.keyboardLayoutName = NiriService.keyboardLayout
         root.muted = false
         root.warning = false
         root.value = 1
-        root.targetScreen = screen === "" ? niriService.focusedOutput : screen
+        root.targetScreen = screen === "" ? NiriService.focusedOutput : screen
         root.reveal(1100)
         return root.keyboardLayoutCode(root.keyboardLayoutName)
     }
 
     function presentAudioFeedback(value: real, muted: bool, screen: string): void {
         root.kind = "volume"
-        root.value = Math.max(0, Math.min(audioService.maxVolume, value))
+        root.value = Math.max(0, Math.min(AudioService.maxVolume, value))
         root.muted = muted
         root.warning = false
-        root.targetScreen = screen === "" ? niriService.focusedOutput : screen
+        root.targetScreen = screen === "" ? NiriService.focusedOutput : screen
         root.reveal(1800)
     }
 
     function adjustAudioVolume(delta: real, screen: string): string {
-        const requested = Math.max(0, Math.min(audioService.maxVolume, audioService.volume + delta))
-        if (!audioService.setVolume(requested)) return "unavailable"
-        root.presentAudioFeedback(requested, audioService.muted, screen)
+        const requested = Math.max(0, Math.min(AudioService.maxVolume, AudioService.volume + delta))
+        if (!AudioService.setVolume(requested)) return "unavailable"
+        root.presentAudioFeedback(requested, AudioService.muted, screen)
         return String(Math.round(requested * 100))
     }
 
     function toggleAudioMuteWithFeedback(screen: string): string {
-        const requestedMuted = !audioService.muted
-        if (!audioService.toggleMute()) return "unavailable"
-        root.presentAudioFeedback(audioService.volume, requestedMuted, screen)
+        const requestedMuted = !AudioService.muted
+        if (!AudioService.toggleMute()) return "unavailable"
+        root.presentAudioFeedback(AudioService.volume, requestedMuted, screen)
         return requestedMuted ? "muted" : "unmuted"
     }
 
@@ -253,8 +235,8 @@ ShellRoot {
         const requested = surface.trim().toLowerCase()
         if (requested !== "system" && requested !== "media" && requested !== "audio" && requested !== "tray") return "unsupported:" + requested
         if (requested === "media" && !mediaPlayer) return "unavailable:media"
-        if (requested === "audio" && !audioService.sinkReady) return "unavailable:audio"
-        if (requested === "tray" && trayService.itemCount === 0) return "unavailable:tray"
+        if (requested === "audio" && !AudioService.sinkReady) return "unavailable:audio"
+        if (requested === "tray" && TrayService.itemCount === 0) return "unavailable:tray"
         activeSurface = requested
         return activeSurface
     }
@@ -262,17 +244,17 @@ ShellRoot {
     function showRailSurface(surface: string, screen: string): string {
         const selected = selectSurface(surface)
         if (selected.indexOf(":") !== -1) return selected
-        const target = screen === "" ? niriService.focusedOutput : screen
+        const target = screen === "" ? NiriService.focusedOutput : screen
         setRailExpanded(true, target)
         return "pinned:" + target + ":" + activeSurface
     }
 
     function toggleRailSurface(surface: string, screen: string): string {
         const requested = surface.trim().toLowerCase()
-        const wasSamePinnedSurface = railPinned && railExpansionScreen === (screen === "" ? niriService.focusedOutput : screen) && activeSurface === requested
+        const wasSamePinnedSurface = railPinned && railExpansionScreen === (screen === "" ? NiriService.focusedOutput : screen) && activeSurface === requested
         const selected = selectSurface(surface)
         if (selected.indexOf(":") !== -1) return selected
-        const target = screen === "" ? niriService.focusedOutput : screen
+        const target = screen === "" ? NiriService.focusedOutput : screen
         if (wasSamePinnedSurface) {
             setRailExpanded(false, target)
             return "collapsed:" + activeSurface
@@ -287,7 +269,7 @@ ShellRoot {
         function showOsd(kind: string, value: real, muted: bool, screen: string): void {
             root.kind = kind
             root.value = Math.max(0, Math.min(1, value))
-            if (kind === "brightness") brightnessService.acceptValue(root.value)
+            if (kind === "brightness") BrightnessService.acceptValue(root.value)
             root.muted = muted
             root.warning = false
             root.targetScreen = screen
@@ -336,13 +318,13 @@ ShellRoot {
         }
 
         function setRailExpanded(expanded: bool, screen: string): string {
-            const target = screen === "" ? niriService.focusedOutput : screen
+            const target = screen === "" ? NiriService.focusedOutput : screen
             root.setRailExpanded(expanded, target)
             return root.railPinned ? "pinned:" + root.railExpansionScreen : "collapsed"
         }
 
         function toggleRailExpanded(screen: string): string {
-            const target = screen === "" ? niriService.focusedOutput : screen
+            const target = screen === "" ? NiriService.focusedOutput : screen
             root.toggleRailFor(target)
             return root.railPinned ? "pinned:" + root.railExpansionScreen : "collapsed"
         }
@@ -370,11 +352,11 @@ ShellRoot {
         }
 
         function getNiriState(): string {
-            return niriService.ready ? "ready:" + niriService.focusedOutput : "waiting"
+            return NiriService.ready ? "ready:" + NiriService.focusedOutput : "waiting"
         }
 
         function getKeyboardLayout(): string {
-            return niriService.keyboardLayout
+            return NiriService.keyboardLayout
         }
 
         function showKeyboardLayout(screen: string): string {
@@ -395,15 +377,15 @@ ShellRoot {
         }
 
         function getAudioState(): string {
-            return JSON.stringify(audioService.state())
+            return JSON.stringify(AudioService.state())
         }
 
         function setAudioVolume(value: real): string {
-            return audioService.setVolume(value) ? "requested" : "unavailable"
+            return AudioService.setVolume(value) ? "requested" : "unavailable"
         }
 
         function toggleAudioMute(): string {
-            return audioService.toggleMute() ? "requested" : "unavailable"
+            return AudioService.toggleMute() ? "requested" : "unavailable"
         }
 
         function adjustAudioVolume(delta: real, screen: string): string {
@@ -415,45 +397,45 @@ ShellRoot {
         }
 
         function getBrightnessState(): string {
-            return brightnessService.ready ? String(brightnessService.percent) : "unavailable"
+            return BrightnessService.ready ? String(BrightnessService.percent) : "unavailable"
         }
 
         function adjustBrightness(step: int, screen: string): string {
-            return brightnessService.adjust(step, screen) ? "requested" : "busy"
+            return BrightnessService.adjust(step, screen) ? "requested" : "busy"
         }
 
         function setMicrophoneVolume(value: real): string {
-            return audioService.setSourceVolume(value) ? "requested" : "unavailable"
+            return AudioService.setSourceVolume(value) ? "requested" : "unavailable"
         }
 
         function toggleMicrophoneMute(): string {
-            return audioService.toggleSourceMute() ? "requested" : "unavailable"
+            return AudioService.toggleSourceMute() ? "requested" : "unavailable"
         }
 
         function selectAudioSink(id: int): string {
-            return audioService.selectSink(id) ? "requested:" + String(id) : "unavailable:" + String(id)
+            return AudioService.selectSink(id) ? "requested:" + String(id) : "unavailable:" + String(id)
         }
 
         function selectMicrophoneSource(id: int): string {
-            return audioService.selectSource(id) ? "requested:" + String(id) : "unavailable:" + String(id)
+            return AudioService.selectSource(id) ? "requested:" + String(id) : "unavailable:" + String(id)
         }
 
         function getTrayState(): string {
-            return JSON.stringify(trayService.snapshot())
+            return JSON.stringify(TrayService.snapshot())
         }
 
         function activateTrayItem(index: int): string {
-            return trayService.activate(index) ? "requested:" + String(index) : "unavailable:" + String(index)
+            return TrayService.activate(index) ? "requested:" + String(index) : "unavailable:" + String(index)
         }
 
         function secondaryActivateTrayItem(index: int): string {
-            return trayService.secondaryActivate(index) ? "requested:" + String(index) : "unavailable:" + String(index)
+            return TrayService.secondaryActivate(index) ? "requested:" + String(index) : "unavailable:" + String(index)
         }
 
         function openTrayItemMenu(index: int, screen: string): string {
-            const item = trayService.itemAt(index)
+            const item = TrayService.itemAt(index)
             if (!item || !item.hasMenu) return "unavailable:" + String(index)
-            const target = screen === "" ? niriService.focusedOutput : screen
+            const target = screen === "" ? NiriService.focusedOutput : screen
             root.trayInlineMenuRequested(index, target)
             return "requested:" + String(index) + ":" + target
         }
@@ -477,7 +459,7 @@ ShellRoot {
         }
 
         function getWorkspaces(): string {
-            return JSON.stringify(niriService.workspaces)
+            return JSON.stringify(NiriService.workspaces)
         }
 
         function getOsdState(): string {
@@ -530,14 +512,8 @@ ShellRoot {
             required property var modelData
 
             outputScreen: modelData
-            niriState: niriService
             railController: root
             mediaPlayer: root.mediaPlayer
-            audioState: audioService
-            brightnessState: brightnessService
-            trayState: trayService
-            shellDark: root.dark
-            railEnabled: root.railVisible
         }
     }
 
@@ -579,9 +555,9 @@ ShellRoot {
                     anchors.fill: parent
                     anchors.margins: 4
                     radius: 15
-                    color: root.background
+                    color: Theme.background
                     border.width: 1
-                    border.color: root.warning ? root.warningAccent : root.border
+                    border.color: root.warning ? Theme.warningAccent : Theme.border
                     opacity: root.presenting ? 1 : 0
                     y: root.presenting ? 0 : 8
 
@@ -599,7 +575,7 @@ ShellRoot {
                         x: 0
                         y: 14
                         radius: 1.5
-                        color: root.warning ? root.warningAccent : root.accent
+                        color: root.warning ? Theme.warningAccent : Theme.accent
                     }
 
                     Text {
@@ -607,7 +583,7 @@ ShellRoot {
                         y: 18
                         width: 38
                         text: root.code()
-                        color: root.warning ? root.warningAccent : root.accent
+                        color: root.warning ? Theme.warningAccent : Theme.accent
                         font.family: "GeistMono Nerd Font"
                         font.pixelSize: 11
                         font.weight: Font.DemiBold
@@ -619,7 +595,7 @@ ShellRoot {
                         y: 13
                         width: parent.width - 154
                         text: root.title()
-                        color: root.foreground
+                        color: Theme.foreground
                         elide: Text.ElideRight
                         font.family: "IBM Plex Sans"
                         font.pixelSize: 15
@@ -655,7 +631,7 @@ ShellRoot {
                         width: 62
                         horizontalAlignment: Text.AlignRight
                         text: root.valueLabel()
-                        color: root.warning ? root.warningAccent : root.foreground
+                        color: root.warning ? Theme.warningAccent : Theme.foreground
                         font.family: "GeistMono Nerd Font"
                         font.pixelSize: root.kind === "renderer" ? 10 : 13
                         font.weight: Font.Medium
@@ -666,7 +642,7 @@ ShellRoot {
                         y: 39
                         width: parent.width - 94
                         text: root.detail()
-                        color: root.mutedForeground
+                        color: Theme.mutedForeground
                         elide: Text.ElideRight
                         font.family: "IBM Plex Sans"
                         font.pixelSize: 11
@@ -680,13 +656,13 @@ ShellRoot {
                         width: parent.width - 94
                         height: 2
                         radius: 1
-                        color: root.track
+                        color: Theme.track
 
                         Rectangle {
                             width: Math.max(0, Math.min(1, root.value)) * parent.width
                             height: parent.height
                             radius: 1
-                            color: root.warning ? root.warningAccent : root.accent
+                            color: root.warning ? Theme.warningAccent : Theme.accent
 
                             Behavior on width {
                                 NumberAnimation { duration: 110; easing.type: Easing.OutCubic }
@@ -700,7 +676,7 @@ ShellRoot {
                             width: 6
                             height: 6
                             radius: 3
-                            color: root.foreground
+                            color: Theme.foreground
 
                             Behavior on x {
                                 NumberAnimation { duration: 110; easing.type: Easing.OutCubic }
@@ -716,7 +692,7 @@ ShellRoot {
                         spacing: 7
 
                         Repeater {
-                            model: niriService.keyboardLayouts
+                            model: NiriService.keyboardLayouts
 
                             Rectangle {
                                 required property string modelData
@@ -724,14 +700,14 @@ ShellRoot {
                                 width: 48
                                 height: 18
                                 radius: 5
-                                color: active ? root.keyboardLayoutColor(modelData) : root.track
+                                color: active ? root.keyboardLayoutColor(modelData) : Theme.track
 
                                 Behavior on color { ColorAnimation { duration: 120 } }
 
                                 Text {
                                     anchors.centerIn: parent
                                     text: root.keyboardLayoutCode(parent.modelData)
-                                    color: parent.active ? root.keyboardLayoutForeground(parent.modelData) : root.mutedForeground
+                                    color: parent.active ? root.keyboardLayoutForeground(parent.modelData) : Theme.mutedForeground
                                     font.family: "GeistMono Nerd Font"
                                     font.pixelSize: 9
                                     font.weight: Font.DemiBold

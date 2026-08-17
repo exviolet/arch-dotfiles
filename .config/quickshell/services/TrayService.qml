@@ -1,8 +1,10 @@
+pragma Singleton
+
 import QtQuick
 import Quickshell
 import Quickshell.Services.SystemTray
 
-Item {
+Singleton {
     id: root
 
     readonly property var items: SystemTray.items.values.slice().sort((left, right) => {

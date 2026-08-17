@@ -1,8 +1,10 @@
+pragma Singleton
+
 import Quickshell
 import Quickshell.Services.Pipewire
 import QtQuick
 
-Scope {
+Singleton {
     id: root
 
     readonly property bool ready: Pipewire.ready
