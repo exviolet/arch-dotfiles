@@ -499,6 +499,10 @@ ShellRoot {
             return JSON.stringify(NiriService.workspaces)
         }
 
+        function getWindows(): string {
+            return JSON.stringify(NiriService.windows)
+        }
+
         function getOsdState(): string {
             return JSON.stringify({
                 "visible": root.windowVisible,

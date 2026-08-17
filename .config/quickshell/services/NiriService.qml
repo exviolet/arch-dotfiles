@@ -8,6 +8,7 @@ Singleton {
     id: root
 
     property var workspaces: []
+    property var windows: []
     property string focusedOutput: ""
     property var keyboardLayouts: []
     property int keyboardLayoutIndex: -1
@@ -15,6 +16,92 @@ Singleton {
     property bool overviewOpen: false
     property bool ready: false
     property bool connected: eventStream.running
+
+    function copyWindow(window: var): var {
+        const stamp = window.focus_timestamp
+        return {
+            "id": Number(window.id),
+            "title": window.title || "",
+            "app_id": window.app_id || "",
+            "workspace_id": window.workspace_id,
+            "is_focused": Boolean(window.is_focused),
+            "focus_timestamp": stamp ? Number(stamp.secs) : 0
+        }
+    }
+
+    function replaceWindows(list: var): void {
+        const next = []
+        for (let index = 0; index < list.length; ++index)
+            next.push(root.copyWindow(list[index]))
+        root.windows = next
+    }
+
+    // WindowOpenedOrChanged fires for both cases, so upsert rather than append.
+    function upsertWindow(window: var): void {
+        const incoming = root.copyWindow(window)
+        const next = []
+        let replaced = false
+
+        for (let index = 0; index < root.windows.length; ++index) {
+            const existing = root.windows[index]
+            if (existing.id === incoming.id) {
+                next.push(incoming)
+                replaced = true
+            } else {
+                // niri reports focus exclusively, so a newly focused window
+                // implies every other one lost focus.
+                next.push(incoming.is_focused && existing.is_focused
+                    ? Object.assign({}, existing, { "is_focused": false })
+                    : existing)
+            }
+        }
+
+        if (!replaced) next.push(incoming)
+        root.windows = next
+    }
+
+    function removeWindow(id: int): void {
+        const next = []
+        for (let index = 0; index < root.windows.length; ++index) {
+            if (root.windows[index].id !== id)
+                next.push(root.windows[index])
+        }
+        root.windows = next
+    }
+
+    function setWindowFocus(id: var): void {
+        const focused = id === null || id === undefined ? -1 : Number(id)
+        const next = []
+        for (let index = 0; index < root.windows.length; ++index) {
+            const window = root.windows[index]
+            next.push(Object.assign({}, window, { "is_focused": window.id === focused }))
+        }
+        root.windows = next
+    }
+
+    function setWindowFocusTimestamp(id: int, stamp: var): void {
+        const seconds = stamp ? Number(stamp.secs) : 0
+        const next = []
+        for (let index = 0; index < root.windows.length; ++index) {
+            const window = root.windows[index]
+            next.push(window.id === id
+                ? Object.assign({}, window, { "focus_timestamp": seconds })
+                : window)
+        }
+        root.windows = next
+    }
+
+    function windowsForAppIds(ids: var): var {
+        const wanted = ids.map(id => String(id).toLowerCase())
+        return root.windows
+            .filter(window => wanted.indexOf(String(window.app_id).toLowerCase()) !== -1)
+            .slice()
+            .sort((left, right) => right.focus_timestamp - left.focus_timestamp)
+    }
+
+    function focusWindow(id: int): void {
+        windowAction.exec(["/usr/sbin/niri", "msg", "action", "focus-window", "--id", String(id)])
+    }
 
     function copyWorkspace(workspace: var): var {
         return {
@@ -107,8 +194,22 @@ Singleton {
             root.setKeyboardLayoutIndex(Number(message.KeyboardLayoutSwitched.idx))
         } else if (message.OverviewOpenedOrClosed) {
             root.overviewOpen = Boolean(message.OverviewOpenedOrClosed.is_open)
+        } else if (message.WindowsChanged) {
+            root.replaceWindows(message.WindowsChanged.windows || [])
+        } else if (message.WindowOpenedOrChanged) {
+            root.upsertWindow(message.WindowOpenedOrChanged.window)
+        } else if (message.WindowClosed) {
+            root.removeWindow(Number(message.WindowClosed.id))
+        } else if (message.WindowFocusChanged) {
+            root.setWindowFocus(message.WindowFocusChanged.id)
+        } else if (message.WindowFocusTimestampChanged) {
+            root.setWindowFocusTimestamp(
+                Number(message.WindowFocusTimestampChanged.id),
+                message.WindowFocusTimestampChanged.focus_timestamp)
         }
     }
+
+    Process { id: windowAction }
 
     Process {
         id: eventStream
