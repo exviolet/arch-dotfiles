@@ -31,6 +31,8 @@ ShellRoot {
     property string targetScreen: ""
     property bool keyboardFeedbackReady: false
     property string keyboardLayoutName: ""
+    property bool launcherVisible: false
+    property string launcherScreen: ""
 
     readonly property var mediaPlayer: {
         const players = Mpris.players.values
@@ -211,6 +213,25 @@ ShellRoot {
         closeTimer.restart()
     }
 
+    function showLauncher(screen: string): string {
+        const target = screen === "" ? NiriService.focusedOutput : screen
+        launcherScreen = target
+        launcherVisible = true
+        return "shown:" + target
+    }
+
+    function hideLauncher(): string {
+        launcherVisible = false
+        launcherScreen = ""
+        return "hidden"
+    }
+
+    function toggleLauncher(screen: string): string {
+        const target = screen === "" ? NiriService.focusedOutput : screen
+        if (launcherVisible && launcherScreen === target) return hideLauncher()
+        return showLauncher(target)
+    }
+
     function setRailPreview(screen: string, active: bool): void {
         if (active) {
             railPreviewScreen = screen
@@ -302,6 +323,22 @@ ShellRoot {
 
         function getTheme(): string {
             return root.dark ? "dark" : "light"
+        }
+
+        function showLauncher(screen: string): string {
+            return root.showLauncher(screen)
+        }
+
+        function hideLauncher(): string {
+            return root.hideLauncher()
+        }
+
+        function toggleLauncher(screen: string): string {
+            return root.toggleLauncher(screen)
+        }
+
+        function getLauncherState(): string {
+            return root.launcherVisible ? "shown:" + root.launcherScreen : "hidden"
         }
 
         function setRailVisible(visible: bool): void {
@@ -514,6 +551,17 @@ ShellRoot {
             outputScreen: modelData
             railController: root
             mediaPlayer: root.mediaPlayer
+        }
+    }
+
+    Variants {
+        model: Quickshell.screens
+
+        Launcher {
+            required property var modelData
+
+            outputScreen: modelData
+            launcherController: root
         }
     }
 

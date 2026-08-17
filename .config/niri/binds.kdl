@@ -18,21 +18,21 @@ binds {
 
     // Suggested binds for running programs: terminal, app launcher, screen locker.
     Mod+B hotkey-overlay-title="Open a Browser: Firefox" { spawn "firefox"; }
-    Mod+A { spawn "/home/ex1te/.local/bin/rewrite-desktop"; }
+    Mod+A { spawn "/home/ex1te/.local/bin/sendoff-desktop"; }
     Mod+Alt+B hotkey-overlay-title="Open a Browser: Helium" { spawn "helium-browser"; }
     Mod+Shift+Return { spawn "alacritty" "--class" "Alacritty-Float"; }
     Mod+Return hotkey-overlay-title="Open a Terminal: alacritty" { spawn "alacritty"; }
     // Mod+G hotkey-overlay-title="Open a Terminal: ghostty" { spawn "ghostty"; }
     Mod+N hotkey-overlay-title="Notification center" { spawn-sh "swaync-client -t"; }
     Mod+E hotkey-overlay-title="Open a File manager: thunar" { spawn "thunar"; }
-    Mod+D hotkey-overlay-title="Run an Application: rofi" { spawn "sh" "-c" "rofi -show drun"; }
+    Mod+D hotkey-overlay-title="Run an Application" { spawn "/home/ex1te/.config/quickshell/scripts/sidecarctl" "launcher-toggle"; }
     Mod+S { spawn "bash" "-c" "$HOME/.config/rofi/scripts/search.sh"; }
 
     Mod+Shift+E hotkey-overlay-title="Run an Application: rofi-emoji" { spawn "sh" "-c" "rofi -show emoji -theme ~/.config/rofi/launchers/emoji.rasi"; }
     Mod+Shift+D { spawn "bash" "-c" "$HOME/.config/rofi/scripts/clipboard.sh"; }
     Mod+Shift+S hotkey-overlay-title="Screenshot manager" { spawn "bash" "-c" "$HOME/.config/rofi/scripts/screenshots.sh"; }
     Super+Alt+L hotkey-overlay-title="Lock the Screen: hyprlock" { spawn "hyprlock"; }
-    Mod+T hotkey-overlay-title="Lock the Screen: Telegram" { spawn "Telegram"; }
+    Mod+T hotkey-overlay-title="Lock the Screen: Telegram" { spawn "org.telegram.desktop"; }
     Mod+Shift+O { spawn "bash" "-c" "$HOME/.config/rofi/scripts/wallpapermenu.sh"; }
     Mod+Shift+T hotkey-overlay-title="Toggle desktop theme" { spawn "bash" "-c" "$HOME/.config/rofi/scripts/toggle-gtk-theme.sh toggle"; }
     Mod+Shift+C { spawn "sh" "-c" "rofi -show calc -theme ~/.config/rofi/launchers/calc.rasi"; }
