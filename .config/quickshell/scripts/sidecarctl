@@ -91,7 +91,7 @@ wait_ready() {
 
 usage() {
     printf '%s\n' \
-        'Usage: sidecarctl <volume-up|volume-down|volume-mute|mic-up|mic-down|mic-mute|brightness-up|brightness-down|renderer|startup|hide|theme|launcher-toggle>' >&2
+        'Usage: sidecarctl <volume-up|volume-down|volume-mute|mic-up|mic-down|mic-mute|brightness-up|brightness-down|renderer|startup|hide|theme|launcher-toggle|clipboard-toggle>' >&2
     exit 2
 }
 
@@ -143,6 +143,9 @@ case "${1:-}" in
         ;;
     launcher-toggle)
         ipc toggleLauncher "$(focused_screen)"
+        ;;
+    clipboard-toggle)
+        ipc toggleClipboard "$(focused_screen)"
         ;;
     *)
         usage

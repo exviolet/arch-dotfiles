@@ -454,10 +454,14 @@ PanelWindow {
                     color: windowRow.active
                         ? Theme.raisedSurface
                         : (rowHover.hovered ? Theme.surface : "transparent")
-                    border.width: windowRow.active ? 1 : 0
-                    border.color: Theme.accent
+                    antialiasing: true
+                    border.width: 1
+                    border.color: windowRow.active ? Theme.accent : "transparent"
 
-                    Behavior on color {
+                    // No fill animation: on a fast pointer sweep a fade
+                    // leaves several tiles lit at once, which reads as the
+                    // highlight lagging behind the cursor.
+                    Behavior on border.color {
                         ColorAnimation { duration: 90 }
                     }
                 }
@@ -495,7 +499,7 @@ PanelWindow {
                     elide: Text.ElideRight
                     font.family: "DejaVu Sans"
                     font.pixelSize: 12
-                    font.weight: windowRow.active ? Font.DemiBold : Font.Normal
+                    font.weight: Font.Normal
                 }
 
                 Text {
@@ -587,10 +591,14 @@ PanelWindow {
                     color: appCell.active
                         ? Theme.raisedSurface
                         : (cellHover.hovered ? Theme.surface : "transparent")
-                    border.width: appCell.active ? 1 : 0
-                    border.color: Theme.accent
+                    antialiasing: true
+                    border.width: 1
+                    border.color: appCell.active ? Theme.accent : "transparent"
 
-                    Behavior on color {
+                    // No fill animation: on a fast pointer sweep a fade
+                    // leaves several tiles lit at once, which reads as the
+                    // highlight lagging behind the cursor.
+                    Behavior on border.color {
                         ColorAnimation { duration: 90 }
                     }
                 }
@@ -642,7 +650,7 @@ PanelWindow {
                     horizontalAlignment: Text.AlignHCenter
                     font.family: "DejaVu Sans"
                     font.pixelSize: 11
-                    font.weight: appCell.active ? Font.DemiBold : Font.Normal
+                    font.weight: Font.Normal
                 }
 
                 Text {

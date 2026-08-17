@@ -33,6 +33,8 @@ ShellRoot {
     property string keyboardLayoutName: ""
     property bool launcherVisible: false
     property string launcherScreen: ""
+    property bool clipboardVisible: false
+    property string clipboardScreen: ""
 
     readonly property var mediaPlayer: {
         const players = Mpris.players.values
@@ -215,6 +217,8 @@ ShellRoot {
 
     function showLauncher(screen: string): string {
         const target = screen === "" ? NiriService.focusedOutput : screen
+        // Only one keyboard-grabbing overlay at a time.
+        clipboardVisible = false
         launcherScreen = target
         launcherVisible = true
         return "shown:" + target
@@ -230,6 +234,26 @@ ShellRoot {
         const target = screen === "" ? NiriService.focusedOutput : screen
         if (launcherVisible && launcherScreen === target) return hideLauncher()
         return showLauncher(target)
+    }
+
+    function showClipboard(screen: string): string {
+        const target = screen === "" ? NiriService.focusedOutput : screen
+        launcherVisible = false
+        clipboardScreen = target
+        clipboardVisible = true
+        return "shown:" + target
+    }
+
+    function hideClipboard(): string {
+        clipboardVisible = false
+        clipboardScreen = ""
+        return "hidden"
+    }
+
+    function toggleClipboard(screen: string): string {
+        const target = screen === "" ? NiriService.focusedOutput : screen
+        if (clipboardVisible && clipboardScreen === target) return hideClipboard()
+        return showClipboard(target)
     }
 
     function setRailPreview(screen: string, active: bool): void {
@@ -339,6 +363,22 @@ ShellRoot {
 
         function getLauncherState(): string {
             return root.launcherVisible ? "shown:" + root.launcherScreen : "hidden"
+        }
+
+        function showClipboard(screen: string): string {
+            return root.showClipboard(screen)
+        }
+
+        function hideClipboard(): string {
+            return root.hideClipboard()
+        }
+
+        function toggleClipboard(screen: string): string {
+            return root.toggleClipboard(screen)
+        }
+
+        function getClipboardState(): string {
+            return root.clipboardVisible ? "shown:" + root.clipboardScreen : "hidden"
         }
 
         function setRailVisible(visible: bool): void {
@@ -566,6 +606,17 @@ ShellRoot {
 
             outputScreen: modelData
             launcherController: root
+        }
+    }
+
+    Variants {
+        model: Quickshell.screens
+
+        Clipboard {
+            required property var modelData
+
+            outputScreen: modelData
+            clipboardController: root
         }
     }
 

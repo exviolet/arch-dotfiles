@@ -29,7 +29,7 @@ binds {
     Mod+S { spawn "bash" "-c" "$HOME/.config/rofi/scripts/search.sh"; }
 
     Mod+Shift+E hotkey-overlay-title="Run an Application: rofi-emoji" { spawn "sh" "-c" "rofi -show emoji -theme ~/.config/rofi/launchers/emoji.rasi"; }
-    Mod+Shift+D { spawn "bash" "-c" "$HOME/.config/rofi/scripts/clipboard.sh"; }
+    Mod+Shift+D hotkey-overlay-title="Clipboard history" { spawn "/home/ex1te/.config/quickshell/scripts/sidecarctl" "clipboard-toggle"; }
     Mod+Shift+S hotkey-overlay-title="Screenshot manager" { spawn "bash" "-c" "$HOME/.config/rofi/scripts/screenshots.sh"; }
     Super+Alt+L hotkey-overlay-title="Lock the Screen: hyprlock" { spawn "hyprlock"; }
     Mod+T hotkey-overlay-title="Lock the Screen: Telegram" { spawn "org.telegram.desktop"; }
