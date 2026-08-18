@@ -26,6 +26,15 @@ Item {
     readonly property bool canNext: hasMedia && player.canGoNext
     readonly property real progress: hasMedia && player.lengthSupported && length > 0 ? Math.max(0, Math.min(1, position / length)) : 0
 
+    // MPRIS отдаёт позицию по запросу: без периодического positionChanged
+    // счётчик и полоса застывают на значении момента открытия
+    Timer {
+        running: surface.visible && surface.playing && surface.hasMedia && surface.player.positionSupported
+        interval: 1000
+        repeat: true
+        onTriggered: surface.player.positionChanged()
+    }
+
     function formatDuration(seconds: real): string {
         if (!isFinite(seconds) || seconds < 0) return "--:--"
         const minutes = Math.floor(seconds / 60)
