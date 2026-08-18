@@ -45,6 +45,7 @@ PanelWindow {
     readonly property real interactiveWidth: compactWidth + drawerWidth * revealProgress
     readonly property bool outputFocused: NiriService.focusedOutput === outputScreen.name
     property real outputFocusPulse: 0
+    property string pendingSurface: ""
 
     readonly property var screenWorkspaces: NiriService.workspaces.filter(workspace => workspace.output === outputScreen.name)
     readonly property var battery: UPower.displayDevice
@@ -105,6 +106,16 @@ PanelWindow {
     }
 
     Timer {
+        id: surfaceHoverTimer
+        interval: 200
+        repeat: false
+        onTriggered: {
+            if (rail.pendingSurface !== "")
+                rail.railController.selectSurface(rail.pendingSurface)
+        }
+    }
+
+    Timer {
         id: collapseTimer
         interval: 260
         repeat: false
@@ -150,9 +161,27 @@ PanelWindow {
                 if (!rail.expanded) previewTimer.restart()
             } else {
                 previewTimer.stop()
+                rail.clearSurfaceRequest()
                 if (!rail.externallyPinned) collapseTimer.restart()
             }
         }
+    }
+
+    function requestSurface(surface: string): void {
+        if (externallyPinned) return
+        pendingSurface = surface
+        surfaceHoverTimer.restart()
+    }
+
+    function cancelSurfaceRequest(surface: string): void {
+        if (pendingSurface !== surface) return
+        pendingSurface = ""
+        surfaceHoverTimer.stop()
+    }
+
+    function clearSurfaceRequest(): void {
+        pendingSurface = ""
+        surfaceHoverTimer.stop()
     }
 
     function focusWorkspace(output: string, index: int): void {
@@ -369,14 +398,13 @@ PanelWindow {
                 acceptedButtons: Qt.LeftButton | Qt.RightButton
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onEntered: {
-                    if (!rail.externallyPinned)
-                        rail.railController.selectSurface("system")
-                }
+                onEntered: rail.requestSurface("system")
+                onExited: rail.cancelSurfaceRequest("system")
                 onClicked: mouse => {
                     if (mouse.button === Qt.RightButton) {
                         rendererAction.exec(["/home/ex1te/.config/quickshell/scripts/sidecarctl", "renderer"])
                     } else {
+                        rail.clearSurfaceRequest()
                         rail.railController.setRailPreview(rail.outputScreen.name, false)
                         rail.railController.toggleRailSurface("system", rail.outputScreen.name)
                     }
@@ -547,11 +575,10 @@ PanelWindow {
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onEntered: {
-                    if (!rail.externallyPinned)
-                        rail.railController.selectSurface("media")
-                }
+                onEntered: rail.requestSurface("media")
+                onExited: rail.cancelSurfaceRequest("media")
                 onClicked: {
+                    rail.clearSurfaceRequest()
                     rail.railController.setRailPreview(rail.outputScreen.name, false)
                     rail.railController.toggleRailSurface("media", rail.outputScreen.name)
                 }
@@ -599,15 +626,14 @@ PanelWindow {
                 acceptedButtons: Qt.LeftButton | Qt.MiddleButton
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onEntered: {
-                    if (!rail.externallyPinned)
-                        rail.railController.selectSurface("audio")
-                }
+                onEntered: rail.requestSurface("audio")
+                onExited: rail.cancelSurfaceRequest("audio")
                 onClicked: mouse => {
                     if (mouse.button === Qt.MiddleButton) {
                         rail.railController.toggleAudioMuteWithFeedback(rail.outputScreen.name)
                         return
                     }
+                    rail.clearSurfaceRequest()
                     rail.railController.setRailPreview(rail.outputScreen.name, false)
                     rail.railController.toggleRailSurface("audio", rail.outputScreen.name)
                 }
@@ -681,11 +707,10 @@ PanelWindow {
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onEntered: {
-                    if (!rail.externallyPinned)
-                        rail.railController.selectSurface("tray")
-                }
+                onEntered: rail.requestSurface("tray")
+                onExited: rail.cancelSurfaceRequest("tray")
                 onClicked: {
+                    rail.clearSurfaceRequest()
                     rail.railController.setRailPreview(rail.outputScreen.name, false)
                     rail.railController.toggleRailSurface("tray", rail.outputScreen.name)
                 }
