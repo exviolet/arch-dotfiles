@@ -31,13 +31,7 @@ PanelWindow {
     readonly property string mediaDesktopEntryId: hasMedia ? String(mediaPlayer.desktopEntry) : ""
     readonly property var mediaApplication: hasMedia ? DesktopEntries.heuristicLookup(mediaDesktopEntryId || mediaIdentity) : null
     readonly property string mediaApplicationName: mediaApplication ? String(mediaApplication.name).replace(" (Launcher)", "") : mediaIdentity
-    readonly property string mediaIconName: {
-        const key = (mediaDesktopEntryId + " " + mediaIdentity).toLowerCase()
-        if (key.indexOf("spotify") !== -1) return "spotify-launcher"
-        if (key.indexOf("helium") !== -1) return "helium-browser"
-        return mediaApplication ? String(mediaApplication.icon) : mediaDesktopEntryId
-    }
-    readonly property string mediaIconSource: mediaIconName !== "" ? Quickshell.iconPath(mediaIconName, true) : ""
+    readonly property string mediaIconSource: railController.mediaIconSourceFor(mediaPlayer)
     property real drawerWidth: showingAudio ? 394 : (showingMedia ? 360 : (showingTray ? 344 : (showingCalendar ? 336 : 304)))
     readonly property bool externallyPinned: railController.railPinned && railController.railExpansionScreen === outputScreen.name
     readonly property bool previewing: railController.railPreviewScreen === outputScreen.name
@@ -295,6 +289,7 @@ PanelWindow {
             MediaSurface {
                 anchors.fill: parent
                 visible: rail.showingMedia
+                controller: rail.railController
                 player: rail.mediaPlayer
                 iconSource: rail.mediaIconSource
                 applicationName: rail.mediaApplicationName

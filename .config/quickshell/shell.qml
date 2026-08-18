@@ -38,13 +38,38 @@ ShellRoot {
     property bool powermenuVisible: false
     property string powermenuScreen: ""
 
+    property string preferredPlayerId: ""
+
     readonly property var mediaPlayer: {
         const players = Mpris.players.values
+        if (preferredPlayerId !== "") {
+            for (let index = 0; index < players.length; ++index) {
+                if (String(players[index].uniqueId) === preferredPlayerId)
+                    return players[index]
+            }
+        }
         for (let index = 0; index < players.length; ++index) {
             if (players[index].playbackState === MprisPlaybackState.Playing)
                 return players[index]
         }
         return players.length > 0 ? players[0] : null
+    }
+
+    function selectMediaPlayer(id: string): void {
+        preferredPlayerId = id
+    }
+
+    // иконку ищут и полоса, и список плееров, поэтому она живёт здесь
+    function mediaIconSourceFor(player: var): string {
+        if (!player) return ""
+        const entryId = String(player.desktopEntry || "")
+        const identity = String(player.identity || "")
+        const key = (entryId + " " + identity).toLowerCase()
+        if (key.indexOf("spotify") !== -1) return Quickshell.iconPath("spotify-launcher", true)
+        if (key.indexOf("helium") !== -1) return Quickshell.iconPath("helium-browser", true)
+        const application = DesktopEntries.heuristicLookup(entryId || identity)
+        const name = application ? String(application.icon) : entryId
+        return name !== "" ? Quickshell.iconPath(name, true) : ""
     }
 
     onMediaPlayerChanged: {
