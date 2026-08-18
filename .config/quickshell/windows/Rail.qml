@@ -52,6 +52,12 @@ PanelWindow {
     readonly property var battery: UPower.displayDevice
     readonly property int batteryPercentage: battery.ready ? Math.round(battery.percentage * 100) : 0
     readonly property bool charging: battery.ready && battery.state === UPowerDeviceState.Charging
+    readonly property real batterySecondsLeft: battery.ready ? (charging ? battery.timeToFull : battery.timeToEmpty) : 0
+    readonly property string batteryTimeLabel: {
+        if (batterySecondsLeft <= 0) return ""
+        const minutes = Math.round(batterySecondsLeft / 60)
+        return String(Math.floor(minutes / 60)) + ":" + (minutes % 60 < 10 ? "0" : "") + String(minutes % 60)
+    }
 
     screen: outputScreen
     visible: railController.railVisible
@@ -930,7 +936,7 @@ PanelWindow {
 
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: String(rail.batteryPercentage)
+                text: batteryMouse.containsMouse && rail.batteryTimeLabel !== "" ? rail.batteryTimeLabel : String(rail.batteryPercentage)
                 color: rail.batteryPercentage <= 15 ? Theme.warningAccent : Theme.foreground
                 font.family: "DejaVu Sans Mono"
                 font.pixelSize: 10
@@ -966,6 +972,13 @@ PanelWindow {
                 radius: 1
                 color: Theme.accent
             }
+        }
+
+        MouseArea {
+            id: batteryMouse
+            visible: batteryBlock.visible
+            anchors.fill: batteryBlock
+            hoverEnabled: true
         }
     }
 
