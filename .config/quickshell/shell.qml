@@ -303,7 +303,7 @@ ShellRoot {
 
     function selectSurface(surface: string): string {
         const requested = surface.trim().toLowerCase()
-        if (requested !== "system" && requested !== "media" && requested !== "audio" && requested !== "tray") return "unsupported:" + requested
+        if (requested !== "system" && requested !== "media" && requested !== "audio" && requested !== "tray" && requested !== "calendar") return "unsupported:" + requested
         if (requested === "media" && !mediaPlayer) return "unavailable:media"
         if (requested === "audio" && !AudioService.sinkReady) return "unavailable:audio"
         if (requested === "tray" && TrayService.itemCount === 0) return "unavailable:tray"

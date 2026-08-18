@@ -23,6 +23,7 @@ PanelWindow {
     readonly property bool showingMedia: activeSurface === "media" && hasMedia
     readonly property bool showingAudio: activeSurface === "audio" && AudioService.sinkReady
     readonly property bool showingTray: activeSurface === "tray" && TrayService.itemCount > 0
+    readonly property bool showingCalendar: activeSurface === "calendar"
     readonly property url audioIconSource: Qt.resolvedUrl(AudioService.muted ? "../icons/iconoir/sound-off.svg" : "../icons/iconoir/sound-high.svg")
     readonly property url brightnessIconSource: Qt.resolvedUrl("../icons/iconoir/brightness.svg")
     readonly property url trayIconSource: Qt.resolvedUrl("../icons/iconoir/app-notification.svg")
@@ -37,7 +38,7 @@ PanelWindow {
         return mediaApplication ? String(mediaApplication.icon) : mediaDesktopEntryId
     }
     readonly property string mediaIconSource: mediaIconName !== "" ? Quickshell.iconPath(mediaIconName, true) : ""
-    property real drawerWidth: showingAudio ? 394 : (showingMedia ? 360 : (showingTray ? 344 : 304))
+    property real drawerWidth: showingAudio ? 394 : (showingMedia ? 360 : (showingTray ? 344 : (showingCalendar ? 336 : 304)))
     readonly property bool externallyPinned: railController.railPinned && railController.railExpansionScreen === outputScreen.name
     readonly property bool previewing: railController.railPreviewScreen === outputScreen.name
     readonly property bool expanded: externallyPinned || previewing
@@ -278,7 +279,7 @@ PanelWindow {
 
             SystemSurface {
                 anchors.fill: parent
-                visible: !rail.showingMedia && !rail.showingAudio && !rail.showingTray
+                visible: !rail.showingMedia && !rail.showingAudio && !rail.showingTray && !rail.showingCalendar
                 outputName: rail.outputScreen.name
                 workspaceLabel: rail.focusedWorkspaceLabel()
                 pinned: rail.externallyPinned
@@ -298,6 +299,14 @@ PanelWindow {
             AudioSurface {
                 anchors.fill: parent
                 visible: rail.showingAudio
+                pinned: rail.externallyPinned
+                expanded: rail.expanded
+            }
+
+            CalendarSurface {
+                anchors.fill: parent
+                visible: rail.showingCalendar
+                now: clock.date
                 pinned: rail.externallyPinned
                 expanded: rail.expanded
             }
@@ -717,55 +726,93 @@ PanelWindow {
             }
         }
 
-        Column {
-            id: clockColumn
+        Item {
+            id: clockBlock
             anchors.centerIn: parent
-            spacing: -1
+            width: 32
+            height: clockColumn.implicitHeight + 14
 
-            Text {
-                anchors.horizontalCenter: parent.horizontalCenter
-                text: Qt.formatDateTime(clock.date, "HH")
-                color: Theme.foreground
-                font.family: "DejaVu Sans Mono"
-                font.pixelSize: 14
-                font.weight: Font.DemiBold
+            Rectangle {
+                anchors.fill: parent
+                radius: 10
+                color: rail.activeSurface === "calendar" ? Theme.surface : (clockMouse.containsMouse ? Theme.raisedSurface : "transparent")
+                border.width: rail.activeSurface === "calendar" ? 1 : 0
+                border.color: Theme.border
             }
 
             Rectangle {
-                anchors.horizontalCenter: parent.horizontalCenter
-                width: 12
-                height: 1
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                width: 2
+                height: rail.activeSurface === "calendar" ? 15 : 0
+                radius: 1
                 color: Theme.accent
             }
 
-            Text {
-                anchors.horizontalCenter: parent.horizontalCenter
-                text: Qt.formatDateTime(clock.date, "mm")
-                color: Theme.foreground
-                font.family: "DejaVu Sans Mono"
-                font.pixelSize: 14
-                font.weight: Font.DemiBold
+            Column {
+                id: clockColumn
+                anchors.centerIn: parent
+                spacing: -1
+
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: Qt.formatDateTime(clock.date, "HH")
+                    color: Theme.foreground
+                    font.family: "DejaVu Sans Mono"
+                    font.pixelSize: 14
+                    font.weight: Font.DemiBold
+                }
+
+                Rectangle {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: 12
+                    height: 1
+                    color: Theme.accent
+                }
+
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: Qt.formatDateTime(clock.date, "mm")
+                    color: Theme.foreground
+                    font.family: "DejaVu Sans Mono"
+                    font.pixelSize: 14
+                    font.weight: Font.DemiBold
+                }
+
+                Item { width: 1; height: 7 }
+
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: Qt.formatDateTime(clock.date, "dd")
+                    color: Theme.subtleForeground
+                    font.family: "DejaVu Sans Mono"
+                    font.pixelSize: 10
+                    font.weight: Font.Medium
+                }
+
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: Qt.formatDateTime(clock.date, "MMM").toUpperCase()
+                    color: Theme.subtleForeground
+                    font.family: "DejaVu Sans"
+                    font.pixelSize: 8
+                    font.weight: Font.DemiBold
+                    font.letterSpacing: 0.8
+                }
             }
 
-            Item { width: 1; height: 7 }
-
-            Text {
-                anchors.horizontalCenter: parent.horizontalCenter
-                text: Qt.formatDateTime(clock.date, "dd")
-                color: Theme.subtleForeground
-                font.family: "DejaVu Sans Mono"
-                font.pixelSize: 10
-                font.weight: Font.Medium
-            }
-
-            Text {
-                anchors.horizontalCenter: parent.horizontalCenter
-                text: Qt.formatDateTime(clock.date, "MMM").toUpperCase()
-                color: Theme.subtleForeground
-                font.family: "DejaVu Sans"
-                font.pixelSize: 8
-                font.weight: Font.DemiBold
-                font.letterSpacing: 0.8
+            MouseArea {
+                id: clockMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onEntered: rail.requestSurface("calendar")
+                onExited: rail.cancelSurfaceRequest("calendar")
+                onClicked: {
+                    rail.clearSurfaceRequest()
+                    rail.railController.setRailPreview(rail.outputScreen.name, false)
+                    rail.railController.toggleRailSurface("calendar", rail.outputScreen.name)
+                }
             }
         }
 
