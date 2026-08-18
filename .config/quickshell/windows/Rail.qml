@@ -443,13 +443,9 @@ PanelWindow {
                     Rectangle {
                         anchors.fill: parent
                         radius: 10
-                        color: workspaceItem.modelData.is_active ? Theme.surface : "transparent"
+                        color: workspaceItem.modelData.is_active ? Theme.surface : (workspaceMouse.containsMouse ? Theme.raisedSurface : "transparent")
                         border.width: workspaceItem.modelData.is_active ? 1 : 0
                         border.color: Theme.border
-                        scale: workspaceMouse.containsMouse ? 1.06 : 1
-
-                        Behavior on color { ColorAnimation { duration: 120 } }
-                        Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
                     }
 
                     Rectangle {
@@ -508,20 +504,13 @@ PanelWindow {
             anchors.horizontalCenter: parent.horizontalCenter
             width: 32
             height: 32
-            scale: mediaEntryMouse.containsMouse ? 1.06 : 1
-
-            Behavior on scale {
-                NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
-            }
 
             Rectangle {
                 anchors.fill: parent
                 radius: 10
-                color: rail.activeSurface === "media" ? Theme.surface : "transparent"
+                color: rail.activeSurface === "media" ? Theme.surface : (mediaEntryMouse.containsMouse ? Theme.raisedSurface : "transparent")
                 border.width: rail.activeSurface === "media" ? 1 : 0
                 border.color: Theme.border
-
-                Behavior on color { ColorAnimation { duration: 120 } }
             }
 
             Rectangle {
@@ -531,10 +520,6 @@ PanelWindow {
                 height: rail.activeSurface === "media" ? 15 : 0
                 radius: 1
                 color: Theme.accent
-
-                Behavior on height {
-                    NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
-                }
             }
 
             Image {
@@ -581,20 +566,13 @@ PanelWindow {
             anchors.horizontalCenter: parent.horizontalCenter
             width: 32
             height: 32
-            scale: audioEntryMouse.containsMouse ? 1.06 : 1
-
-            Behavior on scale {
-                NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
-            }
 
             Rectangle {
                 anchors.fill: parent
                 radius: 10
-                color: rail.activeSurface === "audio" ? Theme.surface : "transparent"
+                color: rail.activeSurface === "audio" ? Theme.surface : (audioEntryMouse.containsMouse ? Theme.raisedSurface : "transparent")
                 border.width: rail.activeSurface === "audio" ? 1 : 0
                 border.color: Theme.border
-
-                Behavior on color { ColorAnimation { duration: 120 } }
             }
 
             Rectangle {
@@ -604,10 +582,6 @@ PanelWindow {
                 height: rail.activeSurface === "audio" ? 15 : 0
                 radius: 1
                 color: Theme.accent
-
-                Behavior on height {
-                    NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
-                }
             }
 
             Image {
@@ -654,20 +628,13 @@ PanelWindow {
             anchors.horizontalCenter: parent.horizontalCenter
             width: 32
             height: 32
-            scale: trayEntryMouse.containsMouse ? 1.06 : 1
-
-            Behavior on scale {
-                NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
-            }
 
             Rectangle {
                 anchors.fill: parent
                 radius: 10
-                color: rail.activeSurface === "tray" ? Theme.surface : "transparent"
+                color: rail.activeSurface === "tray" ? Theme.surface : (trayEntryMouse.containsMouse ? Theme.raisedSurface : "transparent")
                 border.width: rail.activeSurface === "tray" ? 1 : 0
                 border.color: Theme.border
-
-                Behavior on color { ColorAnimation { duration: 120 } }
             }
 
             Rectangle {
@@ -677,10 +644,6 @@ PanelWindow {
                 height: rail.activeSurface === "tray" ? 15 : 0
                 radius: 1
                 color: Theme.accent
-
-                Behavior on height {
-                    NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
-                }
             }
 
             Image {
@@ -789,11 +752,6 @@ PanelWindow {
             anchors.horizontalCenter: parent.horizontalCenter
             width: 32
             height: 31
-            scale: brightnessMouse.containsMouse ? 1.06 : 1
-
-            Behavior on scale {
-                NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
-            }
 
             Image {
                 anchors.top: parent.top
@@ -860,11 +818,6 @@ PanelWindow {
             anchors.horizontalCenter: parent.horizontalCenter
             width: 32
             height: 31
-            scale: layoutMouse.containsMouse ? 1.06 : 1
-
-            Behavior on scale {
-                NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
-            }
 
             Rectangle {
                 id: layoutTile
