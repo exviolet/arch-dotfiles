@@ -70,7 +70,6 @@ Item {
     SurfaceHeader {
         width: parent.width
         eyebrow: "TRAY /"
-        hasIcon: true
         iconSource: Qt.resolvedUrl("../../icons/iconoir/app-notification.svg")
         eyebrowLabel: "SERVICES"
         mode: surface.menuVisible ? "MENU" : String(TrayService.itemCount) + " LIVE"

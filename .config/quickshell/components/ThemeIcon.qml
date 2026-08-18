@@ -21,7 +21,7 @@ Item {
         id: source
 
         anchors.fill: parent
-        source: Qt.resolvedUrl("../icons/iconoir/" + root.name + ".svg")
+        source: root.name === "" ? "" : Qt.resolvedUrl("../icons/iconoir/" + root.name + ".svg")
         sourceSize.width: root.size * 2
         sourceSize.height: root.size * 2
         fillMode: Image.PreserveAspectFit

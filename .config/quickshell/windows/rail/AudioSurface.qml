@@ -16,7 +16,6 @@ Item {
     SurfaceHeader {
         width: parent.width
         eyebrow: "AUDIO /"
-        hasIcon: true
         iconSource: Qt.resolvedUrl(AudioService.muted ? "../../icons/iconoir/sound-off.svg" : "../../icons/iconoir/sound-high.svg")
         eyebrowLabel: "PIPEWIRE"
         mode: AudioService.muted ? "MUTED" : String(AudioService.volumePercent) + "%"

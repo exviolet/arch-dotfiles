@@ -6,7 +6,6 @@ Item {
     id: header
 
     property string eyebrow: ""
-    property bool hasIcon: false
     property url iconSource
     property string eyebrowLabel: ""
     property string mode: ""
@@ -32,7 +31,7 @@ Item {
         }
 
         Image {
-            visible: header.hasIcon
+            visible: header.iconSource != ""
             width: 13
             height: 13
             source: header.iconSource
