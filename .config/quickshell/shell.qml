@@ -561,6 +561,51 @@ ShellRoot {
             return BrightnessService.adjust(step, screen) ? "requested" : "busy"
         }
 
+        function setBrightnessPercent(percent: int, screen: string): string {
+            return BrightnessService.setPercent(percent, screen) ? "requested" : "busy"
+        }
+
+        function getSystemState(): string {
+            const wifiNetworks = NetworkService.networks.map(network => ({
+                "name": network.name,
+                "connected": network.connected,
+                "known": network.known,
+                "signal": NetworkService.signalPercent(network)
+            }))
+            const bluetoothDevices = BluetoothService.devices.map(device => ({
+                "address": device.address,
+                "name": BluetoothService.deviceName(device),
+                "connected": device.connected,
+                "battery": BluetoothService.batteryPercent(device)
+            }))
+            return JSON.stringify({
+                "wifi": {
+                    "ready": NetworkService.ready,
+                    "enabled": NetworkService.wifiEnabled,
+                    "hardwareEnabled": NetworkService.wifiHardwareEnabled,
+                    "scanning": NetworkService.wifiDevice ? NetworkService.wifiDevice.scannerEnabled : false,
+                    "connected": NetworkService.connectedNetwork ? NetworkService.connectedNetwork.name : "",
+                    "networks": wifiNetworks
+                },
+                "bluetooth": {
+                    "available": BluetoothService.available,
+                    "enabled": BluetoothService.enabled,
+                    "devices": bluetoothDevices
+                },
+                "power": {
+                    "active": PowerService.profile,
+                    "profiles": PowerService.profiles,
+                    "battery": PowerService.batteryPercent,
+                    "charging": PowerService.charging,
+                    "externalPower": PowerService.externalPower
+                }
+            })
+        }
+
+        function setPowerProfile(profile: string): string {
+            return PowerService.setProfile(profile) ? "requested:" + profile : "unavailable:" + profile
+        }
+
         function setMicrophoneVolume(value: real): string {
             return AudioService.setSourceVolume(value) ? "requested" : "unavailable"
         }

@@ -32,7 +32,22 @@ Singleton {
             "--class=backlight",
             "--device=intel_backlight",
             "set",
-            step > 0 ? "5%+" : "5%-"
+            String(Math.max(1, Math.min(25, Math.abs(step)))) + (step > 0 ? "%+" : "%-")
+        ]
+        actionProcess.running = true
+        return true
+    }
+
+    function setPercent(percent: int, screen: string): bool {
+        if (actionProcess.running) return false
+        const normalized = Math.max(1, Math.min(100, Math.round(percent)))
+        root.feedbackScreen = screen
+        actionProcess.command = [
+            "/usr/sbin/brightnessctl",
+            "--class=backlight",
+            "--device=intel_backlight",
+            "set",
+            String(normalized) + "%"
         ]
         actionProcess.running = true
         return true
@@ -70,6 +85,6 @@ Singleton {
 
     Process {
         id: actionProcess
-        onExited: (exitCode, exitStatus) => root.refresh()
+        onExited: root.refresh()
     }
 }
