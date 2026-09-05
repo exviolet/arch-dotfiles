@@ -33,6 +33,7 @@ ShellRoot {
     property string keyboardLayoutName: ""
     property bool launcherVisible: false
     property string launcherScreen: ""
+    property bool dockForcedVisible: false
     property bool clipboardVisible: false
     property string clipboardScreen: ""
     property bool powermenuVisible: false
@@ -415,6 +416,19 @@ ShellRoot {
             return root.launcherVisible ? "shown:" + root.launcherScreen : "hidden"
         }
 
+        function setDockVisible(visible: bool): string {
+            root.dockForcedVisible = visible
+            return visible ? "shown" : "hidden"
+        }
+
+        function getDockState(): string {
+            return root.dockForcedVisible ? "shown" : "auto"
+        }
+
+        function getDockPins(): string {
+            return JSON.stringify(DockService.pinnedIds)
+        }
+
         function showClipboard(screen: string): string {
             return root.showClipboard(screen)
         }
@@ -661,6 +675,17 @@ ShellRoot {
             outputScreen: modelData
             railController: root
             mediaPlayer: root.mediaPlayer
+        }
+    }
+
+    Variants {
+        model: Quickshell.screens
+
+        Dock {
+            required property var modelData
+
+            outputScreen: modelData
+            dockController: root
         }
     }
 

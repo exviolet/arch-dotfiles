@@ -30,6 +30,7 @@ PanelWindow {
         : launcher.headerHeight + launcher.visibleWindowRows * launcher.windowRowHeight + 10
     readonly property int cardHeight: launcher.cardPadding * 2 + launcher.queryHeight + 12
         + launcher.windowSectionHeight + launcher.headerHeight + launcher.rows * launcher.cellHeight
+    readonly property var hermesCommand: ["/home/ex1te/.local/bin/hermes", "desktop"]
 
     property string query: ""
 
@@ -228,8 +229,13 @@ PanelWindow {
     function launchApp(index: int): void {
         const entry = launcher.results[index]
         if (!entry) return
+
+        const entryId = String(entry.id || "").toLowerCase()
         AppUsageService.record(String(entry.id || ""))
-        entry.execute()
+        if (entryId === "hermes" || entryId === "hermes.desktop")
+            Quickshell.execDetached(launcher.hermesCommand)
+        else
+            entry.execute()
         launcher.launcherController.hideLauncher()
     }
 
