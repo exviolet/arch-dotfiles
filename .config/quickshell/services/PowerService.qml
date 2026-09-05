@@ -2,6 +2,7 @@ pragma Singleton
 
 import Quickshell
 import Quickshell.Io
+import Quickshell.Services.UPower
 import QtQuick
 
 // Session actions for the power menu.
@@ -12,6 +13,37 @@ Singleton {
     id: root
 
     property string uptime: ""
+
+    readonly property var battery: UPower.displayDevice
+    readonly property int batteryPercent: battery.ready ? Math.round(battery.percentage * 100) : 0
+    readonly property bool charging: battery.ready && battery.state === UPowerDeviceState.Charging
+    readonly property bool externalPower: !UPower.onBattery
+    readonly property real batterySecondsLeft: battery.ready ? (charging ? battery.timeToFull : battery.timeToEmpty) : 0
+    readonly property string batteryTimeLabel: {
+        if (batterySecondsLeft <= 0) return ""
+        const minutes = Math.round(batterySecondsLeft / 60)
+        return String(Math.floor(minutes / 60)) + "h " + String(minutes % 60) + "m"
+    }
+    readonly property string profile: {
+        if (PowerProfiles.profile === PowerProfile.PowerSaver) return "power-saver"
+        if (PowerProfiles.profile === PowerProfile.Performance) return "performance"
+        return "balanced"
+    }
+    readonly property var profiles: PowerProfiles.hasPerformanceProfile
+        ? ["power-saver", "balanced", "performance"]
+        : ["power-saver", "balanced"]
+
+    function setProfile(profile: string): bool {
+        if (profile === "power-saver")
+            PowerProfiles.profile = PowerProfile.PowerSaver
+        else if (profile === "balanced")
+            PowerProfiles.profile = PowerProfile.Balanced
+        else if (profile === "performance" && PowerProfiles.hasPerformanceProfile)
+            PowerProfiles.profile = PowerProfile.Performance
+        else
+            return false
+        return true
+    }
 
     // Ordered by descending consequence, so shutting down is the default
     // selection: closing the laptop for the day is the common case, and it

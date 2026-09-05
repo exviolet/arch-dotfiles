@@ -2,7 +2,6 @@ pragma ComponentBehavior: Bound
 
 import Quickshell
 import Quickshell.Io
-import Quickshell.Services.UPower
 import Quickshell.Wayland
 import QtQuick
 
@@ -32,7 +31,7 @@ PanelWindow {
     readonly property var mediaApplication: hasMedia ? DesktopEntries.heuristicLookup(mediaDesktopEntryId || mediaIdentity) : null
     readonly property string mediaApplicationName: mediaApplication ? String(mediaApplication.name).replace(" (Launcher)", "") : mediaIdentity
     readonly property string mediaIconSource: railController.mediaIconSourceFor(mediaPlayer)
-    property real drawerWidth: showingAudio ? 394 : (showingMedia ? 360 : (showingTray ? 344 : (showingCalendar ? 336 : 304)))
+    property real drawerWidth: showingAudio ? 394 : (showingMedia ? 360 : (showingTray ? 344 : (showingCalendar ? 336 : 394)))
     readonly property bool externallyPinned: railController.railPinned && railController.railExpansionScreen === outputScreen.name
     readonly property bool previewing: railController.railPreviewScreen === outputScreen.name
     readonly property bool expanded: externallyPinned || previewing
@@ -43,15 +42,10 @@ PanelWindow {
     property string pendingSurface: ""
 
     readonly property var screenWorkspaces: NiriService.workspaces.filter(workspace => workspace.output === outputScreen.name)
-    readonly property var battery: UPower.displayDevice
-    readonly property int batteryPercentage: battery.ready ? Math.round(battery.percentage * 100) : 0
-    readonly property bool charging: battery.ready && battery.state === UPowerDeviceState.Charging
-    readonly property real batterySecondsLeft: battery.ready ? (charging ? battery.timeToFull : battery.timeToEmpty) : 0
-    readonly property string batteryTimeLabel: {
-        if (batterySecondsLeft <= 0) return ""
-        const minutes = Math.round(batterySecondsLeft / 60)
-        return String(Math.floor(minutes / 60)) + ":" + (minutes % 60 < 10 ? "0" : "") + String(minutes % 60)
-    }
+    readonly property var battery: PowerService.battery
+    readonly property int batteryPercentage: PowerService.batteryPercent
+    readonly property bool charging: PowerService.charging
+    readonly property string batteryTimeLabel: PowerService.batteryTimeLabel.replace("h ", ":").replace("m", "")
 
     screen: outputScreen
     visible: railController.railVisible
@@ -284,6 +278,7 @@ PanelWindow {
                 workspaceLabel: rail.focusedWorkspaceLabel()
                 pinned: rail.externallyPinned
                 expanded: rail.expanded
+                active: visible && rail.expanded
             }
 
             MediaSurface {
