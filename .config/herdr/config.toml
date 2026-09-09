@@ -9,13 +9,13 @@ onboarding = false
 # Built-in themes: catppuccin, terminal, tokyo-night, dracula, nord,
 #                  gruvbox, one-dark, solarized, kanagawa, rose-pine,
 #                  vesper
-name = "vesper"
+name = "solarized-light"
 
 # Follow the light/dark appearance of the host terminal. Alacritty is switched
 # by the desktop theme toggle, so Herdr follows without rewriting this config.
 auto_switch = true
 dark_name = "kanagawa"
-light_name = "catppuccin-latte"
+light_name = "solarized-light"
 
 # Override individual color tokens on top of the base theme.
 # Accepts: hex (#rrggbb), named colors, rgb(r,g,b), or panel_bg = "reset"
@@ -201,6 +201,8 @@ mouse_capture = true
 accent = "#ff085e"
 
 agent_panel_sort = "priority"
+status_indicators = "symbols"
+show_agent_labels_on_pane_borders = true
 [ui.toast]
 # off = disable pop-up notifications
 # herdr = show in-app toasts
@@ -209,6 +211,7 @@ agent_panel_sort = "priority"
 # delivery = "off"
 # delay_seconds = 1
 
+delivery = "system"
 [ui.toast.herdr]
 # position = "bottom-right"
 

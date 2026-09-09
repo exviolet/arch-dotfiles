@@ -14,15 +14,14 @@ window-rule {
     background-effect {
         blur true
     }
-    default-column-width { fixed 735; }
 }
 
 window-rule {
     match app-id="^Alacritty-Float"
 
-    background-effect {
-        blur true
-    }
+    // background-effect {
+    //     blur true
+    // }
     default-column-width { fixed 1200; }
     default-window-height { fixed 800; }
     open-floating true
@@ -131,6 +130,22 @@ window-rule {
     }
     open-maximized-to-edges true
 }
+
+window-rule {
+    match app-id="one.alynx.showmethekey"
+
+    // Делаем окно плавающим над остальными
+    open-floating true
+
+    // Отключаем тени, рамки и фоновые подложки самого Niri
+    draw-border-with-background false
+    geometry-corner-radius 0
+
+    // Исключаем из фокуса, чтобы окно не перехватывало клики и ввод
+    focus-ring { off; }
+    border { off; }
+}
+
 
 window-rule {
     match app-id=r#"firefox$"# title="^Picture-in-Picture$"

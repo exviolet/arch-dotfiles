@@ -61,7 +61,7 @@ layout {
 
         // Color of the ring on the active monitor.
         active-color "#e3d3ac"
-        active-gradient from="#e3d3ac" to="#DC3C22" angle=-30
+        // active-gradient from="#e3d3ac" to="#DC3C22" angle=-30
 
         // Color of the ring on inactive monitors.
         inactive-color "#505050"
@@ -73,7 +73,7 @@ layout {
         // You can use any CSS linear-gradient tool on the web to set these up.
         // Changing the color space is also supported, check the wiki for more info.
         //
-        // active-gradient from="#80c8ff" to="#bbddff" angle=45
+        active-gradient from="#80c8ff" to="#bbddff" angle=45
 
         // You can also color the gradient relative to the entire view
         // of the workspace, rather than relative to just the window itself.
