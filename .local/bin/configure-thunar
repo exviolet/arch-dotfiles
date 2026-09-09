@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+set_prop() {
+  local name=$1 type=$2 value=$3
+  xfconf-query -c thunar -p "/$name" -n -t "$type" -s "$value"
+}
+
+# Compact details-first workflow.
+set_prop last-view string ThunarDetailsView
+set_prop last-side-pane string THUNAR_SIDEPANE_TYPE_SHORTCUTS
+set_prop last-show-hidden bool false
+set_prop last-sort-column string THUNAR_COLUMN_NAME
+set_prop last-sort-order string GTK_SORT_ASCENDING
+set_prop last-details-view-zoom-level string THUNAR_ZOOM_LEVEL_38_PERCENT
+set_prop last-details-view-fixed-columns bool false
+set_prop last-details-view-column-order string 'THUNAR_COLUMN_NAME,THUNAR_COLUMN_SIZE,THUNAR_COLUMN_SIZE_IN_BYTES,THUNAR_COLUMN_TYPE,THUNAR_COLUMN_DATE_MODIFIED'
+set_prop last-details-view-visible-columns string 'THUNAR_COLUMN_DATE_MODIFIED,THUNAR_COLUMN_NAME,THUNAR_COLUMN_SIZE,THUNAR_COLUMN_TYPE'
+set_prop misc-folders-first bool true
+set_prop misc-expandable-folders bool true
+set_prop misc-single-click bool false
+set_prop misc-symbolic-icons-in-sidepane bool true
+set_prop misc-highlighting-enabled bool true
+set_prop misc-thumbnail-draw-frames bool false
+set_prop misc-thumbnail-mode string THUNAR_THUMBNAIL_MODE_ALWAYS
+set_prop misc-full-path-in-tab-title bool true
+set_prop last-menubar-visible bool false
+set_prop last-statusbar-visible bool true
+set_prop last-separator-position int 210
+set_prop last-toolbar-items string 'menu:1,back:1,forward:1,open-parent:1,open-home:1,new-tab:0,new-window:0,toggle-split-view:1,undo:0,redo:0,zoom-out:0,zoom-in:0,zoom-reset:0,view-as-icons:0,view-as-detailed-list:0,view-as-compact-list:0,view-switcher:1,location-bar:1,reload:0,search:1,uca-action-1755753201151819-1:0'
