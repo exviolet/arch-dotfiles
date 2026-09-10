@@ -429,6 +429,22 @@ ShellRoot {
             return JSON.stringify(DockService.pinnedIds)
         }
 
+        function dismissNotifications(): string {
+            NotificationService.dismissAll()
+            return "dismissed"
+        }
+
+        function getNotificationState(): string {
+            return JSON.stringify(NotificationService.popups.map(entry => ({
+                "id": entry.id,
+                "app": String(entry.notification.appName || ""),
+                "summary": String(entry.notification.summary || ""),
+                "urgency": Number(entry.notification.urgency),
+                "actions": entry.notification.actions.length,
+                "icon": NotificationService.iconFor(entry.notification) !== ""
+            })))
+        }
+
         function showClipboard(screen: string): string {
             return root.showClipboard(screen)
         }
@@ -764,6 +780,16 @@ ShellRoot {
 
             outputScreen: modelData
             powerController: root
+        }
+    }
+
+    Variants {
+        model: Quickshell.screens
+
+        Notifications {
+            required property var modelData
+
+            outputScreen: modelData
         }
     }
 
