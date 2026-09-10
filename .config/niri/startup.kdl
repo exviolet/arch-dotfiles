@@ -10,7 +10,6 @@ environment {
 }
 
 spawn-at-startup "awww-daemon"
-spawn-at-startup "swaync"
 spawn-at-startup "sh" "-c" "wl-paste --type text --watch cliphist store"
 spawn-at-startup "sh" "-c" "wl-paste --type image --watch cliphist store"
 spawn-at-startup "sh" "-c" "wl-paste --watch cliphist store"

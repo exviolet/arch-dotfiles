@@ -23,7 +23,6 @@ binds {
     Mod+Shift+Return { spawn "alacritty" "--class" "Alacritty-Float"; }
     Mod+Return hotkey-overlay-title="Open a Terminal: alacritty" { spawn "alacritty"; }
     // Mod+G hotkey-overlay-title="Open a Terminal: ghostty" { spawn "ghostty"; }
-    Mod+N hotkey-overlay-title="Notification center" { spawn-sh "swaync-client -t"; }
     Mod+E hotkey-overlay-title="Open a File manager: thunar" { spawn "thunar"; }
     Mod+D hotkey-overlay-title="Run an Application" { spawn "/home/ex1te/.config/quickshell/scripts/sidecarctl" "launcher-toggle"; }
     Mod+S { spawn "bash" "-c" "$HOME/.config/rofi/scripts/search.sh"; }
