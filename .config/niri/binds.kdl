@@ -25,15 +25,15 @@ binds {
     // Mod+G hotkey-overlay-title="Open a Terminal: ghostty" { spawn "ghostty"; }
     Mod+E hotkey-overlay-title="Open a File manager: thunar" { spawn "thunar"; }
     Mod+D hotkey-overlay-title="Run an Application" { spawn "/home/ex1te/.config/quickshell/scripts/sidecarctl" "launcher-toggle"; }
-    Mod+S { spawn "bash" "-c" "$HOME/.config/rofi/scripts/search.sh"; }
+    Mod+S hotkey-overlay-title="Quicklinks" { spawn "/home/ex1te/.config/quickshell/scripts/sidecarctl" "search-toggle"; }
 
-    Mod+Shift+E hotkey-overlay-title="Run an Application: rofi-emoji" { spawn "sh" "-c" "rofi -show emoji -theme ~/.config/rofi/launchers/emoji.rasi"; }
+    Mod+Shift+E hotkey-overlay-title="Emoji" { spawn "/home/ex1te/.config/quickshell/scripts/sidecarctl" "emoji-toggle"; }
     Mod+Shift+D hotkey-overlay-title="Clipboard history" { spawn "/home/ex1te/.config/quickshell/scripts/sidecarctl" "clipboard-toggle"; }
     Super+Alt+L hotkey-overlay-title="Lock the Screen" { spawn "/home/ex1te/.config/quickshell/scripts/sidecarctl" "lock"; }
     Mod+T hotkey-overlay-title="Lock the Screen: Telegram" { spawn "org.telegram.desktop"; }
     Mod+Shift+O hotkey-overlay-title="Wallpaper" { spawn "/home/ex1te/.config/quickshell/scripts/sidecarctl" "wallpaper-toggle"; }
     Mod+Shift+T hotkey-overlay-title="Toggle desktop theme" { spawn "bash" "-c" "$HOME/.config/rofi/scripts/toggle-gtk-theme.sh toggle"; }
-    Mod+Shift+C { spawn "sh" "-c" "rofi -show calc -theme ~/.config/rofi/launchers/calc.rasi"; }
+    Mod+Shift+C hotkey-overlay-title="Calculator" { spawn "/home/ex1te/.config/quickshell/scripts/sidecarctl" "calc-toggle"; }
     Mod+Shift+W hotkey-overlay-title="Session controls" { spawn "/home/ex1te/.config/quickshell/scripts/sidecarctl" "powermenu-toggle"; }
 
     // You can also use a shell. Do this if you need pipes, multiple commands, etc.

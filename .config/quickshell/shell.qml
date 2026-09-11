@@ -33,6 +33,10 @@ ShellRoot {
     property string keyboardLayoutName: ""
     property bool launcherVisible: false
     property string launcherScreen: ""
+
+    // Text the launcher opens with. Mod+S is Mod+D with "search " already
+    // typed, so the two keys share one window instead of growing a second.
+    property string launcherPrefill: ""
     property bool dockForcedVisible: false
     property bool clipboardVisible: false
     property string clipboardScreen: ""
@@ -247,12 +251,13 @@ ShellRoot {
         closeTimer.restart()
     }
 
-    function showLauncher(screen: string): string {
+    function showLauncher(screen: string, prefill: string): string {
         const target = screen === "" ? NiriService.focusedOutput : screen
         wallpaperVisible = false
         // Only one keyboard-grabbing overlay at a time.
         clipboardVisible = false
         powermenuVisible = false
+        launcherPrefill = prefill
         launcherScreen = target
         launcherVisible = true
         return "shown:" + target
@@ -264,10 +269,13 @@ ShellRoot {
         return "hidden"
     }
 
-    function toggleLauncher(screen: string): string {
+    function toggleLauncher(screen: string, prefill: string): string {
         const target = screen === "" ? NiriService.focusedOutput : screen
-        if (launcherVisible && launcherScreen === target) return hideLauncher()
-        return showLauncher(target)
+        // Pressing the same key again closes; pressing the other one switches
+        // mode rather than closing.
+        if (launcherVisible && launcherScreen === target && launcherPrefill === prefill)
+            return hideLauncher()
+        return showLauncher(target, prefill)
     }
 
     function showPowermenu(screen: string): string {
@@ -448,7 +456,7 @@ ShellRoot {
         }
 
         function showLauncher(screen: string): string {
-            return root.showLauncher(screen)
+            return root.showLauncher(screen, "")
         }
 
         function hideLauncher(): string {
@@ -456,7 +464,13 @@ ShellRoot {
         }
 
         function toggleLauncher(screen: string): string {
-            return root.toggleLauncher(screen)
+            return root.toggleLauncher(screen, "")
+        }
+
+        // Mod+S, Mod+Shift+C and Mod+Shift+E are all Mod+D with the prefix
+        // already typed: one window, one set of keys, no second launcher.
+        function toggleLauncherMode(mode: string, screen: string): string {
+            return root.toggleLauncher(screen, mode === "" ? "" : mode + " ")
         }
 
         function getLauncherState(): string {
@@ -484,6 +498,15 @@ ShellRoot {
         function unlock(): string {
             LockService.unlock()
             return "unlocked"
+        }
+
+        function getQuicklinkState(): string {
+            return JSON.stringify({
+                "links": QuicklinkService.links.length,
+                "groups": QuicklinkService.groups.length,
+                "top": QuicklinkService.rowsFor("").slice(0, 3).map(row => row.title),
+                "sample": QuicklinkService.rowsFor("g s кошки").map(row => row.kind + " -> " + row.subtitle)
+            })
         }
 
         function getWallpaperState(): string {
