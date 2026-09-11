@@ -38,6 +38,8 @@ ShellRoot {
     property string clipboardScreen: ""
     property bool powermenuVisible: false
     property string powermenuScreen: ""
+    property bool lockPreviewVisible: false
+    property string lockPreviewScreen: ""
 
     property string preferredPlayerId: ""
 
@@ -307,6 +309,23 @@ ShellRoot {
         return showClipboard(target)
     }
 
+    function showLockPreview(screen: string): string {
+        const target = screen === "" ? NiriService.focusedOutput : screen
+        launcherVisible = false
+        clipboardVisible = false
+        powermenuVisible = false
+        LockService.refreshWallpapers()
+        lockPreviewScreen = target
+        lockPreviewVisible = true
+        return "shown:" + target
+    }
+
+    function hideLockPreview(): string {
+        lockPreviewVisible = false
+        lockPreviewScreen = ""
+        return "hidden"
+    }
+
     function setRailPreview(screen: string, active: bool): void {
         if (active) {
             railPreviewScreen = screen
@@ -427,6 +446,24 @@ ShellRoot {
 
         function getDockPins(): string {
             return JSON.stringify(DockService.pinnedIds)
+        }
+
+        function lock(): string {
+            LockService.lock()
+            return "locked"
+        }
+
+        function unlock(): string {
+            LockService.unlock()
+            return "unlocked"
+        }
+
+        function previewLock(screen: string): string {
+            return root.showLockPreview(screen)
+        }
+
+        function hideLockPreview(): string {
+            return root.hideLockPreview()
         }
 
         function dismissNotifications(): string {
@@ -791,6 +828,22 @@ ShellRoot {
 
             outputScreen: modelData
         }
+    }
+
+    Variants {
+        model: Quickshell.screens
+
+        LockPreview {
+            required property var modelData
+
+            outputScreen: modelData
+            lockController: root
+        }
+    }
+
+    // Not a Variants: WlSessionLock makes its own surface for every screen.
+    Lock {
+        lockController: root
     }
 
     Variants {

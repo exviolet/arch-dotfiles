@@ -89,7 +89,9 @@ Singleton {
             "label": "Lock",
             "icon": "lock",
             "confirm": false,
-            "command": ["/usr/sbin/hyprlock"]
+            // Handled in run(): the lock lives in this shell now, so spawning
+            // anything would be a round trip out and back in.
+            "command": []
         }
     ]
 
@@ -100,6 +102,12 @@ Singleton {
 
     function run(action: var): void {
         if (!action) return
+
+        if (action.id === "lock") {
+            LockService.lock()
+            return
+        }
+
         actionProcess.command = action.command
         actionProcess.running = true
     }
