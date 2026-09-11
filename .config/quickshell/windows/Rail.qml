@@ -23,6 +23,7 @@ PanelWindow {
     readonly property bool showingAudio: activeSurface === "audio" && AudioService.sinkReady
     readonly property bool showingTray: activeSurface === "tray" && TrayService.itemCount > 0
     readonly property bool showingCalendar: activeSurface === "calendar"
+    readonly property bool showingUsage: activeSurface === "usage" && ClaudeUsageService.ready
     readonly property url audioIconSource: Qt.resolvedUrl(AudioService.muted ? "../icons/iconoir/sound-off.svg" : "../icons/iconoir/sound-high.svg")
     readonly property url brightnessIconSource: Qt.resolvedUrl("../icons/iconoir/brightness.svg")
     readonly property url trayIconSource: Qt.resolvedUrl("../icons/iconoir/app-notification.svg")
@@ -273,7 +274,7 @@ PanelWindow {
 
             SystemSurface {
                 anchors.fill: parent
-                visible: !rail.showingMedia && !rail.showingAudio && !rail.showingTray && !rail.showingCalendar
+                visible: !rail.showingMedia && !rail.showingAudio && !rail.showingTray && !rail.showingCalendar && !rail.showingUsage
                 outputName: rail.outputScreen.name
                 workspaceLabel: rail.focusedWorkspaceLabel()
                 pinned: rail.externallyPinned
@@ -297,6 +298,14 @@ PanelWindow {
                 visible: rail.showingAudio
                 pinned: rail.externallyPinned
                 expanded: rail.expanded
+            }
+
+            UsageSurface {
+                anchors.fill: parent
+                visible: rail.showingUsage
+                pinned: rail.externallyPinned
+                expanded: rail.expanded
+                active: visible && rail.expanded
             }
 
             CalendarSurface {
@@ -718,6 +727,94 @@ PanelWindow {
                     rail.clearSurfaceRequest()
                     rail.railController.setRailPreview(rail.outputScreen.name, false)
                     rail.railController.toggleRailSurface("tray", rail.outputScreen.name)
+                }
+            }
+        }
+
+        // Sits with the other entries that open a drawer rather than with the
+        // readouts below: hovering it is supposed to reveal something. Shows a
+        // number instead of an icon because the number is the whole point.
+        Item {
+            id: usageEntry
+
+            visible: rail.ClaudeUsageService.ready
+            anchors.top: trayEntry.visible ? trayEntry.bottom : (audioEntry.visible ? audioEntry.bottom : (mediaEntry.visible ? mediaEntry.bottom : workspaceColumn.bottom))
+            anchors.topMargin: 7
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: 32
+            height: 32
+
+            readonly property real percent: Math.max(0, rail.ClaudeUsageService.fivePercent)
+
+            Rectangle {
+                anchors.fill: parent
+                radius: 10
+                color: rail.activeSurface === "usage" ? Theme.surface : (usageEntryMouse.containsMouse ? Theme.raisedSurface : "transparent")
+                border.width: rail.activeSurface === "usage" ? 1 : 0
+                border.color: Theme.border
+            }
+
+            Rectangle {
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                width: 2
+                height: rail.activeSurface === "usage" ? 15 : 0
+                radius: 1
+                color: Theme.accent
+            }
+
+            Image {
+                anchors.centerIn: parent
+                width: 17
+                height: 17
+                source: Qt.resolvedUrl("../icons/iconoir/asterisk.svg")
+                fillMode: Image.PreserveAspectFit
+                smooth: true
+                opacity: rail.ClaudeUsageService.stale ? 0.45 : 1
+            }
+
+            // The icon says what this is; the sliver underneath says how much
+            // is gone, which is the only thing worth reading at strip width.
+            Rectangle {
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: 3
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: 16
+                height: 2
+                radius: 1
+                color: Theme.track
+
+                Rectangle {
+                    anchors.left: parent.left
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    width: Math.max(2, parent.width * Math.min(1, usageEntry.percent / 100))
+                    radius: 1
+                    color: {
+                        if (rail.ClaudeUsageService.stale) return Theme.subtleForeground
+                        if (usageEntry.percent >= 80) return Theme.accent
+                        if (usageEntry.percent >= 50) return Theme.warningAccent
+                        return Theme.foreground
+                    }
+
+                    Behavior on width {
+                        NumberAnimation { duration: 240; easing.type: Easing.OutCubic }
+                    }
+                }
+            }
+
+            MouseArea {
+                id: usageEntryMouse
+
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onEntered: rail.requestSurface("usage")
+                onExited: rail.cancelSurfaceRequest("usage")
+                onClicked: {
+                    rail.clearSurfaceRequest()
+                    rail.railController.setRailPreview(rail.outputScreen.name, false)
+                    rail.railController.toggleRailSurface("usage", rail.outputScreen.name)
                 }
             }
         }

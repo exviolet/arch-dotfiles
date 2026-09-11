@@ -348,10 +348,11 @@ ShellRoot {
 
     function selectSurface(surface: string): string {
         const requested = surface.trim().toLowerCase()
-        if (requested !== "system" && requested !== "media" && requested !== "audio" && requested !== "tray" && requested !== "calendar") return "unsupported:" + requested
+        if (requested !== "system" && requested !== "media" && requested !== "audio" && requested !== "tray" && requested !== "calendar" && requested !== "usage") return "unsupported:" + requested
         if (requested === "media" && !mediaPlayer) return "unavailable:media"
         if (requested === "audio" && !AudioService.sinkReady) return "unavailable:audio"
         if (requested === "tray" && TrayService.itemCount === 0) return "unavailable:tray"
+        if (requested === "usage" && !ClaudeUsageService.ready) return "unavailable:usage"
         activeSurface = requested
         return activeSurface
     }
@@ -464,6 +465,22 @@ ShellRoot {
 
         function hideLockPreview(): string {
             return root.hideLockPreview()
+        }
+
+        function getUsageState(): string {
+            return JSON.stringify({
+                "ready": ClaudeUsageService.ready,
+                "stale": ClaudeUsageService.stale,
+                "fivePercent": ClaudeUsageService.fivePercent,
+                "fiveResets": ClaudeUsageService.countdown(ClaudeUsageService.fiveResetsAt),
+                "sevenPercent": ClaudeUsageService.sevenPercent,
+                "sevenResets": ClaudeUsageService.countdown(ClaudeUsageService.sevenResetsAt),
+                "tokensReady": ClaudeUsageService.tokensReady,
+                "tokenTotal": ClaudeUsageService.compact(ClaudeUsageService.tokenTotal),
+                "days": ClaudeUsageService.tokenDays.length,
+                "models": ClaudeUsageService.tokenModels.map(entry =>
+                    ClaudeUsageService.modelLabel(String(entry.model)) + " " + ClaudeUsageService.compact(entry.tokens))
+            })
         }
 
         function dismissNotifications(): string {
