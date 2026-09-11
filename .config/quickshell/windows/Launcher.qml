@@ -28,11 +28,29 @@ PanelWindow {
     readonly property int windowSectionHeight: launcher.windowResults.length === 0
         ? 0
         : launcher.headerHeight + launcher.visibleWindowRows * launcher.windowRowHeight + 10
-    readonly property int cardHeight: launcher.cardPadding * 2 + launcher.queryHeight + 12
-        + launcher.windowSectionHeight + launcher.headerHeight + launcher.rows * launcher.cellHeight
+    readonly property int cardHeight: launcher.calcMode
+        ? launcher.cardPadding * 2 + launcher.queryHeight + 12 + launcher.calcPanelHeight
+        : launcher.cardPadding * 2 + launcher.queryHeight + 12
+            + launcher.windowSectionHeight + launcher.headerHeight + launcher.rows * launcher.cellHeight
     readonly property var hermesCommand: ["/home/ex1te/.local/bin/hermes", "desktop"]
 
     property string query: ""
+
+    // The launcher's first prefix mode. `calc` swallows the whole query: apps
+    // and windows are hidden, because "calc 2+2" is not a search for anything.
+    readonly property int calcPanelHeight: 92
+
+    readonly property bool calcMode: {
+        const lowered = launcher.query.replace(/^\s+/, "").toLowerCase()
+        return lowered === "calc" || lowered.startsWith("calc ")
+    }
+
+    readonly property string calcExpression: {
+        if (!launcher.calcMode) return ""
+        return launcher.query.replace(/^\s+/, "").slice(4).trim()
+    }
+
+    onCalcExpressionChanged: if (launcher.calcMode) CalcService.evaluate(launcher.calcExpression)
 
     // One flat index across both sections: [windows..., apps...]. Keeping a
     // single index is what lets arrow keys cross the section boundary without
@@ -72,6 +90,8 @@ PanelWindow {
     // the app grid. Matching on title is the point: two Helium windows are only
     // distinguishable by what they are showing.
     readonly property var windowResults: {
+        if (launcher.calcMode) return []
+
         const needle = launcher.query.trim().toLowerCase()
         const windows = NiriService.windows
         const matches = []
@@ -103,6 +123,8 @@ PanelWindow {
     }
 
     readonly property var results: {
+        if (launcher.calcMode) return []
+
         const entries = DesktopEntries.applications.values
         const needle = launcher.query.trim().toLowerCase()
         const matches = []
@@ -258,6 +280,13 @@ PanelWindow {
     // window. A selected window row focuses either way — there is nothing to
     // launch from it.
     function submit(event: var): void {
+        if (launcher.calcMode) {
+            if (!CalcService.hasResult) return
+            CalcService.copyResult()
+            launcher.launcherController.hideLauncher()
+            return
+        }
+
         if (launcher.selectionIsWindow) {
             launcher.focusWindowAt(launcher.selectedIndex)
             return
@@ -399,6 +428,8 @@ PanelWindow {
                 // Surfaces the action for the current selection only when it
                 // would actually do something.
                 text: {
+                    if (launcher.calcMode)
+                        return CalcService.hasResult ? "⏎ copy" : (CalcService.busy ? "…" : "qalc")
                     if (launcher.totalCount === 0) return "no matches"
                     if (launcher.selectionIsWindow) return "⏎ focus"
 
@@ -410,6 +441,48 @@ PanelWindow {
                 color: Theme.subtleForeground
                 font.family: "DejaVu Sans Mono"
                 font.pixelSize: 10
+            }
+        }
+
+        Rectangle {
+            visible: launcher.calcMode
+            x: launcher.cardPadding
+            y: queryField.y + queryField.height + 12
+            width: parent.width - launcher.cardPadding * 2
+            height: launcher.calcPanelHeight
+            radius: 12
+            color: Theme.surface
+            border.width: 1
+            border.color: Theme.border
+
+            Text {
+                x: 16
+                y: 12
+                text: "QALC"
+                color: Theme.subtleForeground
+                font.family: "DejaVu Sans Mono"
+                font.pixelSize: 9
+                font.weight: Font.DemiBold
+                font.letterSpacing: 1.2
+            }
+
+            Text {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.leftMargin: 16
+                anchors.rightMargin: 16
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.verticalCenterOffset: 6
+                text: {
+                    if (launcher.calcExpression === "") return "2+2 · 1 GiB to MB · 100 USD to EUR"
+                    if (CalcService.hasResult) return CalcService.result
+                    return CalcService.busy ? "…" : "не считается"
+                }
+                color: CalcService.hasResult ? Theme.foreground : Theme.subtleForeground
+                font.family: "DejaVu Sans Mono"
+                font.pixelSize: CalcService.hasResult ? 22 : 12
+                font.weight: CalcService.hasResult ? Font.DemiBold : Font.Normal
+                elide: Text.ElideRight
             }
         }
 
@@ -557,6 +630,7 @@ PanelWindow {
         }
 
         ThemeIcon {
+            visible: !launcher.calcMode
             x: launcher.cardPadding + 4
             y: appsHeader.y
             size: 11
@@ -567,6 +641,7 @@ PanelWindow {
         Text {
             id: appsHeader
 
+            visible: !launcher.calcMode
             x: launcher.cardPadding + 20
             y: launcher.windowResults.length === 0
                 ? queryField.y + queryField.height + 12
@@ -582,6 +657,7 @@ PanelWindow {
         GridView {
             id: grid
 
+            visible: !launcher.calcMode
             x: launcher.cardPadding
             y: appsHeader.y + launcher.headerHeight
             width: parent.width - launcher.cardPadding * 2

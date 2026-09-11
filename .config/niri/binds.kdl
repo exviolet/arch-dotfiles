@@ -29,13 +29,11 @@ binds {
 
     Mod+Shift+E hotkey-overlay-title="Run an Application: rofi-emoji" { spawn "sh" "-c" "rofi -show emoji -theme ~/.config/rofi/launchers/emoji.rasi"; }
     Mod+Shift+D hotkey-overlay-title="Clipboard history" { spawn "/home/ex1te/.config/quickshell/scripts/sidecarctl" "clipboard-toggle"; }
-    Mod+Shift+S hotkey-overlay-title="Screenshot manager" { spawn "bash" "-c" "$HOME/.config/rofi/scripts/screenshots.sh"; }
     Super+Alt+L hotkey-overlay-title="Lock the Screen" { spawn "/home/ex1te/.config/quickshell/scripts/sidecarctl" "lock"; }
     Mod+T hotkey-overlay-title="Lock the Screen: Telegram" { spawn "org.telegram.desktop"; }
     Mod+Shift+O { spawn "bash" "-c" "$HOME/.config/rofi/scripts/wallpapermenu.sh"; }
     Mod+Shift+T hotkey-overlay-title="Toggle desktop theme" { spawn "bash" "-c" "$HOME/.config/rofi/scripts/toggle-gtk-theme.sh toggle"; }
     Mod+Shift+C { spawn "sh" "-c" "rofi -show calc -theme ~/.config/rofi/launchers/calc.rasi"; }
-    Mod+Shift+B { spawn "bash" "-c" "$HOME/.config/rofi/scripts/bluetoothctlmenu.sh"; }
     Mod+Shift+W hotkey-overlay-title="Session controls" { spawn "/home/ex1te/.config/quickshell/scripts/sidecarctl" "powermenu-toggle"; }
 
     // You can also use a shell. Do this if you need pipes, multiple commands, etc.
