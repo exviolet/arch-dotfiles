@@ -31,6 +31,8 @@ binds {
     Mod+Shift+D hotkey-overlay-title="Clipboard history" { spawn "/home/ex1te/.config/quickshell/scripts/sidecarctl" "clipboard-toggle"; }
     Super+Alt+L hotkey-overlay-title="Lock the Screen" { spawn "/home/ex1te/.config/quickshell/scripts/sidecarctl" "lock"; }
     Mod+T hotkey-overlay-title="Lock the Screen: Telegram" { spawn "org.telegram.desktop"; }
+    Mod+G hotkey-overlay-title="Translate" { spawn "/home/ex1te/.config/quickshell/scripts/sidecarctl" "translate-toggle"; }
+    Mod+P hotkey-overlay-title="Pick a colour" { spawn "hyprpicker" "-a" "-n" "-f" "hex" "-l" "-q"; }
     Mod+Shift+O hotkey-overlay-title="Wallpaper" { spawn "/home/ex1te/.config/quickshell/scripts/sidecarctl" "wallpaper-toggle"; }
     Mod+Shift+T hotkey-overlay-title="Toggle desktop theme" { spawn "bash" "-c" "$HOME/.config/quickshell/scripts/toggle-theme.sh toggle"; }
     Mod+Shift+C hotkey-overlay-title="Calculator" { spawn "/home/ex1te/.config/quickshell/scripts/sidecarctl" "calc-toggle"; }
