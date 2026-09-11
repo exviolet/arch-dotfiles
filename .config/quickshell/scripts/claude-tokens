@@ -1,0 +1,89 @@
+#!/usr/bin/env python3
+"""Total Claude Code token volume, by day and by model.
+
+Claude Code publishes plan percentages to the status line, but never token
+counts; the transcripts are the only place those exist. Reading all of them
+takes about half a second for a quarter gigabyte, which is cheap enough to do
+on demand — hence no cache file, no incremental offsets and no update timer.
+
+Prints one JSON object on stdout.
+"""
+
+import collections
+import glob
+import json
+import os
+import sys
+
+DAYS = 7
+MODELS = 4
+
+# input + output + both cache counters: the literal volume that moved through
+# the model, not a billing figure.
+COUNTERS = (
+    "input_tokens",
+    "output_tokens",
+    "cache_creation_input_tokens",
+    "cache_read_input_tokens",
+)
+
+
+def main() -> int:
+    root = os.path.expanduser("~/.claude/projects")
+    by_day: collections.Counter = collections.Counter()
+    by_model: collections.Counter = collections.Counter()
+
+    for path in glob.iglob(os.path.join(root, "**", "*.jsonl"), recursive=True):
+        try:
+            handle = open(path, encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+
+        with handle:
+            for line in handle:
+                # Cheap reject first: most lines are not assistant turns.
+                if '"usage"' not in line:
+                    continue
+
+                try:
+                    record = json.loads(line)
+                except ValueError:
+                    continue
+
+                if record.get("type") != "assistant":
+                    continue
+
+                message = record.get("message") or {}
+                usage = message.get("usage") or {}
+                total = sum(int(usage.get(name) or 0) for name in COUNTERS)
+                if not total:
+                    continue
+
+                model = str(message.get("model") or "")
+                # "<synthetic>" marks turns Claude Code generated itself.
+                if not model or model.startswith("<"):
+                    continue
+
+                by_day[str(record.get("timestamp") or "")[:10]] += total
+                by_model[model] += total
+
+    days = [
+        {"date": date, "tokens": tokens}
+        for date, tokens in sorted(by_day.items())
+        if date
+    ][-DAYS:]
+
+    models = [
+        {"model": model, "tokens": tokens}
+        for model, tokens in by_model.most_common(MODELS)
+    ]
+
+    json.dump(
+        {"days": days, "models": models, "total": sum(by_model.values())},
+        sys.stdout,
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
