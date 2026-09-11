@@ -13,6 +13,12 @@ import QtQuick
 // measured at 1.6ms for a 3.4KB reply, which makes a three second poll cheaper
 // than the bookkeeping a socket would need.
 //
+// Read-only, and it has to be. `herdr agent focus` called from outside a herdr
+// pane sets the server's focused flag and nothing else — the attached client
+// keeps showing whatever it was showing, then the flag snaps back. Verified
+// 2026-09-11 with the context variables stripped exactly as Quickshell has
+// them. So this lists agents; it cannot jump to one.
+//
 // Worth remembering what this is for: herdr shows the same statuses in its own
 // sidebar and already sends desktop notifications when they change. The rail
 // earns its place only while herdr is *not* the focused window.
@@ -45,24 +51,9 @@ Singleton {
         return "—"
     }
 
-    function focus(id: string): void {
-        if (id === "") return
-        focusProcess.command = [Quickshell.env("HOME") + "/.config/quickshell/scripts/focus-agent", id]
-        focusProcess.running = true
-    }
-
     function refresh(): void {
         if (lister.running) return
         lister.running = true
-    }
-
-    // blocked is the only status that wants you right now, so it sorts first;
-    // working next, because it is the one that will want you soon.
-    function rank(status: string): int {
-        if (status === "blocked") return 0
-        if (status === "working") return 1
-        if (status === "done") return 2
-        return 3
     }
 
     Process {
@@ -100,19 +91,19 @@ Singleton {
                     })
                 }
 
+                // Sorted by where the agent lives, not by what it is doing.
+                // Status changes every few seconds, and a list that reorders
+                // itself under the eye is unreadable — who needs you is told
+                // by the dot and the count in the section header instead.
                 next.sort((left, right) => {
-                    const byRank = root.rank(left.status) - root.rank(right.status)
-                    return byRank !== 0 ? byRank : left.label.localeCompare(right.label)
+                    const byProject = left.project.localeCompare(right.project)
+                    return byProject !== 0 ? byProject : left.label.localeCompare(right.label)
                 })
 
                 root.agents = next
                 root.ready = true
             }
         }
-    }
-
-    Process {
-        id: focusProcess
     }
 
     Timer {

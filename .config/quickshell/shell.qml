@@ -467,11 +467,6 @@ ShellRoot {
             return root.hideLockPreview()
         }
 
-        function focusAgent(id: string): string {
-            AgentService.focus(id)
-            return "focused:" + id
-        }
-
         function getAgentState(): string {
             return JSON.stringify({
                 "ready": AgentService.ready,
