@@ -20,6 +20,20 @@ Item {
     // timer — nobody watches this panel idle.
     onActiveChanged: if (surface.active) ClaudeUsageService.refreshTokens()
 
+    // The panel does not scroll, so the list is capped rather than allowed to
+    // push the token sections off the bottom of the screen. herdr's own
+    // sidebar is the complete view; this one is the glance.
+    readonly property int agentLimit: 6
+    readonly property var visibleAgents: AgentService.agents.slice(0, surface.agentLimit)
+    readonly property int hiddenAgents: Math.max(0, AgentService.agents.length - surface.agentLimit)
+
+    function agentTone(status: string): color {
+        if (status === "blocked") return Theme.accent
+        if (status === "working") return Theme.warningAccent
+        if (status === "done") return Theme.layoutUs
+        return Theme.subtleForeground
+    }
+
     function toneFor(percent: real): color {
         if (ClaudeUsageService.stale) return Theme.mutedForeground
         if (percent >= 80) return Theme.accent
@@ -208,6 +222,110 @@ Item {
         width: surface.width - 44
         spacing: 12
         visible: ClaudeUsageService.tokensReady
+
+        Column {
+            width: parent.width
+            visible: AgentService.ready && AgentService.agents.length > 0
+
+            spacing: 6
+
+            Text {
+                text: "AGENTS / " + AgentService.agents.length
+                    + (AgentService.blockedCount > 0 ? " · " + AgentService.blockedCount + " ЖДУТ" : "")
+                color: AgentService.blockedCount > 0 ? Theme.accent : Theme.subtleForeground
+                font.family: "DejaVu Sans Mono"
+                font.pixelSize: 9
+                font.weight: Font.DemiBold
+                font.letterSpacing: 0.8
+            }
+
+            Repeater {
+                model: surface.visibleAgents
+
+                delegate: Rectangle {
+                    id: agentRow
+
+                    required property var modelData
+
+                    width: surface.width - 44
+                    height: 38
+                    radius: 8
+                    color: agentMouse.containsMouse ? Theme.raisedSurface : "transparent"
+
+                    Rectangle {
+                        id: statusDot
+
+                        anchors.left: parent.left
+                        anchors.leftMargin: 8
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 6
+                        height: 6
+                        radius: 3
+                        color: surface.agentTone(String(agentRow.modelData.status))
+                    }
+
+                    Text {
+                        id: agentLabel
+
+                        anchors.left: statusDot.right
+                        anchors.leftMargin: 10
+                        anchors.right: agentStatus.left
+                        anchors.rightMargin: 8
+                        anchors.top: parent.top
+                        anchors.topMargin: 6
+                        text: String(agentRow.modelData.label)
+                        color: agentRow.modelData.focused ? Theme.foreground : Theme.mutedForeground
+                        font.pixelSize: 11
+                        font.weight: agentRow.modelData.focused ? Font.DemiBold : Font.Normal
+                        elide: Text.ElideRight
+                    }
+
+                    Text {
+                        anchors.left: agentLabel.left
+                        anchors.bottom: parent.bottom
+                        anchors.bottomMargin: 7
+                        text: String(agentRow.modelData.project)
+                        color: Theme.subtleForeground
+                        font.family: "DejaVu Sans Mono"
+                        font.pixelSize: 9
+                        elide: Text.ElideRight
+                    }
+
+                    Text {
+                        id: agentStatus
+
+                        anchors.right: parent.right
+                        anchors.rightMargin: 10
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: AgentService.statusLabel(String(agentRow.modelData.status))
+                        color: surface.agentTone(String(agentRow.modelData.status))
+                        font.family: "DejaVu Sans Mono"
+                        font.pixelSize: 9
+                        font.weight: Font.DemiBold
+                        font.letterSpacing: 0.6
+                    }
+
+                    MouseArea {
+                        id: agentMouse
+
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: AgentService.focus(String(agentRow.modelData.id))
+                    }
+                }
+            }
+
+            Text {
+                visible: surface.hiddenAgents > 0
+                text: "+ ещё " + surface.hiddenAgents
+                color: Theme.subtleForeground
+                font.family: "DejaVu Sans Mono"
+                font.pixelSize: 9
+                font.weight: Font.DemiBold
+                font.letterSpacing: 0.8
+            }
+        }
 
         Column {
             width: parent.width

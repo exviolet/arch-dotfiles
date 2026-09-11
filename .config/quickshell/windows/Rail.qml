@@ -324,49 +324,6 @@ PanelWindow {
                 expanded: rail.expanded
             }
 
-            Item {
-                anchors.left: parent.left
-                anchors.right: parent.right
-                anchors.bottom: parent.bottom
-                anchors.leftMargin: 22
-                anchors.rightMargin: 22
-                anchors.bottomMargin: 24
-                height: 48
-
-                Rectangle {
-                    anchors.top: parent.top
-                    width: parent.width
-                    height: 1
-                    color: Theme.border
-
-                    Rectangle {
-                        width: 24
-                        height: 1
-                        color: Theme.accent
-                    }
-                }
-
-                Text {
-                    anchors.left: parent.left
-                    anchors.bottom: parent.bottom
-                    text: rail.externallyPinned ? "CLICK TO CLOSE" : "LEAVE TO COLLAPSE"
-                    color: Theme.subtleForeground
-                    font.family: "DejaVu Sans Mono"
-                    font.pixelSize: 9
-                    font.weight: Font.Medium
-                    font.letterSpacing: 0.8
-                }
-
-                Text {
-                    anchors.right: parent.right
-                    anchors.bottom: parent.bottom
-                    text: String(Math.round(rail.interactiveWidth)) + " PX"
-                    color: Theme.subtleForeground
-                    font.family: "DejaVu Sans Mono"
-                    font.pixelSize: 9
-                    font.weight: Font.Medium
-                }
-            }
         }
     }
 
@@ -771,6 +728,21 @@ PanelWindow {
                 fillMode: Image.PreserveAspectFit
                 smooth: true
                 opacity: rail.ClaudeUsageService.stale ? 0.45 : 1
+            }
+
+            // An agent is waiting on an answer. Deliberately louder than the
+            // burn sliver: that is a number you glance at, this is a thing to
+            // go and do.
+            Rectangle {
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.rightMargin: 3
+                anchors.topMargin: 3
+                width: 6
+                height: 6
+                radius: 3
+                visible: rail.AgentService.needsAttention
+                color: Theme.accent
             }
 
             // The icon says what this is; the sliver underneath says how much
