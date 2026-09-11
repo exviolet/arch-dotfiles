@@ -28,10 +28,17 @@ PanelWindow {
     readonly property int windowSectionHeight: launcher.windowResults.length === 0
         ? 0
         : launcher.headerHeight + launcher.visibleWindowRows * launcher.windowRowHeight + 10
-    readonly property int cardHeight: launcher.calcMode
-        ? launcher.cardPadding * 2 + launcher.queryHeight + 12 + launcher.calcPanelHeight
-        : launcher.cardPadding * 2 + launcher.queryHeight + 12
-            + launcher.windowSectionHeight + launcher.headerHeight + launcher.rows * launcher.cellHeight
+    readonly property int cardHeight: {
+        const base = launcher.cardPadding * 2 + launcher.queryHeight + 12
+
+        if (launcher.calcMode) return base + launcher.calcPanelHeight
+        if (launcher.emojiMode)
+            return base + launcher.headerHeight
+                + Math.max(1, launcher.visibleEmojiRows) * launcher.emojiRowHeight
+
+        return base + launcher.windowSectionHeight + launcher.headerHeight
+            + launcher.rows * launcher.cellHeight
+    }
     readonly property var hermesCommand: ["/home/ex1te/.local/bin/hermes", "desktop"]
 
     property string query: ""
@@ -39,6 +46,27 @@ PanelWindow {
     // The launcher's first prefix mode. `calc` swallows the whole query: apps
     // and windows are hidden, because "calc 2+2" is not a search for anything.
     readonly property int calcPanelHeight: 92
+
+    readonly property int emojiRowHeight: 34
+    readonly property int maxEmojiRows: 8
+
+    readonly property bool emojiMode: {
+        const lowered = launcher.query.replace(/^\s+/, "").toLowerCase()
+        return lowered === "emoji" || lowered.startsWith("emoji ")
+    }
+
+    readonly property string emojiExpression: {
+        if (!launcher.emojiMode) return ""
+        return launcher.query.replace(/^\s+/, "").slice(5).trim()
+    }
+
+    readonly property var emojiResults: launcher.emojiMode
+        ? EmojiService.search(launcher.emojiExpression)
+        : []
+
+    readonly property int visibleEmojiRows: Math.min(launcher.emojiResults.length, launcher.maxEmojiRows)
+
+    onEmojiModeChanged: if (launcher.emojiMode) EmojiService.ensureLoaded()
 
     readonly property bool calcMode: {
         const lowered = launcher.query.replace(/^\s+/, "").toLowerCase()
@@ -60,7 +88,9 @@ PanelWindow {
     readonly property int windowCount: launcher.windowResults.length
     readonly property bool selectionIsWindow: launcher.selectedIndex < launcher.windowCount
     readonly property int selectedAppIndex: launcher.selectedIndex - launcher.windowCount
-    readonly property int totalCount: launcher.windowCount + launcher.results.length
+    readonly property int totalCount: launcher.emojiMode
+        ? launcher.emojiResults.length
+        : launcher.windowCount + launcher.results.length
 
     // niri reports a window class, which is only loosely related to the desktop
     // entry id: "Hermes" vs "hermes", "sendoff-desktop" vs "dev.sendoff.app".
@@ -90,7 +120,7 @@ PanelWindow {
     // the app grid. Matching on title is the point: two Helium windows are only
     // distinguishable by what they are showing.
     readonly property var windowResults: {
-        if (launcher.calcMode) return []
+        if (launcher.calcMode || launcher.emojiMode) return []
 
         const needle = launcher.query.trim().toLowerCase()
         const windows = NiriService.windows
@@ -123,7 +153,7 @@ PanelWindow {
     }
 
     readonly property var results: {
-        if (launcher.calcMode) return []
+        if (launcher.calcMode || launcher.emojiMode) return []
 
         const entries = DesktopEntries.applications.values
         const needle = launcher.query.trim().toLowerCase()
@@ -210,7 +240,9 @@ PanelWindow {
         if (launcher.totalCount === 0) return
         launcher.selectedIndex = Math.max(0, Math.min(launcher.totalCount - 1, index))
 
-        if (launcher.selectionIsWindow)
+        if (launcher.emojiMode)
+            emojiList.positionViewAtIndex(launcher.selectedIndex, ListView.Contain)
+        else if (launcher.selectionIsWindow)
             windowList.positionViewAtIndex(launcher.selectedIndex, ListView.Contain)
         else
             grid.positionViewAtIndex(launcher.selectedAppIndex, GridView.Contain)
@@ -224,6 +256,11 @@ PanelWindow {
     }
 
     function moveVertical(delta: int): void {
+        if (launcher.emojiMode) {
+            launcher.setSelection(launcher.selectedIndex + delta)
+            return
+        }
+
         if (launcher.selectionIsWindow) {
             launcher.setSelection(launcher.selectedIndex + delta)
             return
@@ -283,6 +320,14 @@ PanelWindow {
         if (launcher.calcMode) {
             if (!CalcService.hasResult) return
             CalcService.copyResult()
+            launcher.launcherController.hideLauncher()
+            return
+        }
+
+        if (launcher.emojiMode) {
+            const picked = launcher.emojiResults[launcher.selectedIndex]
+            if (!picked) return
+            EmojiService.copy(String(picked.glyph))
             launcher.launcherController.hideLauncher()
             return
         }
@@ -428,6 +473,10 @@ PanelWindow {
                 // Surfaces the action for the current selection only when it
                 // would actually do something.
                 text: {
+                    if (launcher.emojiMode)
+                        return launcher.emojiResults.length === 0
+                            ? (EmojiService.loaded ? "no matches" : "…")
+                            : "⏎ copy · " + String(launcher.emojiResults.length)
                     if (launcher.calcMode)
                         return CalcService.hasResult ? "⏎ copy" : (CalcService.busy ? "…" : "qalc")
                     if (launcher.totalCount === 0) return "no matches"
@@ -441,6 +490,106 @@ PanelWindow {
                 color: Theme.subtleForeground
                 font.family: "DejaVu Sans Mono"
                 font.pixelSize: 10
+            }
+        }
+
+        ThemeIcon {
+            visible: launcher.emojiMode
+            x: launcher.cardPadding + 4
+            y: queryField.y + queryField.height + 12
+            size: 11
+            name: "search"
+            color: Theme.subtleForeground
+        }
+
+        Text {
+            id: emojiHeader
+
+            visible: launcher.emojiMode
+            x: launcher.cardPadding + 20
+            y: queryField.y + queryField.height + 12
+            text: "EMOJI"
+            color: Theme.subtleForeground
+            font.family: "DejaVu Sans Mono"
+            font.pixelSize: 9
+            font.weight: Font.DemiBold
+            font.letterSpacing: 1.2
+        }
+
+        ListView {
+            id: emojiList
+
+            visible: launcher.emojiMode
+            x: launcher.cardPadding
+            y: emojiHeader.y + launcher.headerHeight
+            width: parent.width - launcher.cardPadding * 2
+            height: launcher.visibleEmojiRows * launcher.emojiRowHeight
+            model: launcher.emojiResults
+            currentIndex: launcher.emojiMode ? launcher.selectedIndex : -1
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
+
+            delegate: Item {
+                id: emojiRow
+
+                required property int index
+                required property var modelData
+
+                readonly property bool active: launcher.emojiMode
+                    && launcher.selectedIndex === emojiRow.index
+
+                width: emojiList.width
+                height: launcher.emojiRowHeight
+
+                Rectangle {
+                    anchors.fill: parent
+                    anchors.rightMargin: 2
+                    anchors.bottomMargin: 2
+                    radius: 8
+                    color: emojiRow.active
+                        ? Theme.raisedSurface
+                        : (emojiHover.hovered ? Theme.surface : "transparent")
+                    antialiasing: true
+                    border.width: 1
+                    border.color: emojiRow.active ? Theme.accent : "transparent"
+
+                    Behavior on border.color {
+                        ColorAnimation { duration: 90 }
+                    }
+                }
+
+                Text {
+                    id: glyph
+
+                    x: 12
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: String(emojiRow.modelData.glyph)
+                    font.pixelSize: 17
+                }
+
+                Text {
+                    anchors.left: glyph.right
+                    anchors.leftMargin: 14
+                    anchors.right: parent.right
+                    anchors.rightMargin: 14
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: String(emojiRow.modelData.name)
+                    color: emojiRow.active ? Theme.foreground : Theme.mutedForeground
+                    font.pixelSize: 12
+                    elide: Text.ElideRight
+                }
+
+                HoverHandler {
+                    id: emojiHover
+                }
+
+                TapHandler {
+                    onTapped: {
+                        launcher.setSelection(emojiRow.index)
+                        EmojiService.copy(String(emojiRow.modelData.glyph))
+                        launcher.launcherController.hideLauncher()
+                    }
+                }
             }
         }
 
@@ -630,7 +779,7 @@ PanelWindow {
         }
 
         ThemeIcon {
-            visible: !launcher.calcMode
+            visible: !launcher.calcMode && !launcher.emojiMode
             x: launcher.cardPadding + 4
             y: appsHeader.y
             size: 11
@@ -641,7 +790,7 @@ PanelWindow {
         Text {
             id: appsHeader
 
-            visible: !launcher.calcMode
+            visible: !launcher.calcMode && !launcher.emojiMode
             x: launcher.cardPadding + 20
             y: launcher.windowResults.length === 0
                 ? queryField.y + queryField.height + 12
@@ -657,7 +806,7 @@ PanelWindow {
         GridView {
             id: grid
 
-            visible: !launcher.calcMode
+            visible: !launcher.calcMode && !launcher.emojiMode
             x: launcher.cardPadding
             y: appsHeader.y + launcher.headerHeight
             width: parent.width - launcher.cardPadding * 2

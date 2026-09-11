@@ -40,6 +40,8 @@ ShellRoot {
     property string powermenuScreen: ""
     property bool lockPreviewVisible: false
     property string lockPreviewScreen: ""
+    property bool wallpaperVisible: false
+    property string wallpaperScreen: ""
 
     property string preferredPlayerId: ""
 
@@ -247,6 +249,7 @@ ShellRoot {
 
     function showLauncher(screen: string): string {
         const target = screen === "" ? NiriService.focusedOutput : screen
+        wallpaperVisible = false
         // Only one keyboard-grabbing overlay at a time.
         clipboardVisible = false
         powermenuVisible = false
@@ -269,6 +272,7 @@ ShellRoot {
 
     function showPowermenu(screen: string): string {
         const target = screen === "" ? NiriService.focusedOutput : screen
+        wallpaperVisible = false
         launcherVisible = false
         clipboardVisible = false
         powermenuScreen = target
@@ -290,6 +294,7 @@ ShellRoot {
 
     function showClipboard(screen: string): string {
         const target = screen === "" ? NiriService.focusedOutput : screen
+        wallpaperVisible = false
         launcherVisible = false
         powermenuVisible = false
         clipboardScreen = target
@@ -307,6 +312,28 @@ ShellRoot {
         const target = screen === "" ? NiriService.focusedOutput : screen
         if (clipboardVisible && clipboardScreen === target) return hideClipboard()
         return showClipboard(target)
+    }
+
+    function showWallpaper(screen: string): string {
+        const target = screen === "" ? NiriService.focusedOutput : screen
+        launcherVisible = false
+        clipboardVisible = false
+        powermenuVisible = false
+        wallpaperScreen = target
+        wallpaperVisible = true
+        return "shown:" + target
+    }
+
+    function hideWallpaper(): string {
+        wallpaperVisible = false
+        wallpaperScreen = ""
+        return "hidden"
+    }
+
+    function toggleWallpaper(screen: string): string {
+        const target = screen === "" ? NiriService.focusedOutput : screen
+        if (wallpaperVisible && wallpaperScreen === target) return hideWallpaper()
+        return showWallpaper(target)
     }
 
     function showLockPreview(screen: string): string {
@@ -457,6 +484,18 @@ ShellRoot {
         function unlock(): string {
             LockService.unlock()
             return "unlocked"
+        }
+
+        function getWallpaperState(): string {
+            return JSON.stringify({
+                "files": WallpaperService.files.length,
+                "current": WallpaperService.current,
+                "names": WallpaperService.files.slice(0, 3).map(path => WallpaperService.nameOf(String(path)))
+            })
+        }
+
+        function toggleWallpaper(screen: string): string {
+            return root.toggleWallpaper(screen)
         }
 
         function previewLock(screen: string): string {
@@ -865,6 +904,17 @@ ShellRoot {
 
             outputScreen: modelData
             lockController: root
+        }
+    }
+
+    Variants {
+        model: Quickshell.screens
+
+        Wallpaper {
+            required property var modelData
+
+            outputScreen: modelData
+            wallpaperController: root
         }
     }
 

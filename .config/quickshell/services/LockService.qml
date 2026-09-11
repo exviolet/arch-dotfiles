@@ -8,9 +8,9 @@ import QtQuick
 
 // Screen lock: state, authentication and the idle trigger.
 //
-// Replaces hyprlock, whose config had rotted anyway — it pointed at a
-// wallpaper file that no longer exists and at two ~/bash-scripts helpers whose
-// directory is gone, so its layout and battery readouts had been blank for
+// Replaces hyprlock, whose config had partly rotted — it pointed at two
+// ~/bash-scripts helpers whose directory does not exist (the scripts live in
+// ~/.config/autostart), so its layout and battery readouts had been blank for
 // some time. Both come from PowerService and NiriService here instead.
 //
 // The lock surface is what the compositor keeps on screen if this process
@@ -25,20 +25,14 @@ Singleton {
     property string status: ""
     property bool statusIsError: false
 
-    // Output name -> wallpaper path, read from awww at lock time so the lock
-    // shows whatever is actually on the desktop right now.
-    property var wallpapers: ({})
-
     readonly property int idleTimeout: 600
 
     function wallpaperFor(name: string): string {
-        const path = String(root.wallpapers[name] || "")
-        return path === "" ? "" : "file://" + path
+        return WallpaperService.sourceFor(name)
     }
 
     function refreshWallpapers(): void {
-        wallpaperQuery.running = false
-        wallpaperQuery.running = true
+        WallpaperService.refresh()
     }
 
     function lock(): void {
@@ -117,28 +111,6 @@ Singleton {
             root.authenticating = false
             root.statusIsError = true
             root.status = "Authentication unavailable: " + PamError.toString(error)
-        }
-    }
-
-    // Lines look like:
-    //   eDP-1: 1920x1080, scale: 1, currently displaying: image: /path/to.png
-    Process {
-        id: wallpaperQuery
-
-        command: ["awww", "query"]
-
-        stdout: StdioCollector {
-            onStreamFinished: {
-                const next = ({})
-                const lines = String(text).split("\n")
-
-                for (let index = 0; index < lines.length; ++index) {
-                    const match = lines[index].match(/^\s*:?\s*([^:]+):.*currently displaying:\s*image:\s*(.+)$/)
-                    if (match) next[match[1].trim()] = match[2].trim()
-                }
-
-                root.wallpapers = next
-            }
         }
     }
 
