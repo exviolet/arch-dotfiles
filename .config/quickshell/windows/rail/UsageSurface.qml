@@ -250,7 +250,7 @@ Item {
                     width: surface.width - 44
                     height: 38
                     radius: 8
-                    color: agentMouse.containsMouse ? Theme.raisedSurface : "transparent"
+                    color: "transparent"
 
                     Rectangle {
                         id: statusDot
@@ -305,14 +305,6 @@ Item {
                         font.letterSpacing: 0.6
                     }
 
-                    MouseArea {
-                        id: agentMouse
-
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: AgentService.focus(String(agentRow.modelData.id))
-                    }
                 }
             }
 
