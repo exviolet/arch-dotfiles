@@ -32,6 +32,9 @@ PanelWindow {
         const base = launcher.cardPadding * 2 + launcher.queryHeight + 12
 
         if (launcher.calcMode) return base + launcher.calcPanelHeight
+        if (launcher.searchMode)
+            return base + launcher.headerHeight
+                + Math.max(1, launcher.visibleSearchRows) * launcher.searchRowHeight
         if (launcher.emojiMode)
             return base + launcher.headerHeight
                 + Math.max(1, launcher.visibleEmojiRows) * launcher.emojiRowHeight
@@ -46,6 +49,25 @@ PanelWindow {
     // The launcher's first prefix mode. `calc` swallows the whole query: apps
     // and windows are hidden, because "calc 2+2" is not a search for anything.
     readonly property int calcPanelHeight: 92
+
+    readonly property int searchRowHeight: 42
+    readonly property int maxSearchRows: 7
+
+    readonly property bool searchMode: {
+        const lowered = launcher.query.replace(/^\s+/, "").toLowerCase()
+        return lowered === "search" || lowered.startsWith("search ")
+    }
+
+    readonly property string searchExpression: {
+        if (!launcher.searchMode) return ""
+        return launcher.query.replace(/^\s+/, "").slice(6).trim()
+    }
+
+    readonly property var searchResults: launcher.searchMode
+        ? QuicklinkService.rowsFor(launcher.searchExpression)
+        : []
+
+    readonly property int visibleSearchRows: Math.min(launcher.searchResults.length, launcher.maxSearchRows)
 
     readonly property int emojiRowHeight: 34
     readonly property int maxEmojiRows: 8
@@ -88,9 +110,11 @@ PanelWindow {
     readonly property int windowCount: launcher.windowResults.length
     readonly property bool selectionIsWindow: launcher.selectedIndex < launcher.windowCount
     readonly property int selectedAppIndex: launcher.selectedIndex - launcher.windowCount
-    readonly property int totalCount: launcher.emojiMode
-        ? launcher.emojiResults.length
-        : launcher.windowCount + launcher.results.length
+    readonly property int totalCount: {
+        if (launcher.emojiMode) return launcher.emojiResults.length
+        if (launcher.searchMode) return launcher.searchResults.length
+        return launcher.windowCount + launcher.results.length
+    }
 
     // niri reports a window class, which is only loosely related to the desktop
     // entry id: "Hermes" vs "hermes", "sendoff-desktop" vs "dev.sendoff.app".
@@ -120,7 +144,7 @@ PanelWindow {
     // the app grid. Matching on title is the point: two Helium windows are only
     // distinguishable by what they are showing.
     readonly property var windowResults: {
-        if (launcher.calcMode || launcher.emojiMode) return []
+        if (launcher.calcMode || launcher.emojiMode || launcher.searchMode) return []
 
         const needle = launcher.query.trim().toLowerCase()
         const windows = NiriService.windows
@@ -153,7 +177,7 @@ PanelWindow {
     }
 
     readonly property var results: {
-        if (launcher.calcMode || launcher.emojiMode) return []
+        if (launcher.calcMode || launcher.emojiMode || launcher.searchMode) return []
 
         const entries = DesktopEntries.applications.values
         const needle = launcher.query.trim().toLowerCase()
@@ -240,7 +264,9 @@ PanelWindow {
         if (launcher.totalCount === 0) return
         launcher.selectedIndex = Math.max(0, Math.min(launcher.totalCount - 1, index))
 
-        if (launcher.emojiMode)
+        if (launcher.searchMode)
+            searchList.positionViewAtIndex(launcher.selectedIndex, ListView.Contain)
+        else if (launcher.emojiMode)
             emojiList.positionViewAtIndex(launcher.selectedIndex, ListView.Contain)
         else if (launcher.selectionIsWindow)
             windowList.positionViewAtIndex(launcher.selectedIndex, ListView.Contain)
@@ -256,7 +282,7 @@ PanelWindow {
     }
 
     function moveVertical(delta: int): void {
-        if (launcher.emojiMode) {
+        if (launcher.emojiMode || launcher.searchMode) {
             launcher.setSelection(launcher.selectedIndex + delta)
             return
         }
@@ -324,6 +350,14 @@ PanelWindow {
             return
         }
 
+        if (launcher.searchMode) {
+            const row = launcher.searchResults[launcher.selectedIndex]
+            if (!row) return
+            QuicklinkService.activate(row)
+            launcher.launcherController.hideLauncher()
+            return
+        }
+
         if (launcher.emojiMode) {
             const picked = launcher.emojiResults[launcher.selectedIndex]
             if (!picked) return
@@ -354,6 +388,8 @@ PanelWindow {
 
     onVisibleChanged: {
         if (visible) {
+            queryInput.text = launcher.launcherController.launcherPrefill
+            queryInput.cursorPosition = queryInput.text.length
             queryInput.forceActiveFocus()
         } else {
             queryInput.clear()
@@ -473,6 +509,10 @@ PanelWindow {
                 // Surfaces the action for the current selection only when it
                 // would actually do something.
                 text: {
+                    if (launcher.searchMode)
+                        return launcher.searchResults.length === 0
+                            ? "no matches"
+                            : "⏎ open · " + String(launcher.searchResults.length)
                     if (launcher.emojiMode)
                         return launcher.emojiResults.length === 0
                             ? (EmojiService.loaded ? "no matches" : "…")
@@ -490,6 +530,121 @@ PanelWindow {
                 color: Theme.subtleForeground
                 font.family: "DejaVu Sans Mono"
                 font.pixelSize: 10
+            }
+        }
+
+        ThemeIcon {
+            visible: launcher.searchMode
+            x: launcher.cardPadding + 4
+            y: queryField.y + queryField.height + 12
+            size: 11
+            name: "search"
+            color: Theme.subtleForeground
+        }
+
+        Text {
+            id: searchHeader
+
+            visible: launcher.searchMode
+            x: launcher.cardPadding + 20
+            y: queryField.y + queryField.height + 12
+            text: "QUICKLINKS"
+            color: Theme.subtleForeground
+            font.family: "DejaVu Sans Mono"
+            font.pixelSize: 9
+            font.weight: Font.DemiBold
+            font.letterSpacing: 1.2
+        }
+
+        ListView {
+            id: searchList
+
+            visible: launcher.searchMode
+            x: launcher.cardPadding
+            y: searchHeader.y + launcher.headerHeight
+            width: parent.width - launcher.cardPadding * 2
+            height: launcher.visibleSearchRows * launcher.searchRowHeight
+            model: launcher.searchResults
+            currentIndex: launcher.searchMode ? launcher.selectedIndex : -1
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
+
+            delegate: Item {
+                id: searchRow
+
+                required property int index
+                required property var modelData
+
+                readonly property bool active: launcher.searchMode
+                    && launcher.selectedIndex === searchRow.index
+
+                width: searchList.width
+                height: launcher.searchRowHeight
+
+                Rectangle {
+                    anchors.fill: parent
+                    anchors.rightMargin: 2
+                    anchors.bottomMargin: 2
+                    radius: 8
+                    color: searchRow.active
+                        ? Theme.raisedSurface
+                        : (searchHover.hovered ? Theme.surface : "transparent")
+                    antialiasing: true
+                    border.width: 1
+                    border.color: searchRow.active ? Theme.accent : "transparent"
+
+                    Behavior on border.color {
+                        ColorAnimation { duration: 90 }
+                    }
+                }
+
+                Text {
+                    id: rowEmoji
+
+                    x: 12
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: String(searchRow.modelData.emoji)
+                    font.pixelSize: 15
+                }
+
+                Text {
+                    id: rowTitle
+
+                    anchors.left: rowEmoji.right
+                    anchors.leftMargin: 14
+                    anchors.right: parent.right
+                    anchors.rightMargin: 14
+                    anchors.top: parent.top
+                    anchors.topMargin: 7
+                    text: String(searchRow.modelData.title)
+                    color: searchRow.active ? Theme.foreground : Theme.mutedForeground
+                    font.pixelSize: 12
+                    elide: Text.ElideRight
+                }
+
+                Text {
+                    anchors.left: rowTitle.left
+                    anchors.right: rowTitle.right
+                    anchors.bottom: parent.bottom
+                    anchors.bottomMargin: 8
+                    text: String(searchRow.modelData.subtitle)
+                    color: Theme.subtleForeground
+                    font.family: "DejaVu Sans Mono"
+                    font.pixelSize: 9
+                    elide: Text.ElideRight
+                }
+
+                HoverHandler {
+                    id: searchHover
+                }
+
+                TapHandler {
+                    onTapped: {
+                        launcher.setSelection(searchRow.index)
+                        QuicklinkService.activate(searchRow.modelData)
+                        launcher.launcherController.hideLauncher()
+                    }
+                }
             }
         }
 
@@ -779,7 +934,7 @@ PanelWindow {
         }
 
         ThemeIcon {
-            visible: !launcher.calcMode && !launcher.emojiMode
+            visible: !launcher.calcMode && !launcher.emojiMode && !launcher.searchMode
             x: launcher.cardPadding + 4
             y: appsHeader.y
             size: 11
@@ -790,7 +945,7 @@ PanelWindow {
         Text {
             id: appsHeader
 
-            visible: !launcher.calcMode && !launcher.emojiMode
+            visible: !launcher.calcMode && !launcher.emojiMode && !launcher.searchMode
             x: launcher.cardPadding + 20
             y: launcher.windowResults.length === 0
                 ? queryField.y + queryField.height + 12
@@ -806,7 +961,7 @@ PanelWindow {
         GridView {
             id: grid
 
-            visible: !launcher.calcMode && !launcher.emojiMode
+            visible: !launcher.calcMode && !launcher.emojiMode && !launcher.searchMode
             x: launcher.cardPadding
             y: appsHeader.y + launcher.headerHeight
             width: parent.width - launcher.cardPadding * 2
