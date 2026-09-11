@@ -32,6 +32,7 @@ PanelWindow {
         const base = launcher.cardPadding * 2 + launcher.queryHeight + 12
 
         if (launcher.calcMode) return base + launcher.calcPanelHeight
+        if (launcher.translateMode) return base + launcher.translatePanelHeight
         if (launcher.searchMode)
             return base + launcher.headerHeight
                 + Math.max(1, launcher.visibleSearchRows) * launcher.searchRowHeight
@@ -49,6 +50,20 @@ PanelWindow {
     // The launcher's first prefix mode. `calc` swallows the whole query: apps
     // and windows are hidden, because "calc 2+2" is not a search for anything.
     readonly property int calcPanelHeight: 92
+
+    readonly property int translatePanelHeight: 118
+
+    readonly property bool translateMode: {
+        const lowered = launcher.query.replace(/^\s+/, "").toLowerCase()
+        return lowered === "tr" || lowered.startsWith("tr ")
+    }
+
+    readonly property string translateExpression: {
+        if (!launcher.translateMode) return ""
+        return launcher.query.replace(/^\s+/, "").slice(2).trim()
+    }
+
+    onTranslateExpressionChanged: if (launcher.translateMode) TranslateService.translate(launcher.translateExpression)
 
     readonly property int searchRowHeight: 42
     readonly property int maxSearchRows: 7
@@ -144,7 +159,8 @@ PanelWindow {
     // the app grid. Matching on title is the point: two Helium windows are only
     // distinguishable by what they are showing.
     readonly property var windowResults: {
-        if (launcher.calcMode || launcher.emojiMode || launcher.searchMode) return []
+        if (launcher.calcMode || launcher.emojiMode || launcher.searchMode
+            || launcher.translateMode) return []
 
         const needle = launcher.query.trim().toLowerCase()
         const windows = NiriService.windows
@@ -177,7 +193,8 @@ PanelWindow {
     }
 
     readonly property var results: {
-        if (launcher.calcMode || launcher.emojiMode || launcher.searchMode) return []
+        if (launcher.calcMode || launcher.emojiMode || launcher.searchMode
+            || launcher.translateMode) return []
 
         const entries = DesktopEntries.applications.values
         const needle = launcher.query.trim().toLowerCase()
@@ -343,6 +360,13 @@ PanelWindow {
     // window. A selected window row focuses either way — there is nothing to
     // launch from it.
     function submit(event: var): void {
+        if (launcher.translateMode) {
+            if (!TranslateService.hasResult) return
+            TranslateService.copyResult()
+            launcher.launcherController.hideLauncher()
+            return
+        }
+
         if (launcher.calcMode) {
             if (!CalcService.hasResult) return
             CalcService.copyResult()
@@ -517,6 +541,10 @@ PanelWindow {
                         return launcher.emojiResults.length === 0
                             ? (EmojiService.loaded ? "no matches" : "…")
                             : "⏎ copy · " + String(launcher.emojiResults.length)
+                    if (launcher.translateMode) {
+                        if (TranslateService.busy) return "…"
+                        return TranslateService.hasResult ? "⏎ copy" : "trans"
+                    }
                     if (launcher.calcMode)
                         return CalcService.hasResult ? "⏎ copy" : (CalcService.busy ? "…" : "qalc")
                     if (launcher.totalCount === 0) return "no matches"
@@ -749,6 +777,51 @@ PanelWindow {
         }
 
         Rectangle {
+            visible: launcher.translateMode
+            x: launcher.cardPadding
+            y: queryField.y + queryField.height + 12
+            width: parent.width - launcher.cardPadding * 2
+            height: launcher.translatePanelHeight
+            radius: 12
+            color: Theme.surface
+            border.width: 1
+            border.color: Theme.border
+
+            Text {
+                x: 16
+                y: 12
+                text: "TRANSLATE " + TranslateService.direction
+                color: Theme.subtleForeground
+                font.family: "DejaVu Sans Mono"
+                font.pixelSize: 9
+                font.weight: Font.DemiBold
+                font.letterSpacing: 1.2
+            }
+
+            Text {
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.leftMargin: 16
+                anchors.rightMargin: 16
+                anchors.top: parent.top
+                anchors.topMargin: 34
+                anchors.bottomMargin: 14
+                text: {
+                    if (TranslateService.source.trim() === "")
+                        return "текст, либо «tr kk текст» для выбора языка"
+                    if (TranslateService.hasResult) return TranslateService.result
+                    if (TranslateService.busy) return "…"
+                    return TranslateService.failed ? "не перевелось" : "…"
+                }
+                color: TranslateService.hasResult ? Theme.foreground : Theme.subtleForeground
+                font.pixelSize: TranslateService.hasResult ? 16 : 12
+                wrapMode: Text.WordWrap
+                maximumLineCount: 4
+                elide: Text.ElideRight
+            }
+        }
+
+        Rectangle {
             visible: launcher.calcMode
             x: launcher.cardPadding
             y: queryField.y + queryField.height + 12
@@ -934,7 +1007,7 @@ PanelWindow {
         }
 
         ThemeIcon {
-            visible: !launcher.calcMode && !launcher.emojiMode && !launcher.searchMode
+            visible: !launcher.calcMode && !launcher.emojiMode && !launcher.searchMode && !launcher.translateMode
             x: launcher.cardPadding + 4
             y: appsHeader.y
             size: 11
@@ -945,7 +1018,7 @@ PanelWindow {
         Text {
             id: appsHeader
 
-            visible: !launcher.calcMode && !launcher.emojiMode && !launcher.searchMode
+            visible: !launcher.calcMode && !launcher.emojiMode && !launcher.searchMode && !launcher.translateMode
             x: launcher.cardPadding + 20
             y: launcher.windowResults.length === 0
                 ? queryField.y + queryField.height + 12
@@ -961,7 +1034,7 @@ PanelWindow {
         GridView {
             id: grid
 
-            visible: !launcher.calcMode && !launcher.emojiMode && !launcher.searchMode
+            visible: !launcher.calcMode && !launcher.emojiMode && !launcher.searchMode && !launcher.translateMode
             x: launcher.cardPadding
             y: appsHeader.y + launcher.headerHeight
             width: parent.width - launcher.cardPadding * 2
