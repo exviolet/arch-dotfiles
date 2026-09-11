@@ -32,7 +32,7 @@ binds {
     Super+Alt+L hotkey-overlay-title="Lock the Screen" { spawn "/home/ex1te/.config/quickshell/scripts/sidecarctl" "lock"; }
     Mod+T hotkey-overlay-title="Lock the Screen: Telegram" { spawn "org.telegram.desktop"; }
     Mod+Shift+O hotkey-overlay-title="Wallpaper" { spawn "/home/ex1te/.config/quickshell/scripts/sidecarctl" "wallpaper-toggle"; }
-    Mod+Shift+T hotkey-overlay-title="Toggle desktop theme" { spawn "bash" "-c" "$HOME/.config/rofi/scripts/toggle-gtk-theme.sh toggle"; }
+    Mod+Shift+T hotkey-overlay-title="Toggle desktop theme" { spawn "bash" "-c" "$HOME/.config/quickshell/scripts/toggle-theme.sh toggle"; }
     Mod+Shift+C hotkey-overlay-title="Calculator" { spawn "/home/ex1te/.config/quickshell/scripts/sidecarctl" "calc-toggle"; }
     Mod+Shift+W hotkey-overlay-title="Session controls" { spawn "/home/ex1te/.config/quickshell/scripts/sidecarctl" "powermenu-toggle"; }
 

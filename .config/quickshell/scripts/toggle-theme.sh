@@ -193,9 +193,14 @@ reload_apps() {
     pkill -SIGUSR2 waybar || true
   fi
 
-  if command -v swaync-client >/dev/null 2>&1; then
-    swaync-client -rs >/dev/null 2>&1 || true
-    swaync-client -R >/dev/null 2>&1 || true
+  # The binary outlives the daemon: swaync-client is still installed after
+  # swaync was dropped, and with nothing answering on the bus it waits forever
+  # rather than failing. `|| true` cannot rescue a process that never exits, so
+  # the guard has to be the running daemon, not the binary — and the timeout is
+  # there in case it hangs for some other reason.
+  if pgrep -x swaync >/dev/null 2>&1; then
+    timeout 3 swaync-client -rs >/dev/null 2>&1 || true
+    timeout 3 swaync-client -R >/dev/null 2>&1 || true
   fi
 
   if command -v alacritty >/dev/null 2>&1; then
