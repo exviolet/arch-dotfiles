@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# Jump to an agent from the rail: switch herdr to its pane, then raise the
+# window herdr is running inside.
+#
+# herdr has no window of its own — it lives in a terminal — so the window has
+# to be found by walking up from the herdr client process until a pid turns up
+# that niri knows about.
+set -euo pipefail
+
+NIRI="${NIRI_BIN:-/usr/sbin/niri}"
+
+target="${1:-}"
+if [[ -z "$target" ]]; then
+    printf 'Usage: %s <agent-name-or-pane-id>\n' "${0##*/}" >&2
+    exit 2
+fi
+
+herdr agent focus "$target" >/dev/null 2>&1 || exit 1
+
+window="$(
+    "$NIRI" msg --json windows 2>/dev/null | python3 -c '
+import json, os, sys
+
+try:
+    windows = json.load(sys.stdin)
+except ValueError:
+    raise SystemExit(1)
+
+by_pid = {w.get("pid"): w.get("id") for w in windows if w.get("pid")}
+
+
+def ancestry(pid):
+    """pid and its parents, stopping at init or a broken chain."""
+    for _ in range(8):
+        if pid is None or pid <= 1:
+            return
+        yield pid
+        try:
+            with open(f"/proc/{pid}/stat", encoding="utf-8") as handle:
+                fields = handle.read().rsplit(") ", 1)[1].split()
+        except (OSError, IndexError):
+            return
+        pid = int(fields[1])
+
+
+for entry in os.listdir("/proc"):
+    if not entry.isdigit():
+        continue
+    try:
+        with open(f"/proc/{entry}/cmdline", "rb") as handle:
+            argv = handle.read().split(b"\0")
+    except OSError:
+        continue
+
+    # The client is bare `herdr`; `herdr server` is the daemon behind it.
+    if not argv or os.path.basename(argv[0].decode(errors="replace")) != "herdr":
+        continue
+    if len(argv) > 1 and argv[1]:
+        continue
+
+    for pid in ancestry(int(entry)):
+        if pid in by_pid:
+            print(by_pid[pid])
+            raise SystemExit(0)
+
+raise SystemExit(1)
+'
+)" || exit 0
+
+[[ -n "$window" ]] && "$NIRI" msg action focus-window --id "$window" >/dev/null 2>&1 || true
