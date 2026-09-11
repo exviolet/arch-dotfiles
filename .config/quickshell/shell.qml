@@ -14,7 +14,6 @@ ShellRoot {
 
     property bool windowVisible: false
     property bool presenting: false
-    property bool dark: true
     property bool railVisible: true
     property bool railPinned: false
     property string railExpansionScreen: ""
@@ -88,12 +87,6 @@ ShellRoot {
         } else if (!mediaPlayer && activeSurface === "media") {
             activeSurface = "system"
         }
-    }
-
-    Binding {
-        target: Theme
-        property: "dark"
-        value: root.dark
     }
 
     Connections {
@@ -439,8 +432,9 @@ ShellRoot {
             root.reveal(warning ? 5200 : 3200)
         }
 
+        // Kept so the theme script's existing call still resolves, but the
+        // palette now follows gsettings on its own and does not need pushing.
         function refreshTheme(): void {
-            themeProcess.exec(["/usr/sbin/gsettings", "get", "org.gnome.desktop.interface", "color-scheme"])
         }
 
         function hide(): void {
@@ -452,7 +446,7 @@ ShellRoot {
         }
 
         function getTheme(): string {
-            return root.dark ? "dark" : "light"
+            return Theme.dark ? "dark" : "light"
         }
 
         function showLauncher(screen: string): string {
@@ -821,15 +815,6 @@ ShellRoot {
                 "warning": root.warning,
                 "screen": root.targetScreen
             })
-        }
-    }
-
-    Process {
-        id: themeProcess
-        command: ["/usr/sbin/gsettings", "get", "org.gnome.desktop.interface", "color-scheme"]
-        running: true
-        stdout: StdioCollector {
-            onStreamFinished: root.dark = text.indexOf("prefer-dark") !== -1
         }
     }
 
