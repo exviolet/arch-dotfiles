@@ -1,0 +1,13 @@
+[Unit]
+Description=Offer a crashed process to a coding agent
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.config/niri/scripts/watch-coredumps.sh
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=graphical-session.target
