@@ -23,7 +23,9 @@ PanelWindow {
     readonly property bool showingAudio: activeSurface === "audio" && AudioService.sinkReady
     readonly property bool showingTray: activeSurface === "tray" && TrayService.itemCount > 0
     readonly property bool showingCalendar: activeSurface === "calendar"
-    readonly property bool showingUsage: activeSurface === "usage" && ClaudeUsageService.ready
+    readonly property bool hasAgents: AgentService.agents.length > 0
+    readonly property bool usageAvailable: ClaudeUsageService.ready || hasAgents
+    readonly property bool showingUsage: activeSurface === "usage" && usageAvailable
     readonly property url audioIconSource: Qt.resolvedUrl(AudioService.muted ? "../icons/iconoir/sound-off.svg" : "../icons/iconoir/sound-high.svg")
     readonly property url brightnessIconSource: Qt.resolvedUrl("../icons/iconoir/brightness.svg")
     readonly property url trayIconSource: Qt.resolvedUrl("../icons/iconoir/app-notification.svg")
@@ -697,13 +699,10 @@ PanelWindow {
             }
         }
 
-        // Sits with the other entries that open a drawer rather than with the
-        // readouts below: hovering it is supposed to reveal something. Shows a
-        // number instead of an icon because the number is the whole point.
         Item {
             id: usageEntry
 
-            visible: rail.ClaudeUsageService.ready
+            visible: rail.usageAvailable
             anchors.top: trayEntry.visible ? trayEntry.bottom : (audioEntry.visible ? audioEntry.bottom : (mediaEntry.visible ? mediaEntry.bottom : workspaceColumn.bottom))
             anchors.topMargin: 7
             anchors.horizontalCenter: parent.horizontalCenter
@@ -736,7 +735,7 @@ PanelWindow {
                 source: Qt.resolvedUrl("../icons/iconoir/asterisk.svg")
                 fillMode: Image.PreserveAspectFit
                 smooth: true
-                opacity: rail.ClaudeUsageService.stale ? 0.45 : 1
+                opacity: rail.ClaudeUsageService.stale && !rail.hasAgents ? 0.45 : 1
             }
 
             // An agent is waiting on an answer. Deliberately louder than the
@@ -757,6 +756,7 @@ PanelWindow {
             // The icon says what this is; the sliver underneath says how much
             // is gone, which is the only thing worth reading at strip width.
             Rectangle {
+                visible: rail.ClaudeUsageService.fivePercent >= 0
                 anchors.bottom: parent.bottom
                 anchors.bottomMargin: 3
                 anchors.horizontalCenter: parent.horizontalCenter
@@ -786,7 +786,10 @@ PanelWindow {
 
             MouseArea {
                 id: usageEntryMouse
-                readonly property string hint: "Лимиты Claude и агенты Herdr"
+                readonly property string hint: {
+                    if (!rail.ClaudeUsageService.ready) return "Агенты Herdr"
+                    return rail.hasAgents ? "Агенты Herdr и лимиты Claude" : "Лимиты Claude"
+                }
 
                 anchors.fill: parent
                 hoverEnabled: true

@@ -380,7 +380,8 @@ ShellRoot {
         if (requested === "media" && !mediaPlayer) return "unavailable:media"
         if (requested === "audio" && !AudioService.sinkReady) return "unavailable:audio"
         if (requested === "tray" && TrayService.itemCount === 0) return "unavailable:tray"
-        if (requested === "usage" && !ClaudeUsageService.ready) return "unavailable:usage"
+        if (requested === "usage" && !ClaudeUsageService.ready && AgentService.agents.length === 0)
+            return "unavailable:usage"
         activeSurface = requested
         return activeSurface
     }
