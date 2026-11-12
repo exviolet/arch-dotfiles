@@ -1,4 +1,5 @@
 g	s	🔍	Search	https://www.google.com/search?q=%s	https://www.google.com
+g	ai	✨	Google AI Mode	https://www.google.com/search?udm=50&q=%s	https://www.google.com/ai
 g	m	🗺️	Maps	https://www.google.com/maps/search/%s	https://www.google.com/maps
 g	d	📂	Drive	https://drive.google.com/drive/search?q=%s	https://drive.google.com
 g	t	🌐	Translate	https://translate.google.com/?sl=auto&tl=ru&text=%s	https://translate.google.com
