@@ -33,9 +33,9 @@ PanelWindow {
 
         if (launcher.calcMode) return base + launcher.calcPanelHeight
         if (launcher.translateMode) return base + launcher.translatePanelHeight
-        if (launcher.searchMode)
+        if (launcher.listMode)
             return base + launcher.headerHeight
-                + Math.max(1, launcher.visibleSearchRows) * launcher.searchRowHeight
+                + Math.max(1, launcher.visibleListRows) * launcher.listRowHeight
         if (launcher.emojiMode)
             return base + launcher.headerHeight
                 + Math.max(1, launcher.visibleEmojiRows) * launcher.emojiRowHeight
@@ -65,8 +65,8 @@ PanelWindow {
 
     onTranslateExpressionChanged: if (launcher.translateMode) TranslateService.translate(launcher.translateExpression)
 
-    readonly property int searchRowHeight: 42
-    readonly property int maxSearchRows: 7
+    readonly property int listRowHeight: 42
+    readonly property int maxListRows: 7
 
     readonly property bool searchMode: {
         const lowered = launcher.query.replace(/^\s+/, "").toLowerCase()
@@ -78,11 +78,27 @@ PanelWindow {
         return launcher.query.replace(/^\s+/, "").slice(6).trim()
     }
 
-    readonly property var searchResults: launcher.searchMode
-        ? QuicklinkService.rowsFor(launcher.searchExpression)
-        : []
+    readonly property bool commandMode: launcher.query.trim().startsWith(">")
+    readonly property bool listMode: launcher.searchMode || launcher.commandMode
+    readonly property var listResults: {
+        if (launcher.searchMode) return QuicklinkService.rowsFor(launcher.searchExpression)
+        if (!launcher.commandMode) return []
 
-    readonly property int visibleSearchRows: Math.min(launcher.searchResults.length, launcher.maxSearchRows)
+        const needle = launcher.query.trim().slice(1).trim().toLowerCase()
+        const commands = [
+            { "kind": "command", "panel": "audio", "emoji": "🔊", "title": "Звук",
+              "subtitle": "Громкость и аудиоустройства", "aliases": "audio sound volume" },
+            { "kind": "command", "panel": "calendar", "emoji": "📅", "title": "Календарь",
+              "subtitle": "Просмотр месяца", "aliases": "calendar date" },
+            { "kind": "command", "panel": "wallpaper", "emoji": "🖼", "title": "Обои",
+              "subtitle": "Выбор фона рабочего стола", "aliases": "wallpaper background" }
+        ]
+        return commands.filter(command =>
+            (command.panel !== "audio" || AudioService.sinkReady)
+            && (command.title.toLowerCase().includes(needle) || command.aliases.includes(needle)))
+    }
+
+    readonly property int visibleListRows: Math.min(launcher.listResults.length, launcher.maxListRows)
 
     readonly property int emojiRowHeight: 34
     readonly property int maxEmojiRows: 8
@@ -117,6 +133,9 @@ PanelWindow {
 
     onCalcExpressionChanged: if (launcher.calcMode) CalcService.evaluate(launcher.calcExpression)
 
+    readonly property bool appMode: !(launcher.calcMode || launcher.emojiMode
+        || launcher.listMode || launcher.translateMode)
+
     // One flat index across both sections: [windows..., apps...]. Keeping a
     // single index is what lets arrow keys cross the section boundary without
     // the two views fighting over focus.
@@ -127,7 +146,7 @@ PanelWindow {
     readonly property int selectedAppIndex: launcher.selectedIndex - launcher.windowCount
     readonly property int totalCount: {
         if (launcher.emojiMode) return launcher.emojiResults.length
-        if (launcher.searchMode) return launcher.searchResults.length
+        if (launcher.listMode) return launcher.listResults.length
         return launcher.windowCount + launcher.results.length
     }
 
@@ -159,8 +178,7 @@ PanelWindow {
     // the app grid. Matching on title is the point: two Helium windows are only
     // distinguishable by what they are showing.
     readonly property var windowResults: {
-        if (launcher.calcMode || launcher.emojiMode || launcher.searchMode
-            || launcher.translateMode) return []
+        if (!launcher.appMode) return []
 
         const needle = launcher.query.trim().toLowerCase()
         const windows = NiriService.windows
@@ -193,8 +211,7 @@ PanelWindow {
     }
 
     readonly property var results: {
-        if (launcher.calcMode || launcher.emojiMode || launcher.searchMode
-            || launcher.translateMode) return []
+        if (!launcher.appMode) return []
 
         const entries = DesktopEntries.applications.values
         const needle = launcher.query.trim().toLowerCase()
@@ -281,8 +298,8 @@ PanelWindow {
         if (launcher.totalCount === 0) return
         launcher.selectedIndex = Math.max(0, Math.min(launcher.totalCount - 1, index))
 
-        if (launcher.searchMode)
-            searchList.positionViewAtIndex(launcher.selectedIndex, ListView.Contain)
+        if (launcher.listMode)
+            resultList.positionViewAtIndex(launcher.selectedIndex, ListView.Contain)
         else if (launcher.emojiMode)
             emojiList.positionViewAtIndex(launcher.selectedIndex, ListView.Contain)
         else if (launcher.selectionIsWindow)
@@ -299,7 +316,7 @@ PanelWindow {
     }
 
     function moveVertical(delta: int): void {
-        if (launcher.emojiMode || launcher.searchMode) {
+        if (launcher.emojiMode || launcher.listMode) {
             launcher.setSelection(launcher.selectedIndex + delta)
             return
         }
@@ -356,7 +373,26 @@ PanelWindow {
         launcher.launcherController.hideLauncher()
     }
 
-    // Enter always starts a new instance; Shift+Enter focuses an existing
+    function activateListRow(row: var): void {
+        if (!row) return
+
+        const controller = launcher.launcherController
+        if (row.kind === "command") {
+            const screen = launcher.outputScreen.name
+            if (row.panel === "wallpaper") {
+                controller.showWallpaper(screen)
+            } else {
+                if (!controller.showRailSurface(row.panel, screen).startsWith("pinned:")) return
+                controller.railVisible = true
+            }
+        } else {
+            QuicklinkService.activate(row)
+        }
+
+        controller.hideLauncher()
+    }
+
+    // For apps, Enter starts a new instance; Shift+Enter focuses an existing
     // window. A selected window row focuses either way — there is nothing to
     // launch from it.
     function submit(event: var): void {
@@ -374,11 +410,8 @@ PanelWindow {
             return
         }
 
-        if (launcher.searchMode) {
-            const row = launcher.searchResults[launcher.selectedIndex]
-            if (!row) return
-            QuicklinkService.activate(row)
-            launcher.launcherController.hideLauncher()
+        if (launcher.listMode) {
+            launcher.activateListRow(launcher.listResults[launcher.selectedIndex])
             return
         }
 
@@ -409,12 +442,26 @@ PanelWindow {
 
     onWindowResultsChanged: launcher.resetSelection()
     onResultsChanged: launcher.resetSelection()
+    onListResultsChanged: launcher.selectedIndex = 0
+
+    function applyPrefill(): void {
+        queryInput.text = launcher.launcherController.launcherPrefill
+        queryInput.cursorPosition = queryInput.text.length
+        launcher.selectedIndex = 0
+        queryInput.forceActiveFocus()
+    }
+
+    Connections {
+        target: launcher.launcherController
+
+        function onLauncherPrefillChanged(): void {
+            if (launcher.visible) launcher.applyPrefill()
+        }
+    }
 
     onVisibleChanged: {
         if (visible) {
-            queryInput.text = launcher.launcherController.launcherPrefill
-            queryInput.cursorPosition = queryInput.text.length
-            queryInput.forceActiveFocus()
+            launcher.applyPrefill()
         } else {
             queryInput.clear()
             launcher.selectedIndex = 0
@@ -510,7 +557,7 @@ PanelWindow {
                 Text {
                     anchors.fill: parent
                     visible: queryInput.text === ""
-                    text: "Search windows and applications"
+                    text: "Search windows and applications · > for commands"
                     color: Theme.subtleForeground
                     font: queryInput.font
                     verticalAlignment: Text.AlignVCenter
@@ -521,8 +568,12 @@ PanelWindow {
                 Keys.onEnterPressed: event => launcher.submit(event)
                 Keys.onUpPressed: launcher.moveVertical(-1)
                 Keys.onDownPressed: launcher.moveVertical(1)
-                Keys.onLeftPressed: launcher.moveHorizontal(-1)
-                Keys.onRightPressed: launcher.moveHorizontal(1)
+                Keys.onPressed: event => {
+                    if (!launcher.appMode || (event.key !== Qt.Key_Left && event.key !== Qt.Key_Right))
+                        return
+                    event.accepted = true
+                    launcher.moveHorizontal(event.key === Qt.Key_Left ? -1 : 1)
+                }
                 Keys.onTabPressed: launcher.moveHorizontal(1)
                 Keys.onBacktabPressed: launcher.moveHorizontal(-1)
             }
@@ -533,10 +584,10 @@ PanelWindow {
                 // Surfaces the action for the current selection only when it
                 // would actually do something.
                 text: {
-                    if (launcher.searchMode)
-                        return launcher.searchResults.length === 0
+                    if (launcher.listMode)
+                        return launcher.listResults.length === 0
                             ? "no matches"
-                            : "⏎ open · " + String(launcher.searchResults.length)
+                            : "⏎ open · " + String(launcher.listResults.length)
                     if (launcher.emojiMode)
                         return launcher.emojiResults.length === 0
                             ? (EmojiService.loaded ? "no matches" : "…")
@@ -562,7 +613,7 @@ PanelWindow {
         }
 
         ThemeIcon {
-            visible: launcher.searchMode
+            visible: launcher.listMode
             x: launcher.cardPadding + 4
             y: queryField.y + queryField.height + 12
             size: 11
@@ -571,12 +622,12 @@ PanelWindow {
         }
 
         Text {
-            id: searchHeader
+            id: resultHeader
 
-            visible: launcher.searchMode
+            visible: launcher.listMode
             x: launcher.cardPadding + 20
             y: queryField.y + queryField.height + 12
-            text: "QUICKLINKS"
+            text: launcher.commandMode ? "COMMANDS" : "QUICKLINKS"
             color: Theme.subtleForeground
             font.family: "DejaVu Sans Mono"
             font.pixelSize: 9
@@ -585,15 +636,15 @@ PanelWindow {
         }
 
         ListView {
-            id: searchList
+            id: resultList
 
-            visible: launcher.searchMode
+            visible: launcher.listMode
             x: launcher.cardPadding
-            y: searchHeader.y + launcher.headerHeight
+            y: resultHeader.y + launcher.headerHeight
             width: parent.width - launcher.cardPadding * 2
-            height: launcher.visibleSearchRows * launcher.searchRowHeight
-            model: launcher.searchResults
-            currentIndex: launcher.searchMode ? launcher.selectedIndex : -1
+            height: launcher.visibleListRows * launcher.listRowHeight
+            model: launcher.listResults
+            currentIndex: launcher.listMode ? launcher.selectedIndex : -1
             clip: true
             boundsBehavior: Flickable.StopAtBounds
 
@@ -603,11 +654,11 @@ PanelWindow {
                 required property int index
                 required property var modelData
 
-                readonly property bool active: launcher.searchMode
+                readonly property bool active: launcher.listMode
                     && launcher.selectedIndex === searchRow.index
 
-                width: searchList.width
-                height: launcher.searchRowHeight
+                width: resultList.width
+                height: launcher.listRowHeight
 
                 Rectangle {
                     anchors.fill: parent
@@ -669,8 +720,7 @@ PanelWindow {
                 TapHandler {
                     onTapped: {
                         launcher.setSelection(searchRow.index)
-                        QuicklinkService.activate(searchRow.modelData)
-                        launcher.launcherController.hideLauncher()
+                        launcher.activateListRow(searchRow.modelData)
                     }
                 }
             }
@@ -1007,7 +1057,7 @@ PanelWindow {
         }
 
         ThemeIcon {
-            visible: !launcher.calcMode && !launcher.emojiMode && !launcher.searchMode && !launcher.translateMode
+            visible: launcher.appMode
             x: launcher.cardPadding + 4
             y: appsHeader.y
             size: 11
@@ -1018,7 +1068,7 @@ PanelWindow {
         Text {
             id: appsHeader
 
-            visible: !launcher.calcMode && !launcher.emojiMode && !launcher.searchMode && !launcher.translateMode
+            visible: launcher.appMode
             x: launcher.cardPadding + 20
             y: launcher.windowResults.length === 0
                 ? queryField.y + queryField.height + 12
@@ -1034,7 +1084,7 @@ PanelWindow {
         GridView {
             id: grid
 
-            visible: !launcher.calcMode && !launcher.emojiMode && !launcher.searchMode && !launcher.translateMode
+            visible: launcher.appMode
             x: launcher.cardPadding
             y: appsHeader.y + launcher.headerHeight
             width: parent.width - launcher.cardPadding * 2

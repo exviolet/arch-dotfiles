@@ -165,6 +165,17 @@ Singleton {
             })
         }
 
+        const google = root.groupFor("g", "s")
+        if (trimmed !== "" && google) {
+            rows.push({
+                "kind": "search",
+                "emoji": String(google.emoji),
+                "title": "Искать в Google: " + trimmed,
+                "subtitle": root.urlFor(google, trimmed),
+                "payload": { "prefix": google.prefix, "sub": google.sub, "query": trimmed }
+            })
+        }
+
         return rows
     }
 
