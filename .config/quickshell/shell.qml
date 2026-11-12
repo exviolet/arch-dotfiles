@@ -365,7 +365,7 @@ ShellRoot {
     function setRailExpanded(expanded: bool, screen: string): void {
         railPinned = expanded
         railExpansionScreen = expanded ? screen : ""
-        if (expanded) railPreviewScreen = ""
+        railPreviewScreen = ""
     }
 
     function toggleRailFor(screen: string): bool {

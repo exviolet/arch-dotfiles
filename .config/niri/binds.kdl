@@ -27,6 +27,7 @@ binds {
     Mod+D hotkey-overlay-title="Run an Application" { spawn "/home/ex1te/.config/quickshell/scripts/sidecarctl" "launcher-toggle"; }
     Mod+S hotkey-overlay-title="Quicklinks" { spawn "/home/ex1te/.config/quickshell/scripts/sidecarctl" "search-toggle"; }
     Mod+Shift+S repeat=false hotkey-overlay-title="Google AI Mode" { spawn "/home/ex1te/.config/quickshell/scripts/sidecarctl" "ai-search-toggle"; }
+    Mod+BackSpace repeat=false hotkey-overlay-title="Collapse side panel" { spawn "/home/ex1te/.config/quickshell/scripts/sidecarctl" "rail-collapse"; }
 
     Mod+Shift+E hotkey-overlay-title="Emoji" { spawn "/home/ex1te/.config/quickshell/scripts/sidecarctl" "emoji-toggle"; }
     Mod+Shift+D hotkey-overlay-title="Clipboard history" { spawn "/home/ex1te/.config/quickshell/scripts/sidecarctl" "clipboard-toggle"; }

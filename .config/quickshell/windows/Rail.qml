@@ -41,6 +41,10 @@ PanelWindow {
     readonly property bool outputFocused: NiriService.focusedOutput === outputScreen.name
     property real outputFocusPulse: 0
     property string pendingSurface: ""
+    readonly property var hoveredControl: [
+        systemMouse, mediaEntryMouse, audioEntryMouse, trayEntryMouse,
+        usageEntryMouse, clockMouse, brightnessMouse, layoutMouse
+    ].find(control => control.visible && control.containsMouse && !control.pressed) ?? null
 
     readonly property var screenWorkspaces: NiriService.workspaces.filter(workspace => workspace.output === outputScreen.name)
     readonly property var battery: PowerService.battery
@@ -93,22 +97,21 @@ PanelWindow {
 
     Timer {
         id: previewTimer
-        interval: 130
+        interval: 180
         repeat: false
         onTriggered: {
-            if (!rail.externallyPinned && railHover.hovered)
+            const surface = rail.pendingSurface
+            rail.pendingSurface = ""
+            if (surface === "" || rail.railController.railPinned || !railHover.hovered) return
+            if (rail.railController.selectSurface(surface) === surface)
                 rail.railController.setRailPreview(rail.outputScreen.name, true)
         }
     }
 
     Timer {
-        id: surfaceHoverTimer
-        interval: 200
-        repeat: false
-        onTriggered: {
-            if (rail.pendingSurface !== "")
-                rail.railController.selectSurface(rail.pendingSurface)
-        }
+        id: hintTimer
+        interval: 550
+        onTriggered: controlHint.ready = true
     }
 
     Timer {
@@ -149,35 +152,43 @@ PanelWindow {
             outputFocusPulseAnimation.restart()
     }
 
+    onExpandedChanged: if (!expanded) clearSurfaceRequest()
+    onHoveredControlChanged: {
+        controlHint.ready = false
+        if (hoveredControl) hintTimer.restart()
+        else hintTimer.stop()
+    }
+
     HoverHandler {
         id: railHover
         onHoveredChanged: {
             if (hovered) {
                 collapseTimer.stop()
-                if (!rail.expanded) previewTimer.restart()
             } else {
-                previewTimer.stop()
                 rail.clearSurfaceRequest()
-                if (!rail.externallyPinned) collapseTimer.restart()
+                if (rail.previewing) collapseTimer.restart()
             }
         }
     }
 
     function requestSurface(surface: string): void {
-        if (externallyPinned) return
+        if (railController.railPinned) return
         pendingSurface = surface
-        surfaceHoverTimer.restart()
+        previewTimer.restart()
     }
 
     function cancelSurfaceRequest(surface: string): void {
-        if (pendingSurface !== surface) return
-        pendingSurface = ""
-        surfaceHoverTimer.stop()
+        if (pendingSurface === surface) clearSurfaceRequest()
     }
 
     function clearSurfaceRequest(): void {
         pendingSurface = ""
-        surfaceHoverTimer.stop()
+        previewTimer.stop()
+    }
+
+    function toggleSurface(surface: string): void {
+        clearSurfaceRequest()
+        railController.toggleRailSurface(surface, outputScreen.name)
     }
 
     function focusWorkspace(output: string, index: int): void {
@@ -244,6 +255,11 @@ PanelWindow {
         function onActiveSurfaceChanged(): void {
             if (rail.activeSurface !== "tray")
                 traySurface.closeMenu()
+        }
+
+        function onRailPinnedChanged(): void {
+            if (rail.railController.railPinned)
+                rail.clearSurfaceRequest()
         }
     }
 
@@ -365,6 +381,8 @@ PanelWindow {
             }
 
             MouseArea {
+                id: systemMouse
+                readonly property string hint: "Системные настройки\nПКМ — статус рендерера"
                 anchors.fill: parent
                 acceptedButtons: Qt.LeftButton | Qt.RightButton
                 hoverEnabled: true
@@ -375,9 +393,7 @@ PanelWindow {
                     if (mouse.button === Qt.RightButton) {
                         rendererAction.exec(["/home/ex1te/.config/quickshell/scripts/sidecarctl", "renderer"])
                     } else {
-                        rail.clearSurfaceRequest()
-                        rail.railController.setRailPreview(rail.outputScreen.name, false)
-                        rail.railController.toggleRailSurface("system", rail.outputScreen.name)
+                        rail.toggleSurface("system")
                     }
                 }
             }
@@ -543,16 +559,13 @@ PanelWindow {
 
             MouseArea {
                 id: mediaEntryMouse
+                readonly property string hint: "Управление воспроизведением"
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 onEntered: rail.requestSurface("media")
                 onExited: rail.cancelSurfaceRequest("media")
-                onClicked: {
-                    rail.clearSurfaceRequest()
-                    rail.railController.setRailPreview(rail.outputScreen.name, false)
-                    rail.railController.toggleRailSurface("media", rail.outputScreen.name)
-                }
+                onClicked: rail.toggleSurface("media")
             }
         }
 
@@ -593,6 +606,7 @@ PanelWindow {
 
             MouseArea {
                 id: audioEntryMouse
+                readonly property string hint: "Звук\nКолесо — громкость\nСредний клик — вкл. или выкл. звук"
                 anchors.fill: parent
                 acceptedButtons: Qt.LeftButton | Qt.MiddleButton
                 hoverEnabled: true
@@ -604,9 +618,7 @@ PanelWindow {
                         rail.railController.toggleAudioMuteWithFeedback(rail.outputScreen.name)
                         return
                     }
-                    rail.clearSurfaceRequest()
-                    rail.railController.setRailPreview(rail.outputScreen.name, false)
-                    rail.railController.toggleRailSurface("audio", rail.outputScreen.name)
+                    rail.toggleSurface("audio")
                 }
                 onWheel: wheel => {
                     const delta = wheel.angleDelta.y !== 0 ? wheel.angleDelta.y : wheel.pixelDelta.y
@@ -675,16 +687,13 @@ PanelWindow {
 
             MouseArea {
                 id: trayEntryMouse
+                readonly property string hint: "Системный трей"
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 onEntered: rail.requestSurface("tray")
                 onExited: rail.cancelSurfaceRequest("tray")
-                onClicked: {
-                    rail.clearSurfaceRequest()
-                    rail.railController.setRailPreview(rail.outputScreen.name, false)
-                    rail.railController.toggleRailSurface("tray", rail.outputScreen.name)
-                }
+                onClicked: rail.toggleSurface("tray")
             }
         }
 
@@ -777,17 +786,14 @@ PanelWindow {
 
             MouseArea {
                 id: usageEntryMouse
+                readonly property string hint: "Лимиты Claude и агенты Herdr"
 
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 onEntered: rail.requestSurface("usage")
                 onExited: rail.cancelSurfaceRequest("usage")
-                onClicked: {
-                    rail.clearSurfaceRequest()
-                    rail.railController.setRailPreview(rail.outputScreen.name, false)
-                    rail.railController.toggleRailSurface("usage", rail.outputScreen.name)
-                }
+                onClicked: rail.toggleSurface("usage")
             }
         }
 
@@ -868,16 +874,13 @@ PanelWindow {
 
             MouseArea {
                 id: clockMouse
+                readonly property string hint: "Календарь"
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 onEntered: rail.requestSurface("calendar")
                 onExited: rail.cancelSurfaceRequest("calendar")
-                onClicked: {
-                    rail.clearSurfaceRequest()
-                    rail.railController.setRailPreview(rail.outputScreen.name, false)
-                    rail.railController.toggleRailSurface("calendar", rail.outputScreen.name)
-                }
+                onClicked: rail.toggleSurface("calendar")
             }
         }
 
@@ -934,6 +937,7 @@ PanelWindow {
 
             MouseArea {
                 id: brightnessMouse
+                readonly property string hint: "Яркость\nКолесо — изменить"
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
@@ -978,6 +982,7 @@ PanelWindow {
 
             MouseArea {
                 id: layoutMouse
+                readonly property string hint: "Переключить раскладку"
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
@@ -1038,6 +1043,33 @@ PanelWindow {
             visible: batteryBlock.visible
             anchors.fill: batteryBlock
             hoverEnabled: true
+        }
+
+        Rectangle {
+            id: controlHint
+
+            property bool ready: false
+            readonly property var control: rail.hoveredControl
+            visible: ready && control !== null
+            anchors.right: parent.left
+            anchors.rightMargin: 6
+            y: control === null ? 0 : Math.max(8, Math.min(parent.height - height - 8,
+                control.parent.y + (control.height - height) / 2))
+            width: hintText.implicitWidth + 20
+            height: hintText.implicitHeight + 12
+            radius: 6
+            color: Theme.raisedSurface
+            border.width: 1
+            border.color: Theme.border
+
+            Text {
+                id: hintText
+                anchors.centerIn: parent
+                text: controlHint.control?.hint ?? ""
+                color: Theme.foreground
+                font.family: "DejaVu Sans"
+                font.pixelSize: 12
+            }
         }
     }
 
