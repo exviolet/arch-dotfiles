@@ -141,6 +141,8 @@ PanelWindow {
               "subtitle": "Просмотр месяца", "aliases": "calendar date" },
             { "kind": "command", "panel": "wallpaper", "emoji": "🖼", "title": "Обои",
               "subtitle": "Выбор фона рабочего стола", "aliases": "wallpaper background" },
+            { "kind": "command", "panel": "speedtest", "emoji": "⇅", "title": "Скорость сети",
+              "subtitle": "Измерить скачивание, отдачу и задержку", "aliases": "speed speedtest network internet" },
             { "kind": "command", "panel": "theme", "emoji": "◐", "title": "Тема",
               "subtitle": "Предпросмотр палитр Quickshell", "aliases": "theme appearance" },
             { "kind": "command", "panel": "rail-position", "emoji": "↔", "title": "Панель",
@@ -457,8 +459,10 @@ PanelWindow {
             if (row.panel === "wallpaper") {
                 controller.showWallpaper(screen)
             } else {
-                if (!controller.showRailSurface(row.panel, screen).startsWith("pinned:")) return
+                const surface = row.panel === "speedtest" ? "system" : row.panel
+                if (!controller.showRailSurface(surface, screen).startsWith("pinned:")) return
                 controller.railVisible = true
+                if (row.panel === "speedtest") NetworkService.startSpeedTest()
             }
         } else {
             QuicklinkService.activate(row)

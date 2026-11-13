@@ -1,6 +1,7 @@
 pragma Singleton
 
 import Quickshell
+import Quickshell.Io
 import Quickshell.Networking
 import QtQuick
 
@@ -35,6 +36,51 @@ Singleton {
     }
     property var scannerRequests: ({})
     property string statusMessage: ""
+    property bool speedTestRunning: false
+    property var speedTestResult: null
+    property string speedTestError: ""
+
+    function startSpeedTest(): void {
+        if (root.speedTestRunning) return
+        root.speedTestRunning = true
+        root.speedTestError = ""
+        speedTest.running = true
+    }
+
+    Process {
+        id: speedTest
+        command: ["/usr/bin/timeout", "--kill-after=3s", "60s",
+            "speedtest-cli", "--secure", "--json", "--timeout", "10"]
+        stdout: StdioCollector { id: speedTestOutput }
+
+        onExited: exitCode => {
+            root.speedTestRunning = false
+            if (exitCode === 0) {
+                try {
+                    const result = JSON.parse(speedTestOutput.text)
+                    if ([result.download, result.upload, result.ping].every(value => Number.isFinite(value) && value >= 0)) {
+                        root.speedTestResult = {
+                            "downloadMbps": result.download / 1000000,
+                            "uploadMbps": result.upload / 1000000,
+                            // A failed latency probe adds 600,000 ms to speedtest-cli's reported ping.
+                            "latencyMs": result.ping < 600000 ? result.ping : null,
+                            "measuredAt": new Date()
+                        }
+                        return
+                    }
+                } catch (error) {
+                    // The command may exit successfully without a complete JSON result.
+                }
+                root.speedTestError = "Invalid speed test result"
+            } else if (exitCode === 127) {
+                root.speedTestError = "Install speedtest-cli to run the test"
+            } else if (exitCode === 124 || exitCode === 137) {
+                root.speedTestError = "Speed test timed out. Try again."
+            } else {
+                root.speedTestError = "Speed test failed. Check your connection and try again."
+            }
+        }
+    }
 
     function signalPercent(network: var): int {
         if (!network) return 0

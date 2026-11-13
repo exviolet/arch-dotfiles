@@ -56,6 +56,125 @@ Item {
 
             Rectangle {
                 width: parent.width
+                height: speedTestContent.implicitHeight + 24
+                radius: 12
+                color: Theme.raisedSurface
+                border.width: 1
+                border.color: Theme.border
+
+                Column {
+                    id: speedTestContent
+                    x: 14
+                    y: 12
+                    width: parent.width - 28
+                    spacing: 8
+
+                    Item {
+                        width: parent.width
+                        height: 28
+
+                        Text {
+                            anchors.left: parent.left
+                            anchors.right: speedTestButton.left
+                            anchors.rightMargin: 8
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: "INTERNET SPEED"
+                            elide: Text.ElideRight
+                            color: Theme.subtleForeground
+                            font.family: "DejaVu Sans Mono"
+                            font.pixelSize: 9
+                            font.weight: Font.DemiBold
+                            font.letterSpacing: 1
+                        }
+
+                        Rectangle {
+                            id: speedTestButton
+                            anchors.right: parent.right
+                            width: speedTestButtonLabel.implicitWidth + 20
+                            height: parent.height
+                            radius: 9
+                            color: speedTestMouse.containsMouse && speedTestMouse.enabled ? Theme.surface : Theme.track
+
+                            Text {
+                                id: speedTestButtonLabel
+                                anchors.centerIn: parent
+                                text: NetworkService.speedTestRunning ? "Testing…" : "Run test"
+                                color: NetworkService.speedTestRunning ? Theme.mutedForeground : Theme.foreground
+                                font.family: "DejaVu Sans"
+                                font.pixelSize: 11
+                            }
+
+                            MouseArea {
+                                id: speedTestMouse
+                                anchors.fill: parent
+                                enabled: !NetworkService.speedTestRunning
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: NetworkService.startSpeedTest()
+                            }
+                        }
+                    }
+
+                    Row {
+                        width: parent.width
+                        visible: NetworkService.speedTestResult !== null
+                        spacing: 6
+
+                        Repeater {
+                            model: NetworkService.speedTestResult ? [
+                                { "label": "Download", "value": NetworkService.speedTestResult.downloadMbps, "unit": "Mbps" },
+                                { "label": "Upload", "value": NetworkService.speedTestResult.uploadMbps, "unit": "Mbps" },
+                                { "label": "Latency", "value": NetworkService.speedTestResult.latencyMs, "unit": "ms" }
+                            ] : []
+
+                            Column {
+                                required property var modelData
+                                width: (parent.width - 12) / 3
+                                spacing: 3
+
+                                Text {
+                                    text: parent.modelData.label
+                                    color: Theme.subtleForeground
+                                    font.family: "DejaVu Sans"
+                                    font.pixelSize: 10
+                                }
+
+                                Text {
+                                    width: parent.width
+                                    text: parent.modelData.value === null ? "—"
+                                        : parent.modelData.value.toLocaleString(Qt.locale(), "f", 1) + " " + parent.modelData.unit
+                                    elide: Text.ElideRight
+                                    color: Theme.foreground
+                                    font.family: "DejaVu Sans Mono"
+                                    font.pixelSize: 11
+                                }
+                            }
+                        }
+                    }
+
+                    Text {
+                        width: parent.width
+                        visible: NetworkService.speedTestResult !== null
+                        text: visible ? "Last test · " + Qt.formatDateTime(NetworkService.speedTestResult.measuredAt, "d MMM, HH:mm") : ""
+                        color: Theme.subtleForeground
+                        font.family: "DejaVu Sans"
+                        font.pixelSize: 10
+                    }
+
+                    Text {
+                        width: parent.width
+                        visible: NetworkService.speedTestError !== ""
+                        text: NetworkService.speedTestError
+                        wrapMode: Text.WordWrap
+                        color: Theme.warningAccent
+                        font.family: "DejaVu Sans"
+                        font.pixelSize: 11
+                    }
+                }
+            }
+
+            Rectangle {
+                width: parent.width
                 height: 64 + surface.visibleWifiCount * 38
                 radius: 12
                 color: Theme.raisedSurface
