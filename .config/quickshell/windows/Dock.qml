@@ -14,6 +14,8 @@ PanelWindow {
     required property var outputScreen
     required property var dockController
     property var railWindow: null
+    property string layoutFeedback: ""
+    property color layoutFeedbackColor: Theme.accent
 
     readonly property string edge: PanelPlacement.edgeFor("dock", outputScreen.name)
     readonly property bool island: PanelPlacement.dockPositionFor(outputScreen.name) === "island"
@@ -334,11 +336,33 @@ PanelWindow {
                 anchors.left: parent.left
                 anchors.leftMargin: 19
                 anchors.verticalCenter: parent.verticalCenter
+                visible: dock.layoutFeedback === ""
                 text: Qt.formatTime(islandClock.date, "HH:mm")
                 color: Theme.foreground
                 font.family: "DejaVu Sans Mono"
                 font.pixelSize: 14
                 font.weight: Font.DemiBold
+            }
+
+            Rectangle {
+                visible: dock.layoutFeedback !== ""
+                anchors.left: parent.left
+                anchors.leftMargin: 14
+                anchors.verticalCenter: parent.verticalCenter
+                width: layoutLabel.implicitWidth + 14
+                height: 22
+                radius: 6
+                color: dock.layoutFeedbackColor
+
+                Text {
+                    id: layoutLabel
+                    anchors.centerIn: parent
+                    text: dock.layoutFeedback
+                    color: Theme.layoutForeground(dock.layoutFeedback)
+                    font.family: "DejaVu Sans Mono"
+                    font.pixelSize: 12
+                    font.weight: Font.DemiBold
+                }
             }
 
             Rectangle {
