@@ -387,6 +387,7 @@ PanelWindow {
             expanded: dock.settingsOpen
             active: dock.settingsOpen
             compact: true
+            onNetworkSettingsRequested: dock.setIslandSettings(false)
         }
 
         ListView {

@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import Quickshell
 
 import "../../services"
 
@@ -12,6 +13,7 @@ Item {
     required property bool pinned
     required property bool expanded
     required property bool active
+    signal networkSettingsRequested()
 
     property bool compact: false
     property string section: ""
@@ -22,8 +24,22 @@ Item {
     readonly property var connectedBluetooth: BluetoothService.devices.find(device => device.connected)
     implicitHeight: contentColumn.implicitHeight + (compact ? 14 : 170)
 
-    readonly property int visibleWifiCount: Math.min(4, NetworkService.networks.length)
     readonly property int visibleBluetoothCount: Math.min(3, BluetoothService.devices.length)
+
+    function measurement(value: var, unit: string): string {
+        return value === undefined ? "—" : Math.round(value) + unit
+    }
+
+    function traffic(value: var, suffix: string): string {
+        if (value === undefined) return "—"
+        const units = ["Б", "КиБ", "МиБ", "ГиБ", "ТиБ"]
+        let index = 0
+        while (value >= 1024 && index < units.length - 1) {
+            value /= 1024
+            ++index
+        }
+        return value.toLocaleString(Qt.locale(), "f", index === 0 ? 0 : 1) + " " + units[index] + suffix
+    }
 
     function profileLabel(profile: string): string {
         if (profile === "power-saver") return "SAVER"
@@ -124,7 +140,7 @@ Item {
                     text: {
                         const network = NetworkService.connectedNetwork
                         if (network) return "Wi-Fi · " + NetworkService.signalPercent(network)
-                            + "%"
+                            + "% · " + NetworkService.wifiSecurity(network)
                         return NetworkService.wifiEnabled ? "Нет подключения" : "Wi-Fi выключен"
                     }
                     elide: Text.ElideRight
@@ -142,31 +158,15 @@ Item {
                     font.pixelSize: 15
                 }
 
-                Rectangle {
+                RadioSwitch {
                     id: wifiToggle
                     anchors.right: parent.right
                     anchors.rightMargin: 12
-                    y: 13
-                    width: 48
-                    height: 28
-                    radius: 9
-                    color: NetworkService.wifiEnabled ? Theme.accent : Theme.track
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: NetworkService.wifiEnabled ? "ON" : "OFF"
-                        color: NetworkService.wifiEnabled ? Theme.accentForeground : Theme.subtleForeground
-                        font.family: "DejaVu Sans Mono"
-                        font.pixelSize: 9
-                        font.weight: Font.DemiBold
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        enabled: NetworkService.wifiHardwareEnabled
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: NetworkService.toggleWifi()
-                    }
+                    y: (60 - height) / 2
+                    label: "Wi-Fi"
+                    checked: NetworkService.wifiEnabled
+                    enabled: NetworkService.wifiHardwareEnabled
+                    onToggled: NetworkService.toggleWifi()
                 }
 
                 Column {
@@ -177,49 +177,65 @@ Item {
                     spacing: 8
                     visible: surface.wifiExpanded
 
-                    Repeater {
-                        model: surface.wifiExpanded ? surface.visibleWifiCount : 0
+                    Grid {
+                        id: wifiMetrics
+                        width: parent.width
+                        columns: 2
+                        columnSpacing: 10
+                        rowSpacing: 5
+                        visible: NetworkService.connectedNetwork !== null
 
-                        Rectangle {
-                            required property int index
-                            readonly property var network: NetworkService.networks[index]
-                            width: parent.width
-                            height: 38
-                            radius: 9
-                            color: network.connected ? Theme.surface : (networkMouse.containsMouse ? Theme.track : "transparent")
-
-                            Text {
-                                x: 8
-                                anchors.verticalCenter: parent.verticalCenter
-                                width: parent.width - 70
-                                text: String(parent.network.name || "")
-                                elide: Text.ElideRight
-                                color: parent.network.connected ? Theme.foreground : Theme.mutedForeground
-                                font.family: "DejaVu Sans"
-                                font.pixelSize: 11
-                                font.weight: parent.network.connected ? Font.DemiBold : Font.Normal
+                        Repeater {
+                            model: {
+                                const info = NetworkService.wifiStatus
+                                return [
+                                    ["Пинг", surface.measurement(info.latency, " мс")],
+                                    ["Потери", surface.measurement(info.loss, "%")],
+                                    ["Приём", surface.traffic(info.down, "/с")],
+                                    ["Отдача", surface.traffic(info.up, "/с")],
+                                    ["Принято", surface.traffic(info.rx, "")],
+                                    ["Отдано", surface.traffic(info.tx, "")],
+                                    ["IP-адрес", info.address || "—"],
+                                    ["Шлюз", info.gateway || "—"]
+                                ]
                             }
 
-                            Text {
-                                anchors.right: parent.right
-                                anchors.rightMargin: 8
-                                anchors.verticalCenter: parent.verticalCenter
-                                text: parent.network.connected ? "ACTIVE" : String(NetworkService.signalPercent(parent.network)) + "%"
-                                color: parent.network.connected ? Theme.accent : Theme.subtleForeground
-                                font.family: "DejaVu Sans Mono"
-                                font.pixelSize: 8
-                                font.weight: Font.DemiBold
-                            }
+                            Item {
+                                id: metric
+                                required property var modelData
+                                width: (wifiMetrics.width - wifiMetrics.columnSpacing) / 2
+                                height: 15
 
-                            MouseArea {
-                                id: networkMouse
-                                anchors.fill: parent
-                                enabled: !parent.network.connected && !parent.network.stateChanging
-                                hoverEnabled: true
-                                cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
-                                onClicked: NetworkService.connectNetwork(parent.network)
+                                Text {
+                                    anchors.left: parent.left
+                                    anchors.right: metricValue.left
+                                    anchors.rightMargin: 4
+                                    text: metric.modelData[0]
+                                    elide: Text.ElideRight
+                                    color: Theme.subtleForeground
+                                    font.family: "DejaVu Sans Mono"
+                                    font.pixelSize: 10
+                                }
+
+                                Text {
+                                    id: metricValue
+                                    anchors.right: parent.right
+                                    width: Math.min(implicitWidth, parent.width * 0.66)
+                                    text: metric.modelData[1]
+                                    elide: Text.ElideRight
+                                    color: Theme.foreground
+                                    font.family: "DejaVu Sans Mono"
+                                    font.pixelSize: 10
+                                }
                             }
                         }
+                    }
+
+                    Rectangle {
+                        width: parent.width
+                        height: 1
+                        visible: wifiMetrics.visible
+                        color: Theme.border
                     }
 
                     Rectangle {
@@ -339,6 +355,55 @@ Item {
                         }
                     }
 
+                    WifiGroup {
+                        width: parent.width
+                        title: "Известные сети"
+                        networks: surface.wifiExpanded && NetworkService.wifiEnabled
+                            ? NetworkService.networks.filter(network => network.known || network.connected) : []
+                    }
+
+                    WifiGroup {
+                        width: parent.width
+                        title: "Доступные сети"
+                        networks: surface.wifiExpanded && NetworkService.wifiEnabled
+                            ? NetworkService.networks.filter(network => !network.known && !network.connected) : []
+                    }
+
+                    Rectangle {
+                        width: parent.width
+                        height: 34
+                        radius: 6
+                        color: networkSettingsMouse.containsMouse || networkSettingsMouse.activeFocus
+                            ? Theme.surface : "transparent"
+
+                        Text {
+                            x: 5
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: "Настройки сети…"
+                            color: Theme.foreground
+                            font.family: "DejaVu Sans"
+                            font.pixelSize: 12
+                        }
+
+                        MouseArea {
+                            id: networkSettingsMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            Accessible.role: Accessible.Button
+                            Accessible.name: "Настройки сети"
+                            Accessible.onPressAction: openEditor()
+                            activeFocusOnTab: true
+                            Keys.onReturnPressed: openEditor()
+                            Keys.onSpacePressed: openEditor()
+                            onClicked: openEditor()
+
+                            function openEditor(): void {
+                                surface.networkSettingsRequested()
+                                Quickshell.execDetached(["nm-connection-editor"])
+                            }
+                        }
+                    }
                 }
             }
 
@@ -404,31 +469,15 @@ Item {
                     font.pixelSize: 15
                 }
 
-                Rectangle {
+                RadioSwitch {
                     id: bluetoothToggle
                     anchors.right: parent.right
                     anchors.rightMargin: 12
-                    y: 13
-                    width: 48
-                    height: 28
-                    radius: 9
-                    color: BluetoothService.enabled ? Theme.accent : Theme.track
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: BluetoothService.enabled ? "ON" : "OFF"
-                        color: BluetoothService.enabled ? Theme.accentForeground : Theme.subtleForeground
-                        font.family: "DejaVu Sans Mono"
-                        font.pixelSize: 9
-                        font.weight: Font.DemiBold
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        enabled: BluetoothService.available
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: BluetoothService.toggleEnabled()
-                    }
+                    y: (57 - height) / 2
+                    label: "Bluetooth"
+                    checked: BluetoothService.enabled
+                    enabled: BluetoothService.available
+                    onToggled: BluetoothService.toggleEnabled()
                 }
 
                 Column {

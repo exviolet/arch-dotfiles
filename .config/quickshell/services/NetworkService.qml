@@ -26,7 +26,7 @@ Singleton {
             if (left.connected !== right.connected) return left.connected ? -1 : 1
             return right.signalStrength - left.signalStrength
         })
-        return values.slice(0, 6)
+        return values.filter(network => network.name !== "")
     }
     readonly property var connectedNetwork: {
         for (let index = 0; index < networks.length; ++index) {
@@ -39,6 +39,63 @@ Singleton {
     property bool speedTestRunning: false
     property var speedTestResult: null
     property string speedTestError: ""
+    property var wifiStatus: ({})
+    readonly property string wifiStatusTarget: Object.keys(scannerRequests).length > 0 && connectedNetwork && wifiDevice
+        ? JSON.stringify([wifiDevice.name, connectedNetwork.name]) : ""
+
+    onWifiStatusTargetChanged: {
+        root.wifiStatus = ({})
+        if (root.wifiStatusTarget !== "") Qt.callLater(root.refreshWifiStatus)
+    }
+
+    function wifiSecurity(network: var): string {
+        switch (network.security) {
+        case WifiSecurityType.Open: return "Открытая"
+        case WifiSecurityType.Wpa2Psk:
+        case WifiSecurityType.Wpa2Eap: return "WPA2"
+        case WifiSecurityType.Sae:
+        case WifiSecurityType.Wpa3SuiteB192: return "WPA3"
+        default: return "Защищена"
+        }
+    }
+
+    function refreshWifiStatus(): void {
+        if (root.wifiStatusTarget === "" || wifiProbe.running) return
+        wifiProbe.target = root.wifiStatusTarget
+        wifiProbe.exec(["/usr/bin/python3", Quickshell.shellDir + "/scripts/wifi-status.py", root.wifiDevice.name])
+    }
+
+    Timer {
+        interval: 3000
+        repeat: true
+        running: root.wifiStatusTarget !== ""
+        onTriggered: root.refreshWifiStatus()
+    }
+
+    Process {
+        id: wifiProbe
+        property string target: ""
+        stdout: StdioCollector { id: wifiOutput }
+
+        onExited: exitCode => {
+            if (target !== root.wifiStatusTarget) {
+                Qt.callLater(root.refreshWifiStatus)
+                return
+            }
+            try {
+                const next = exitCode === 0 ? JSON.parse(wifiOutput.text) : ({})
+                const previous = root.wifiStatus
+                const seconds = next.time - previous.time
+                if (seconds > 0 && next.address === previous.address && next.gateway === previous.gateway) {
+                    if (next.rx >= previous.rx) next.down = (next.rx - previous.rx) / seconds
+                    if (next.tx >= previous.tx) next.up = (next.tx - previous.tx) / seconds
+                }
+                root.wifiStatus = next
+            } catch (error) {
+                root.wifiStatus = ({})
+            }
+        }
+    }
 
     function startSpeedTest(): void {
         if (root.speedTestRunning) return
