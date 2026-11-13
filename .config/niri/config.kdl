@@ -66,3 +66,6 @@ hotkey-overlay {
 
 // Generated before niri starts: NVIDIA profile with HDMI, Intel otherwise.
 include "~/.cache/niri/renderer-auto.kdl" optional=true
+
+// Focus ring colors generated from the saved Quickshell palette.
+include "~/.cache/niri/quickshell-colors.kdl" optional=true

@@ -4,6 +4,7 @@ import Quickshell
 import QtQuick
 
 import "../../services"
+import "../../components"
 
 Item {
     id: surface
@@ -15,8 +16,6 @@ Item {
     property var menuHandle: null
     property var menuStack: []
     readonly property bool menuVisible: menuOwner !== null && menuHandle !== null
-    readonly property url backIconSource: Qt.resolvedUrl("../../icons/iconoir/nav-arrow-left.svg")
-    readonly property url forwardIconSource: Qt.resolvedUrl("../../icons/iconoir/nav-arrow-right.svg")
 
     function openMenu(item: var): void {
         if (!item || !item.hasMenu) return
@@ -70,7 +69,7 @@ Item {
     SurfaceHeader {
         width: parent.width
         eyebrow: "TRAY /"
-        iconSource: Qt.resolvedUrl("../../icons/iconoir/app-notification.svg")
+        iconName: "app-notification"
         eyebrowLabel: "SERVICES"
         mode: surface.menuVisible ? "MENU" : String(TrayService.itemCount) + " LIVE"
         pinned: surface.pinned
@@ -235,14 +234,12 @@ Item {
             border.width: 1
             border.color: Theme.border
 
-            Image {
+            ThemeIcon {
                 x: 10
                 anchors.verticalCenter: parent.verticalCenter
-                width: 14
-                height: 14
-                source: surface.backIconSource
-                fillMode: Image.PreserveAspectFit
-                smooth: true
+                size: 14
+                name: "nav-arrow-left"
+                color: Theme.accent
             }
 
             Text {
@@ -337,16 +334,14 @@ Item {
                     font.weight: trayAction.modelData.hasChildren ? Font.DemiBold : Font.Normal
                 }
 
-                Image {
+                ThemeIcon {
                     visible: !trayAction.modelData.isSeparator && trayAction.modelData.hasChildren
                     anchors.right: parent.right
                     anchors.rightMargin: 11
                     anchors.verticalCenter: parent.verticalCenter
-                    width: 14
-                    height: 14
-                    source: surface.forwardIconSource
-                    fillMode: Image.PreserveAspectFit
-                    smooth: true
+                    size: 14
+                    name: "nav-arrow-right"
+                    color: Theme.accent
                 }
 
                 Timer {

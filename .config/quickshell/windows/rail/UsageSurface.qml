@@ -33,9 +33,9 @@ Item {
     readonly property int hiddenAgents: Math.max(0, AgentService.agents.length - surface.agentLimit)
 
     function agentTone(status: string): color {
-        if (status === "blocked") return Theme.accent
+        if (status === "blocked") return Theme.alertAccent
         if (status === "working") return Theme.warningAccent
-        if (status === "done") return Theme.layoutUs
+        if (status === "done") return Theme.successAccent
         return Theme.subtleForeground
     }
 
@@ -51,7 +51,7 @@ Item {
 
         width: parent.width
         eyebrow: surface.hasAgents ? "" : "USAGE /"
-        iconSource: Qt.resolvedUrl("../../icons/iconoir/asterisk.svg")
+        iconName: "asterisk"
         eyebrowLabel: surface.hasAgents ? "HERDR" : "CLAUDE"
         mode: surface.hasAgents ? "" : ClaudeUsageService.stale ? "STALE"
             : ClaudeUsageService.percentLabel(ClaudeUsageService.fivePercent) + "%"

@@ -297,7 +297,7 @@ PanelWindow {
                 anchors.verticalCenter: parent.verticalCenter
                 color: Theme.foreground
                 selectionColor: Theme.accent
-                selectedTextColor: Theme.background
+                selectedTextColor: Theme.accentForeground
                 font.family: "DejaVu Sans"
                 font.pixelSize: 15
                 clip: true

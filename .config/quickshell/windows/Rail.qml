@@ -6,6 +6,7 @@ import Quickshell.Wayland
 import QtQuick
 
 import "../services"
+import "../components"
 import "rail"
 
 PanelWindow {
@@ -26,9 +27,6 @@ PanelWindow {
     readonly property bool hasAgents: AgentService.agents.length > 0
     readonly property bool usageAvailable: ClaudeUsageService.ready || hasAgents
     readonly property bool showingUsage: activeSurface === "usage" && usageAvailable
-    readonly property url audioIconSource: Qt.resolvedUrl(AudioService.muted ? "../icons/iconoir/sound-off.svg" : "../icons/iconoir/sound-high.svg")
-    readonly property url brightnessIconSource: Qt.resolvedUrl("../icons/iconoir/brightness.svg")
-    readonly property url trayIconSource: Qt.resolvedUrl("../icons/iconoir/app-notification.svg")
     readonly property string mediaIdentity: hasMedia ? String(mediaPlayer.identity) : ""
     readonly property string mediaDesktopEntryId: hasMedia ? String(mediaPlayer.desktopEntry) : ""
     readonly property var mediaApplication: hasMedia ? DesktopEntries.heuristicLookup(mediaDesktopEntryId || mediaIdentity) : null
@@ -235,10 +233,6 @@ PanelWindow {
         if (code === "RU") return Theme.layoutRu
         if (code === "KK") return Theme.layoutKk
         return Theme.foreground
-    }
-
-    function keyboardLayoutForeground(): color {
-        return keyboardLayoutCode() === "KK" ? "#171817" : "#ffffff"
     }
 
     function switchKeyboardLayout(): void {
@@ -597,13 +591,11 @@ PanelWindow {
                 color: Theme.accent
             }
 
-            Image {
+            ThemeIcon {
                 anchors.centerIn: parent
-                width: 17
-                height: 17
-                source: rail.audioIconSource
-                fillMode: Image.PreserveAspectFit
-                smooth: true
+                size: 17
+                name: AudioService.muted ? "sound-off" : "sound-high"
+                color: Theme.accent
             }
 
             MouseArea {
@@ -657,13 +649,11 @@ PanelWindow {
                 color: Theme.accent
             }
 
-            Image {
+            ThemeIcon {
                 anchors.centerIn: parent
-                width: 17
-                height: 17
-                source: rail.trayIconSource
-                fillMode: Image.PreserveAspectFit
-                smooth: true
+                size: 17
+                name: "app-notification"
+                color: Theme.accent
             }
 
             Rectangle {
@@ -728,13 +718,11 @@ PanelWindow {
                 color: Theme.accent
             }
 
-            Image {
+            ThemeIcon {
                 anchors.centerIn: parent
-                width: 17
-                height: 17
-                source: Qt.resolvedUrl("../icons/iconoir/asterisk.svg")
-                fillMode: Image.PreserveAspectFit
-                smooth: true
+                size: 17
+                name: "asterisk"
+                color: Theme.accent
                 opacity: rail.ClaudeUsageService.stale && !rail.hasAgents ? 0.45 : 1
             }
 
@@ -750,7 +738,7 @@ PanelWindow {
                 height: 6
                 radius: 3
                 visible: rail.AgentService.needsAttention
-                color: Theme.accent
+                color: Theme.alertAccent
             }
 
             // The icon says what this is; the sliver underneath says how much
@@ -896,15 +884,13 @@ PanelWindow {
             width: 32
             height: 31
 
-            Image {
+            ThemeIcon {
                 anchors.top: parent.top
                 anchors.horizontalCenter: parent.horizontalCenter
                 visible: !brightnessMouse.containsMouse
-                width: 16
-                height: 16
-                source: rail.brightnessIconSource
-                fillMode: Image.PreserveAspectFit
-                smooth: true
+                size: 16
+                name: "brightness"
+                color: Theme.accent
             }
 
             Text {
@@ -974,7 +960,7 @@ PanelWindow {
                 Text {
                     anchors.centerIn: parent
                     text: rail.keyboardLayoutCode()
-                    color: rail.keyboardLayoutForeground()
+                    color: Theme.layoutForeground(rail.keyboardLayoutCode())
                     font.family: "DejaVu Sans Mono"
                     font.pixelSize: 10
                     font.weight: Font.DemiBold

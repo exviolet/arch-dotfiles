@@ -21,6 +21,7 @@ Singleton {
     property var files: []
 
     property bool listing: false
+    property string pendingWallpaper: ""
 
     function sourceFor(output: string): string {
         const path = String(root.current[output] || "")
@@ -51,6 +52,11 @@ Singleton {
 
     function apply(path: string): void {
         if (path === "") return
+        if (setter.running) {
+            root.pendingWallpaper = path
+            return
+        }
+        root.pendingWallpaper = ""
 
         // The transition is the one the rofi menu used; it is the only thing
         // worth keeping from it.
@@ -109,7 +115,12 @@ Singleton {
     Process {
         id: setter
 
-        // awww redraws on its own; re-reading tells us which one won.
-        onExited: query.running = true
+        onExited: {
+            if (root.pendingWallpaper !== "") {
+                root.apply(root.pendingWallpaper)
+            } else {
+                query.running = true
+            }
+        }
     }
 }

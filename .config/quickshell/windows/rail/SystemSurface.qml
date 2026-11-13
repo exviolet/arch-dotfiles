@@ -100,7 +100,7 @@ Item {
                     Text {
                         anchors.centerIn: parent
                         text: NetworkService.wifiEnabled ? "ON" : "OFF"
-                        color: NetworkService.wifiEnabled ? "#ffffff" : Theme.subtleForeground
+                        color: NetworkService.wifiEnabled ? Theme.accentForeground : Theme.subtleForeground
                         font.family: "DejaVu Sans Mono"
                         font.pixelSize: 9
                         font.weight: Font.DemiBold
@@ -208,7 +208,7 @@ Item {
                     Text {
                         anchors.centerIn: parent
                         text: BluetoothService.enabled ? "ON" : "OFF"
-                        color: BluetoothService.enabled ? "#ffffff" : Theme.subtleForeground
+                        color: BluetoothService.enabled ? Theme.accentForeground : Theme.subtleForeground
                         font.family: "DejaVu Sans Mono"
                         font.pixelSize: 9
                         font.weight: Font.DemiBold
@@ -436,7 +436,7 @@ Item {
                             Text {
                                 anchors.centerIn: parent
                                 text: surface.profileLabel(parent.modelData)
-                                color: parent.active ? "#ffffff" : Theme.mutedForeground
+                                color: parent.active ? Theme.accentForeground : Theme.mutedForeground
                                 font.family: "DejaVu Sans Mono"
                                 font.pixelSize: 8
                                 font.weight: Font.DemiBold

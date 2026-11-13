@@ -79,19 +79,41 @@ PanelWindow {
     }
 
     readonly property bool commandMode: launcher.query.trim().startsWith(">")
+    readonly property string commandQuery: launcher.commandMode
+        ? launcher.query.trim().slice(1).trim().toLowerCase() : ""
+    readonly property bool themeMode: launcher.commandQuery === "тема" || launcher.commandQuery === "theme"
+    readonly property var themePreviewOwner: ({})
+    readonly property string palettePreview: {
+        if (!launcher.visible || !launcher.themeMode) return ""
+        const row = launcher.listResults[launcher.selectedIndex]
+        return row?.kind === "palette" ? row.id : ""
+    }
+
+    onPalettePreviewChanged: Theme.setPreview(launcher.themePreviewOwner, launcher.palettePreview)
+    Component.onDestruction: {
+        if (launcher.palettePreview !== "")
+            Theme.setPreview(launcher.themePreviewOwner, "")
+    }
+
     readonly property bool listMode: launcher.searchMode || launcher.commandMode
     readonly property var listResults: {
         if (launcher.searchMode) return QuicklinkService.rowsFor(launcher.searchExpression)
         if (!launcher.commandMode) return []
-
-        const needle = launcher.query.trim().slice(1).trim().toLowerCase()
+        if (launcher.themeMode)
+            return Theme.palettes.map(palette => ({
+                "kind": "palette", "id": palette.id, "title": palette.title,
+                "subtitle": palette.subtitle, "swatch": palette.accent
+            }))
+        const needle = launcher.commandQuery
         const commands = [
             { "kind": "command", "panel": "audio", "emoji": "🔊", "title": "Звук",
               "subtitle": "Громкость и аудиоустройства", "aliases": "audio sound volume" },
             { "kind": "command", "panel": "calendar", "emoji": "📅", "title": "Календарь",
               "subtitle": "Просмотр месяца", "aliases": "calendar date" },
             { "kind": "command", "panel": "wallpaper", "emoji": "🖼", "title": "Обои",
-              "subtitle": "Выбор фона рабочего стола", "aliases": "wallpaper background" }
+              "subtitle": "Выбор фона рабочего стола", "aliases": "wallpaper background" },
+            { "kind": "command", "panel": "theme", "emoji": "◐", "title": "Тема",
+              "subtitle": "Предпросмотр палитр Quickshell", "aliases": "theme appearance" }
         ]
         return commands.filter(command =>
             (command.panel !== "audio" || AudioService.sinkReady)
@@ -377,7 +399,15 @@ PanelWindow {
         if (!row) return
 
         const controller = launcher.launcherController
-        if (row.kind === "command") {
+        if (row.kind === "palette") {
+            Theme.savePalette(row.id)
+        } else if (row.kind === "command") {
+            if (row.panel === "theme") {
+                queryInput.text = ">тема"
+                queryInput.cursorPosition = queryInput.length
+                return
+            }
+
             const screen = launcher.outputScreen.name
             if (row.panel === "wallpaper") {
                 controller.showWallpaper(screen)
@@ -442,12 +472,16 @@ PanelWindow {
 
     onWindowResultsChanged: launcher.resetSelection()
     onResultsChanged: launcher.resetSelection()
-    onListResultsChanged: launcher.selectedIndex = 0
+    onListResultsChanged: {
+        const saved = launcher.themeMode
+            ? launcher.listResults.findIndex(row => row.id === Theme.savedPalette) : 0
+        launcher.selectedIndex = Math.max(0, saved)
+    }
 
     function applyPrefill(): void {
+        launcher.selectedIndex = 0
         queryInput.text = launcher.launcherController.launcherPrefill
         queryInput.cursorPosition = queryInput.text.length
-        launcher.selectedIndex = 0
         queryInput.forceActiveFocus()
     }
 
@@ -547,7 +581,7 @@ PanelWindow {
                 // one-way mirror of this field, cleared on hide.
                 color: Theme.foreground
                 selectionColor: Theme.accent
-                selectedTextColor: Theme.background
+                selectedTextColor: Theme.accentForeground
                 font.family: "DejaVu Sans"
                 font.pixelSize: 15
                 clip: true
@@ -584,6 +618,8 @@ PanelWindow {
                 // Surfaces the action for the current selection only when it
                 // would actually do something.
                 text: {
+                    if (launcher.themeMode) return "⏎ применить · Esc отменить"
+
                     if (launcher.listMode)
                         return launcher.listResults.length === 0
                             ? "no matches"
@@ -627,7 +663,12 @@ PanelWindow {
             visible: launcher.listMode
             x: launcher.cardPadding + 20
             y: queryField.y + queryField.height + 12
-            text: launcher.commandMode ? "COMMANDS" : "QUICKLINKS"
+            text: {
+                if (launcher.themeMode) return "ТЕМЫ"
+
+
+                return launcher.commandMode ? "COMMANDS" : "QUICKLINKS"
+            }
             color: Theme.subtleForeground
             font.family: "DejaVu Sans Mono"
             font.pixelSize: 9
@@ -677,24 +718,43 @@ PanelWindow {
                     }
                 }
 
-                Text {
-                    id: rowEmoji
+                Item {
+                    id: rowIcon
 
                     x: 12
+                    width: 20
+                    height: 20
                     anchors.verticalCenter: parent.verticalCenter
-                    text: String(searchRow.modelData.emoji)
-                    font.pixelSize: 15
+
+                    Text {
+                        visible: searchRow.modelData.kind !== "palette"
+                        anchors.centerIn: parent
+                        text: searchRow.modelData.emoji ?? ""
+                        color: searchRow.active ? Theme.foreground : Theme.mutedForeground
+                        font.family: "DejaVu Sans"
+                        font.pixelSize: 15
+                    }
+
+                    Rectangle {
+                        visible: searchRow.modelData.kind === "palette"
+                        anchors.centerIn: parent
+                        width: 14
+                        height: 14
+                        radius: 7
+                        color: searchRow.modelData.swatch ?? "transparent"
+                        border.width: 1
+                        border.color: Theme.border
+                    }
                 }
 
                 Text {
                     id: rowTitle
 
-                    anchors.left: rowEmoji.right
+                    anchors.left: rowIcon.right
                     anchors.leftMargin: 14
                     anchors.right: parent.right
                     anchors.rightMargin: 14
-                    anchors.top: parent.top
-                    anchors.topMargin: 7
+                    y: searchRow.modelData.subtitle ? 7 : (parent.height - height) / 2
                     text: String(searchRow.modelData.title)
                     color: searchRow.active ? Theme.foreground : Theme.mutedForeground
                     font.pixelSize: 12

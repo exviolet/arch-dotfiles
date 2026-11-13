@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 
 import "../../services"
+import "../../components"
 
 Item {
     id: surface
@@ -93,13 +94,11 @@ Item {
                 border.width: 1
                 border.color: Theme.border
 
-                Image {
+                ThemeIcon {
                     anchors.centerIn: parent
-                    width: 14
-                    height: 14
-                    source: Qt.resolvedUrl("../../icons/iconoir/nav-arrow-left.svg")
-                    fillMode: Image.PreserveAspectFit
-                    smooth: true
+                    size: 14
+                    name: "nav-arrow-left"
+                    color: Theme.accent
                 }
 
                 MouseArea {
@@ -150,13 +149,11 @@ Item {
                 border.width: 1
                 border.color: Theme.border
 
-                Image {
+                ThemeIcon {
                     anchors.centerIn: parent
-                    width: 14
-                    height: 14
-                    source: Qt.resolvedUrl("../../icons/iconoir/nav-arrow-right.svg")
-                    fillMode: Image.PreserveAspectFit
-                    smooth: true
+                    size: 14
+                    name: "nav-arrow-right"
+                    color: Theme.accent
                 }
 
                 MouseArea {
@@ -220,7 +217,7 @@ Item {
                         visible: dayCell.present
                         anchors.centerIn: parent
                         text: String(dayCell.modelData)
-                        color: dayCell.isToday ? Theme.background : (dayCell.weekend ? Theme.subtleForeground : Theme.foreground)
+                        color: dayCell.isToday ? Theme.accentForeground : (dayCell.weekend ? Theme.subtleForeground : Theme.foreground)
                         font.family: "DejaVu Sans Mono"
                         font.pixelSize: 12
                         font.weight: dayCell.isToday ? Font.DemiBold : Font.Medium

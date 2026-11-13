@@ -4,7 +4,7 @@ import QtQuick
 
 import "../../services"
 
-Item {
+Flickable {
     id: surface
 
     required property bool pinned
@@ -12,11 +12,16 @@ Item {
 
     readonly property real routesTop: 330
     readonly property real routesHeight: 28 + AudioService.sinks.length * 44 + Math.max(0, AudioService.sinks.length - 1) * 7
+    contentWidth: width
+    contentHeight: (inputPanel.visible ? inputPanel.y + inputPanel.height : routesTop + routesHeight) + 22
+    boundsBehavior: Flickable.StopAtBounds
+    clip: true
+    onExpandedChanged: if (expanded) contentY = 0
 
     SurfaceHeader {
         width: parent.width
         eyebrow: "AUDIO /"
-        iconSource: Qt.resolvedUrl(AudioService.muted ? "../../icons/iconoir/sound-off.svg" : "../../icons/iconoir/sound-high.svg")
+        iconName: AudioService.muted ? "sound-off" : "sound-high"
         eyebrowLabel: "PIPEWIRE"
         mode: AudioService.muted ? "MUTED" : String(AudioService.volumePercent) + "%"
         pinned: surface.pinned
@@ -144,7 +149,7 @@ Item {
         x: 22
         y: surface.routesTop
         width: parent.width - 44
-        height: 330
+        height: surface.routesHeight
 
         Text {
             x: 0
@@ -230,6 +235,8 @@ Item {
     }
 
     Rectangle {
+        id: inputPanel
+
         visible: AudioService.sourceReady
         x: 22
         y: surface.routesTop + surface.routesHeight + 22

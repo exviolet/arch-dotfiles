@@ -151,7 +151,7 @@ ShellRoot {
     }
 
     function keyboardLayoutForeground(name: string): color {
-        return keyboardLayoutCode(name) === "KK" ? "#171817" : "#ffffff"
+        return Theme.layoutForeground(keyboardLayoutCode(name))
     }
 
     function keyboardLayoutLabel(name: string): string {

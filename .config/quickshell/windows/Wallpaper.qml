@@ -22,12 +22,13 @@ PanelWindow {
     readonly property int cellHeight: 130
     readonly property int cardPadding: 20
     readonly property int headerHeight: 46
+    readonly property int footerHeight: 44
 
     readonly property int rows: Math.max(1, Math.ceil(WallpaperService.files.length / picker.columns))
     readonly property int visibleRows: Math.min(picker.rows, 3)
     readonly property int cardWidth: picker.columns * picker.cellWidth + picker.cardPadding * 2
     readonly property int cardHeight: picker.cardPadding * 2 + picker.headerHeight
-        + picker.visibleRows * picker.cellHeight
+        + picker.visibleRows * picker.cellHeight + picker.footerHeight
 
     property int selectedIndex: 0
 
@@ -39,11 +40,12 @@ PanelWindow {
         grid.positionViewAtIndex(picker.selectedIndex, GridView.Contain)
     }
 
-    function applySelected(): void {
-        const path = WallpaperService.files[picker.selectedIndex]
+    function applySelected(remember: bool): void {
+        const path = String(WallpaperService.files[picker.selectedIndex] || "")
         if (!path) return
 
-        WallpaperService.apply(String(path))
+        if (remember) Theme.rememberWallpaper(path)
+        WallpaperService.apply(path)
         picker.wallpaperController.hideWallpaper()
     }
 
@@ -99,7 +101,7 @@ PanelWindow {
         Text {
             x: picker.cardPadding + 4
             y: picker.cardPadding
-            text: "WALLPAPER"
+            text: "ОБОИ"
             color: Theme.subtleForeground
             font.family: "DejaVu Sans Mono"
             font.pixelSize: 9
@@ -135,8 +137,8 @@ PanelWindow {
             boundsBehavior: Flickable.StopAtBounds
 
             Keys.onEscapePressed: picker.wallpaperController.hideWallpaper()
-            Keys.onReturnPressed: picker.applySelected()
-            Keys.onEnterPressed: picker.applySelected()
+            Keys.onReturnPressed: event => picker.applySelected((event.modifiers & Qt.ShiftModifier) !== 0)
+            Keys.onEnterPressed: event => picker.applySelected((event.modifiers & Qt.ShiftModifier) !== 0)
             Keys.onLeftPressed: picker.setSelection(picker.selectedIndex - 1)
             Keys.onRightPressed: picker.setSelection(picker.selectedIndex + 1)
             Keys.onUpPressed: picker.setSelection(picker.selectedIndex - picker.columns)
@@ -225,9 +227,74 @@ PanelWindow {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: {
+                    onClicked: picker.setSelection(cell.index)
+                    onDoubleClicked: {
                         picker.setSelection(cell.index)
-                        picker.applySelected()
+                        picker.applySelected(false)
+                    }
+                }
+            }
+        }
+
+        Text {
+            anchors.left: grid.left
+            anchors.leftMargin: 6
+            anchors.right: actions.left
+            anchors.rightMargin: 12
+            anchors.verticalCenter: actions.verticalCenter
+            text: Theme.savedChoice.title + (Theme.savedWallpaper === ""
+                ? "" : " · " + WallpaperService.nameOf(Theme.savedWallpaper))
+            color: Theme.mutedForeground
+            font.family: "DejaVu Sans"
+            font.pixelSize: 12
+            elide: Text.ElideRight
+        }
+
+        Row {
+            id: actions
+
+            anchors.right: grid.right
+            anchors.rightMargin: 6
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: picker.cardPadding
+            spacing: 8
+
+            Repeater {
+                model: [
+                    { "label": "Применить · Enter", "remember": false },
+                    { "label": "Запомнить для темы · Shift+Enter", "remember": true }
+                ]
+
+                delegate: Rectangle {
+                    id: action
+
+                    required property var modelData
+                    width: actionLabel.implicitWidth + 24
+                    height: 34
+                    radius: 8
+                    opacity: grid.count > 0 ? 1 : 0.45
+                    color: actionMouse.containsMouse ? Theme.raisedSurface : Theme.surface
+                    border.width: 1
+                    border.color: actionMouse.containsMouse ? Theme.accent : Theme.border
+
+                    Text {
+                        id: actionLabel
+
+                        anchors.centerIn: parent
+                        text: action.modelData.label
+                        color: Theme.foreground
+                        font.family: "DejaVu Sans"
+                        font.pixelSize: 12
+                    }
+
+                    MouseArea {
+                        id: actionMouse
+
+                        anchors.fill: parent
+                        enabled: grid.count > 0
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: picker.applySelected(action.modelData.remember)
                     }
                 }
             }

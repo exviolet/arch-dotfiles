@@ -1,11 +1,13 @@
 import QtQuick
 
 import "../../services"
+import "../../components"
 
 Item {
     id: header
 
     property string eyebrow: ""
+    property string iconName: ""
     property url iconSource
     property string eyebrowLabel: ""
     property string mode: ""
@@ -30,8 +32,15 @@ Item {
             font.letterSpacing: 1.1
         }
 
+        ThemeIcon {
+            visible: header.iconName !== ""
+            name: header.iconName
+            size: 13
+            color: Theme.accent
+        }
+
         Image {
-            visible: header.iconSource != ""
+            visible: header.iconName === "" && header.iconSource != ""
             width: 13
             height: 13
             source: header.iconSource
