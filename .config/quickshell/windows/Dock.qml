@@ -5,6 +5,8 @@ import Quickshell.Wayland
 import QtQuick
 
 import "../services"
+import "../components"
+import "rail"
 
 PanelWindow {
     id: dock
@@ -14,6 +16,7 @@ PanelWindow {
     property var railWindow: null
 
     readonly property string edge: PanelPlacement.edgeFor("dock", outputScreen.name)
+    readonly property bool island: PanelPlacement.dockPositionFor(outputScreen.name) === "island"
     readonly property bool vertical: edge === "left" || edge === "right"
     readonly property bool farEdge: edge === "right" || edge === "bottom"
     readonly property int screenLength: vertical ? outputScreen.height : outputScreen.width
@@ -28,16 +31,32 @@ PanelWindow {
     readonly property int windowLength: Math.min(screenLength, Math.max(activationLength, cardLength + 20))
     readonly property bool sharedEdge: railWindow !== null && railWindow.visible && railWindow.edge === edge
     readonly property int inset: sharedEdge ? PanelPlacement.railThickness : 0
-    readonly property bool blockedByRail: sharedEdge
+    readonly property int islandTop: inset + PanelPlacement.islandGap
+    readonly property int islandHeaderHeight: PanelPlacement.islandHeight
+    readonly property int islandWidth: Math.min(154, Math.max(0, screenLength - 16))
+    readonly property int settingsWidth: Math.min(422, Math.max(0, screenLength - 16))
+    readonly property int settingsMaxHeight: Math.max(0, outputScreen.height - islandTop - islandHeaderHeight - 12)
+    readonly property bool blockedByRail: sharedEdge && !settingsOpen
         && (railWindow.expanded || railWindow.revealProgress > 0)
-        && railWindow.drawerStart < (screenLength + cardLength) / 2 + 10
-        && railWindow.drawerStart + railWindow.drawerLength > (screenLength - cardLength) / 2 - 10
+        && railWindow.drawerStart < (screenLength + Math.max(cardLength, island ? islandWidth : 0)) / 2 + 10
+        && railWindow.drawerStart + railWindow.drawerLength > (screenLength - Math.max(cardLength, island ? islandWidth : 0)) / 2 - 10
 
     property bool revealed: false
+    property bool settingsOpen: false
     property Item hoveredApp: null
-    readonly property bool showing: revealed || dockController.dockForcedVisible
+    readonly property bool showing: (revealed || dockController.dockForcedVisible) && (!island || items.length > 0)
+    readonly property bool pointerOverDock: island ? islandHover.hovered || islandEdgeHover.hovered : dockHover.hovered
     readonly property int inputLength: showing ? Math.min(windowLength, cardLength + 20) : activationLength
     readonly property int inputDepth: showing ? cardThickness + 12 : 2
+
+    function setIslandSettings(open: bool): void {
+        if (!island || !visible || settingsOpen === open) return
+        if (open && railWindow?.expanded)
+            dockController.setRailExpanded(false, outputScreen.name)
+        settingsOpen = open
+        if (!open) revealed = false
+        if (open) settingsButton.forceActiveFocus()
+    }
 
     function entryForAppId(appId: string): var {
         const entry = DesktopEntries.heuristicLookup(appId)
@@ -139,18 +158,19 @@ PanelWindow {
 
     screen: outputScreen
     visible: edge !== "" && !blockedByRail
-    implicitWidth: vertical ? panelDepth : windowLength
-    implicitHeight: vertical ? windowLength : panelDepth
+    implicitWidth: island ? outputScreen.width : vertical ? panelDepth : windowLength
+    implicitHeight: island ? outputScreen.height : vertical ? windowLength : panelDepth
     color: "transparent"
-    exclusionMode: ExclusionMode.Ignore
-    focusable: false
+    exclusiveZone: island && !sharedEdge ? PanelPlacement.islandReservation : 0
+    exclusionMode: island && !sharedEdge ? ExclusionMode.Normal : ExclusionMode.Ignore
+    focusable: settingsOpen
     WlrLayershell.namespace: "quickshell-dock"
     WlrLayershell.layer: WlrLayer.Top
-    WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: settingsOpen ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
     anchors {
-        left: dock.edge === "left"
-        right: dock.edge === "right"
+        left: dock.island || dock.edge === "left"
+        right: dock.island || dock.edge === "right"
         top: dock.edge === "top"
         bottom: dock.edge === "bottom"
     }
@@ -158,25 +178,56 @@ PanelWindow {
     margins {
         left: dock.edge === "left" ? dock.inset : 0
         right: dock.edge === "right" ? dock.inset : 0
-        top: dock.edge === "top" ? dock.inset : 0
+        top: !dock.island && dock.edge === "top" ? dock.inset : 0
         bottom: dock.edge === "bottom" ? dock.inset : 0
     }
 
     mask: Region {
-        x: dock.vertical ? (dock.farEdge ? dock.width - dock.inputDepth : 0)
+        x: dock.settingsOpen ? 0 : dock.island ? Math.floor(card.x)
+            : dock.vertical ? (dock.farEdge ? dock.width - dock.inputDepth : 0)
             : Math.floor((dock.width - dock.inputLength) / 2)
-        y: dock.vertical ? Math.floor((dock.height - dock.inputLength) / 2)
+        y: dock.settingsOpen ? 0 : dock.island ? dock.inset
+            : dock.vertical ? Math.floor((dock.height - dock.inputLength) / 2)
             : (dock.farEdge ? dock.height - dock.inputDepth : 0)
-        width: dock.vertical ? dock.inputDepth : dock.inputLength
-        height: dock.vertical ? dock.inputLength : dock.inputDepth
+        width: dock.settingsOpen ? dock.width : dock.island ? Math.ceil(card.width)
+            : dock.vertical ? dock.inputDepth : dock.inputLength
+        height: dock.settingsOpen ? dock.height : dock.island ? Math.ceil(card.y + card.height - dock.inset)
+            : dock.vertical ? dock.inputLength : dock.inputDepth
     }
 
     onVisibleChanged: {
         if (visible) return
+        settingsOpen = false
         dock.revealed = false
         dock.hoveredApp = null
         revealTimer.stop()
         hideTimer.stop()
+    }
+
+    onIslandChanged: {
+        settingsOpen = false
+        revealed = false
+        hoveredApp = null
+        revealTimer.stop()
+        hideTimer.stop()
+    }
+
+    Connections {
+        target: dock.dockController
+
+        function onLauncherVisibleChanged(): void {
+            if (dock.dockController.launcherVisible) dock.setIslandSettings(false)
+        }
+    }
+
+    onPointerOverDockChanged: {
+        if (pointerOverDock) {
+            hideTimer.stop()
+            if (!revealed && !settingsOpen) revealTimer.restart()
+        } else {
+            revealTimer.stop()
+            if (revealed) hideTimer.restart()
+        }
     }
 
     Timer {
@@ -184,7 +235,7 @@ PanelWindow {
         interval: 150
         repeat: false
         onTriggered: {
-            if (dockHover.hovered && dock.visible) dock.revealed = true
+            if (dock.pointerOverDock && dock.visible && !dock.settingsOpen) dock.revealed = true
         }
     }
 
@@ -193,21 +244,29 @@ PanelWindow {
         interval: 320
         repeat: false
         onTriggered: {
-            if (!dockHover.hovered) dock.revealed = false
+            if (!dock.pointerOverDock) dock.revealed = false
         }
     }
 
     HoverHandler {
         id: dockHover
-        onHoveredChanged: {
-            if (hovered) {
-                hideTimer.stop()
-                if (!dock.revealed) revealTimer.restart()
-            } else {
-                revealTimer.stop()
-                if (dock.revealed) hideTimer.restart()
-            }
-        }
+        enabled: !dock.island
+    }
+
+    MouseArea {
+        anchors.fill: parent
+        visible: dock.settingsOpen
+        onClicked: dock.setIslandSettings(false)
+    }
+
+    // Bridge the gap between the screen edge and the capsule.
+    Item {
+        x: card.x
+        y: dock.inset
+        width: card.width
+        height: PanelPlacement.islandGap
+        visible: dock.island
+        HoverHandler { id: islandEdgeHover }
     }
 
     Rectangle {
@@ -218,14 +277,41 @@ PanelWindow {
             : (dock.farEdge ? dock.panelDepth + 4 : -dock.cardThickness - 4)
 
         x: dock.vertical ? edgeOffset : Math.round((dock.width - width) / 2)
-        y: dock.vertical ? Math.round((dock.height - height) / 2) : edgeOffset
-        width: dock.vertical ? dock.cardThickness : dock.cardLength
-        height: dock.vertical ? dock.cardLength : dock.cardThickness
-        radius: 17
+        y: dock.island ? dock.islandTop : dock.vertical ? Math.round((dock.height - height) / 2) : edgeOffset
+        width: dock.island ? (dock.settingsOpen ? dock.settingsWidth
+            : dock.showing ? Math.max(dock.islandWidth, dock.cardLength) : dock.islandWidth)
+            : dock.vertical ? dock.cardThickness : dock.cardLength
+        height: dock.island ? dock.islandHeaderHeight + (dock.settingsOpen ? settings.height : dock.showing ? 69 : 0)
+            : dock.vertical ? dock.cardLength : dock.cardThickness
+        radius: dock.island ? 21 : 17
+        clip: dock.island
         color: Theme.background
         border.width: 1
         border.color: Theme.border
-        opacity: dock.showing ? 1 : 0
+        opacity: dock.island || dock.showing ? 1 : 0
+
+        Behavior on width {
+            enabled: dock.island
+            NumberAnimation { duration: 220; easing.type: Easing.OutCubic }
+        }
+
+        Behavior on height {
+            enabled: dock.island
+            NumberAnimation { duration: 240; easing.type: Easing.OutCubic }
+        }
+
+        HoverHandler { id: islandHover; enabled: dock.island }
+
+        // Keep Escape available even when a slider or a list row has focus.
+        Keys.onEscapePressed: event => {
+            dock.setIslandSettings(false)
+            event.accepted = true
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            enabled: dock.settingsOpen
+        }
 
         Behavior on edgeOffset {
             NumberAnimation { duration: 210; easing.type: Easing.OutCubic }
@@ -235,10 +321,80 @@ PanelWindow {
             NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
         }
 
+        Item {
+            id: islandHeader
+            visible: dock.island
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: dock.islandWidth
+            height: dock.islandHeaderHeight
+
+            SystemClock { id: islandClock; precision: SystemClock.Minutes }
+
+            Text {
+                anchors.left: parent.left
+                anchors.leftMargin: 19
+                anchors.verticalCenter: parent.verticalCenter
+                text: Qt.formatTime(islandClock.date, "HH:mm")
+                color: Theme.foreground
+                font.family: "DejaVu Sans Mono"
+                font.pixelSize: 14
+                font.weight: Font.DemiBold
+            }
+
+            Rectangle {
+                id: settingsButton
+                anchors.right: parent.right
+                anchors.rightMargin: 5
+                anchors.verticalCenter: parent.verticalCenter
+                width: 38
+                height: 32
+                radius: 15
+                color: settingsMouse.containsMouse || activeFocus || dock.settingsOpen ? Theme.raisedSurface : "transparent"
+                activeFocusOnTab: true
+                Accessible.role: Accessible.Button
+                Accessible.name: "Быстрые настройки"
+                Accessible.onPressAction: dock.setIslandSettings(!dock.settingsOpen)
+                Keys.onReturnPressed: dock.setIslandSettings(!dock.settingsOpen)
+                Keys.onSpacePressed: dock.setIslandSettings(!dock.settingsOpen)
+
+                ThemeIcon {
+                    anchors.centerIn: parent
+                    size: 16
+                    name: "settings-sliders"
+                    color: Theme.foreground
+                }
+
+                MouseArea {
+                    id: settingsMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: dock.setIslandSettings(!dock.settingsOpen)
+                }
+            }
+        }
+
+        SystemSurface {
+            id: settings
+            y: dock.islandHeaderHeight
+            width: dock.settingsWidth
+            anchors.horizontalCenter: parent.horizontalCenter
+            height: Math.min(implicitHeight, dock.settingsMaxHeight)
+            visible: dock.settingsOpen
+            outputName: dock.outputScreen.name
+            workspaceLabel: ""
+            pinned: true
+            expanded: dock.settingsOpen
+            active: dock.settingsOpen
+            compact: true
+        }
+
         ListView {
             id: appList
 
-            anchors.centerIn: parent
+            anchors.horizontalCenter: parent.horizontalCenter
+            y: dock.island ? dock.islandHeaderHeight : (card.height - height) / 2
+            visible: !dock.island || (dock.showing && !dock.settingsOpen)
             width: dock.vertical ? 64 : Math.max(0, card.width - 20)
             height: dock.vertical ? Math.max(0, card.height - 20) : 64
             orientation: dock.vertical ? ListView.Vertical : ListView.Horizontal
@@ -357,7 +513,7 @@ PanelWindow {
                 : card.x + appList.x + app.x - appList.contentX + app.width / 2
         }
 
-        visible: dock.showing && dock.hoveredApp !== null
+        visible: dock.showing && !dock.settingsOpen && dock.hoveredApp !== null
         x: dock.vertical ? (dock.farEdge ? card.x - width - 6 : card.x + card.width + 6)
             : Math.max(4, Math.min(dock.width - width - 4, appCenter - width / 2))
         y: dock.vertical ? Math.max(4, Math.min(dock.height - height - 4, appCenter - height / 2))

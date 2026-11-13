@@ -13,6 +13,15 @@ Item {
     required property bool expanded
     required property bool active
 
+    property bool compact: false
+    property string section: ""
+    readonly property bool wifiExpanded: section === "wifi"
+    readonly property bool bluetoothExpanded: section === "bluetooth"
+    readonly property bool scanning: active && wifiExpanded
+    readonly property string scannerId: outputName + (compact ? ":island" : "")
+    readonly property var connectedBluetooth: BluetoothService.devices.find(device => device.connected)
+    implicitHeight: contentColumn.implicitHeight + (compact ? 14 : 170)
+
     readonly property int visibleWifiCount: Math.min(4, NetworkService.networks.length)
     readonly property int visibleBluetoothCount: Math.min(3, BluetoothService.devices.length)
 
@@ -22,13 +31,26 @@ Item {
         return "BALANCED"
     }
 
-    onActiveChanged: NetworkService.setScanningFor(outputName, active)
-    Component.onCompleted: NetworkService.setScanningFor(outputName, active)
-    Component.onDestruction: {
-        NetworkService.setScanningFor(outputName, false)
+    onScanningChanged: NetworkService.setScanningFor(scannerId, scanning)
+    onActiveChanged: {
+        section = active && NetworkService.speedTestRunning ? "wifi" : ""
+        if (active) settingsScroll.contentY = 0
+    }
+    Component.onCompleted: NetworkService.setScanningFor(scannerId, scanning)
+    Component.onDestruction: NetworkService.setScanningFor(scannerId, false)
+
+    Connections {
+        target: NetworkService
+        function onSpeedTestRunningChanged(): void {
+            if (surface.active && NetworkService.speedTestRunning) {
+                surface.section = "wifi"
+                settingsScroll.contentY = 0
+            }
+        }
     }
 
     SurfaceHeader {
+        visible: !surface.compact
         width: parent.width
         eyebrow: "SYSTEM / " + surface.outputName
         mode: surface.pinned ? "PINNED" : "PREVIEW"
@@ -41,10 +63,12 @@ Item {
     }
 
     Flickable {
-        x: 22
-        y: 146
-        width: parent.width - 44
-        height: parent.height - 218
+        id: settingsScroll
+        x: surface.compact ? 14 : 22
+        y: surface.compact ? 0 : 146
+        width: Math.max(0, parent.width - x * 2)
+        height: Math.max(0, parent.height - y - (surface.compact ? 12 : 24))
+        contentWidth: width
         contentHeight: contentColumn.height
         clip: true
         boundsBehavior: Flickable.StopAtBounds
@@ -56,158 +80,70 @@ Item {
 
             Rectangle {
                 width: parent.width
-                height: speedTestContent.implicitHeight + 24
+                height: surface.wifiExpanded ? wifiDetails.y + wifiDetails.height + 10 : 60
                 radius: 12
                 color: Theme.raisedSurface
                 border.width: 1
                 border.color: Theme.border
 
-                Column {
-                    id: speedTestContent
-                    x: 14
-                    y: 12
-                    width: parent.width - 28
-                    spacing: 8
+                MouseArea {
+                    id: wifiHeader
+                    width: parent.width - 72
+                    height: 60
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    Accessible.role: Accessible.Button
+                    Accessible.name: "Wi-Fi"
+                    Accessible.onPressAction: toggle()
+                    activeFocusOnTab: true
+                    Keys.onReturnPressed: toggle()
+                    Keys.onSpacePressed: toggle()
+                    onClicked: toggle()
 
-                    Item {
-                        width: parent.width
-                        height: 28
-
-                        Text {
-                            anchors.left: parent.left
-                            anchors.right: speedTestButton.left
-                            anchors.rightMargin: 8
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: "INTERNET SPEED"
-                            elide: Text.ElideRight
-                            color: Theme.subtleForeground
-                            font.family: "DejaVu Sans Mono"
-                            font.pixelSize: 9
-                            font.weight: Font.DemiBold
-                            font.letterSpacing: 1
-                        }
-
-                        Rectangle {
-                            id: speedTestButton
-                            anchors.right: parent.right
-                            width: speedTestButtonLabel.implicitWidth + 20
-                            height: parent.height
-                            radius: 9
-                            color: speedTestMouse.containsMouse && speedTestMouse.enabled ? Theme.surface : Theme.track
-
-                            Text {
-                                id: speedTestButtonLabel
-                                anchors.centerIn: parent
-                                text: NetworkService.speedTestRunning ? "Testing…" : "Run test"
-                                color: NetworkService.speedTestRunning ? Theme.mutedForeground : Theme.foreground
-                                font.family: "DejaVu Sans"
-                                font.pixelSize: 11
-                            }
-
-                            MouseArea {
-                                id: speedTestMouse
-                                anchors.fill: parent
-                                enabled: !NetworkService.speedTestRunning
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: NetworkService.startSpeedTest()
-                            }
-                        }
+                    function toggle(): void {
+                        surface.section = surface.wifiExpanded ? "" : "wifi"
                     }
-
-                    Row {
-                        width: parent.width
-                        visible: NetworkService.speedTestResult !== null
-                        spacing: 6
-
-                        Repeater {
-                            model: NetworkService.speedTestResult ? [
-                                { "label": "Download", "value": NetworkService.speedTestResult.downloadMbps, "unit": "Mbps" },
-                                { "label": "Upload", "value": NetworkService.speedTestResult.uploadMbps, "unit": "Mbps" },
-                                { "label": "Latency", "value": NetworkService.speedTestResult.latencyMs, "unit": "ms" }
-                            ] : []
-
-                            Column {
-                                required property var modelData
-                                width: (parent.width - 12) / 3
-                                spacing: 3
-
-                                Text {
-                                    text: parent.modelData.label
-                                    color: Theme.subtleForeground
-                                    font.family: "DejaVu Sans"
-                                    font.pixelSize: 10
-                                }
-
-                                Text {
-                                    width: parent.width
-                                    text: parent.modelData.value === null ? "—"
-                                        : parent.modelData.value.toLocaleString(Qt.locale(), "f", 1) + " " + parent.modelData.unit
-                                    elide: Text.ElideRight
-                                    color: Theme.foreground
-                                    font.family: "DejaVu Sans Mono"
-                                    font.pixelSize: 11
-                                }
-                            }
-                        }
-                    }
-
-                    Text {
-                        width: parent.width
-                        visible: NetworkService.speedTestResult !== null
-                        text: visible ? "Last test · " + Qt.formatDateTime(NetworkService.speedTestResult.measuredAt, "d MMM, HH:mm") : ""
-                        color: Theme.subtleForeground
-                        font.family: "DejaVu Sans"
-                        font.pixelSize: 10
-                    }
-
-                    Text {
-                        width: parent.width
-                        visible: NetworkService.speedTestError !== ""
-                        text: NetworkService.speedTestError
-                        wrapMode: Text.WordWrap
-                        color: Theme.warningAccent
-                        font.family: "DejaVu Sans"
-                        font.pixelSize: 11
-                    }
-                }
-            }
-
-            Rectangle {
-                width: parent.width
-                height: 64 + surface.visibleWifiCount * 38
-                radius: 12
-                color: Theme.raisedSurface
-                border.width: 1
-                border.color: Theme.border
-
-                Text {
-                    x: 14
-                    y: 12
-                    text: "WI-FI"
-                    color: NetworkService.wifiEnabled ? Theme.accent : Theme.subtleForeground
-                    font.family: "DejaVu Sans Mono"
-                    font.pixelSize: 9
-                    font.weight: Font.DemiBold
-                    font.letterSpacing: 1
                 }
 
                 Text {
                     x: 14
-                    y: 31
-                    width: parent.width - 84
-                    text: NetworkService.wifiEnabled
-                        ? (NetworkService.connectedNetwork
-                            ? String(NetworkService.connectedNetwork.name) + "  " + NetworkService.signalPercent(NetworkService.connectedNetwork) + "%"
-                            : "Not connected")
-                        : "Radio disabled"
+                    y: 11
+                    width: wifiHeader.width - 28
+                    text: NetworkService.connectedNetwork?.name ?? "Wi-Fi"
                     elide: Text.ElideRight
                     color: Theme.foreground
-                    font.family: "DejaVu Sans"
-                    font.pixelSize: 12
+                    font.family: "DejaVu Sans Mono"
+                    font.pixelSize: 14
+                    font.weight: Font.DemiBold
+                }
+
+                Text {
+                    x: 14
+                    y: 33
+                    width: wifiHeader.width - 28
+                    text: {
+                        const network = NetworkService.connectedNetwork
+                        if (network) return "Wi-Fi · " + NetworkService.signalPercent(network)
+                            + "%"
+                        return NetworkService.wifiEnabled ? "Нет подключения" : "Wi-Fi выключен"
+                    }
+                    elide: Text.ElideRight
+                    color: Theme.subtleForeground
+                    font.family: "DejaVu Sans Mono"
+                    font.pixelSize: 10
+                }
+
+                Text {
+                    anchors.right: wifiToggle.left
+                    anchors.rightMargin: 8
+                    y: 18
+                    text: surface.wifiExpanded ? "⌄" : "›"
+                    color: wifiHeader.activeFocus ? Theme.foreground : Theme.subtleForeground
+                    font.pixelSize: 15
                 }
 
                 Rectangle {
+                    id: wifiToggle
                     anchors.right: parent.right
                     anchors.rightMargin: 12
                     y: 13
@@ -234,12 +170,15 @@ Item {
                 }
 
                 Column {
-                    x: 8
-                    y: 58
-                    width: parent.width - 16
+                    id: wifiDetails
+                    x: 12
+                    y: 59
+                    width: parent.width - 24
+                    spacing: 8
+                    visible: surface.wifiExpanded
 
                     Repeater {
-                        model: surface.visibleWifiCount
+                        model: surface.wifiExpanded ? surface.visibleWifiCount : 0
 
                         Rectangle {
                             required property int index
@@ -282,22 +221,161 @@ Item {
                             }
                         }
                     }
+
+                    Rectangle {
+                        width: parent.width
+                        height: speedTestContent.implicitHeight + 24
+                        radius: 12
+                        color: Theme.surface
+
+                        Column {
+                            id: speedTestContent
+                            x: 14
+                            y: 12
+                            width: parent.width - 28
+                            spacing: 8
+
+                            Item {
+                                width: parent.width
+                                height: 28
+
+                                Text {
+                                    anchors.left: parent.left
+                                    anchors.right: speedTestButton.left
+                                    anchors.rightMargin: 8
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: "INTERNET SPEED"
+                                    elide: Text.ElideRight
+                                    color: Theme.subtleForeground
+                                    font.family: "DejaVu Sans Mono"
+                                    font.pixelSize: 9
+                                    font.weight: Font.DemiBold
+                                    font.letterSpacing: 1
+                                }
+
+                                Rectangle {
+                                    id: speedTestButton
+                                    anchors.right: parent.right
+                                    width: speedTestButtonLabel.implicitWidth + 20
+                                    height: parent.height
+                                    radius: 9
+                                    color: speedTestMouse.containsMouse && speedTestMouse.enabled ? Theme.surface : Theme.track
+
+                                    Text {
+                                        id: speedTestButtonLabel
+                                        anchors.centerIn: parent
+                                        text: NetworkService.speedTestRunning ? "Testing…" : "Run test"
+                                        color: NetworkService.speedTestRunning ? Theme.mutedForeground : Theme.foreground
+                                        font.family: "DejaVu Sans"
+                                        font.pixelSize: 11
+                                    }
+
+                                    MouseArea {
+                                        id: speedTestMouse
+                                        anchors.fill: parent
+                                        enabled: !NetworkService.speedTestRunning
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: NetworkService.startSpeedTest()
+                                    }
+                                }
+                            }
+
+                            Row {
+                                width: parent.width
+                                visible: NetworkService.speedTestResult !== null
+                                spacing: 6
+
+                                Repeater {
+                                    model: NetworkService.speedTestResult ? [
+                                        { "label": "Download", "value": NetworkService.speedTestResult.downloadMbps, "unit": "Mbps" },
+                                        { "label": "Upload", "value": NetworkService.speedTestResult.uploadMbps, "unit": "Mbps" },
+                                        { "label": "Latency", "value": NetworkService.speedTestResult.latencyMs, "unit": "ms" }
+                                    ] : []
+
+                                    Column {
+                                        required property var modelData
+                                        width: (parent.width - 12) / 3
+                                        spacing: 3
+
+                                        Text {
+                                            text: parent.modelData.label
+                                            color: Theme.subtleForeground
+                                            font.family: "DejaVu Sans"
+                                            font.pixelSize: 10
+                                        }
+
+                                        Text {
+                                            width: parent.width
+                                            text: parent.modelData.value === null ? "—"
+                                                : parent.modelData.value.toLocaleString(Qt.locale(), "f", 1) + " " + parent.modelData.unit
+                                            elide: Text.ElideRight
+                                            color: Theme.foreground
+                                            font.family: "DejaVu Sans Mono"
+                                            font.pixelSize: 11
+                                        }
+                                    }
+                                }
+                            }
+
+                            Text {
+                                width: parent.width
+                                visible: NetworkService.speedTestResult !== null
+                                text: visible ? "Last test · " + Qt.formatDateTime(NetworkService.speedTestResult.measuredAt, "d MMM, HH:mm") : ""
+                                color: Theme.subtleForeground
+                                font.family: "DejaVu Sans"
+                                font.pixelSize: 10
+                            }
+
+                            Text {
+                                width: parent.width
+                                visible: NetworkService.speedTestError !== ""
+                                text: NetworkService.speedTestError
+                                wrapMode: Text.WordWrap
+                                color: Theme.warningAccent
+                                font.family: "DejaVu Sans"
+                                font.pixelSize: 11
+                            }
+                        }
+                    }
+
                 }
             }
 
             Rectangle {
                 width: parent.width
-                height: 64 + surface.visibleBluetoothCount * 38
+                height: surface.bluetoothExpanded ? bluetoothDetails.y + bluetoothDetails.height + 8 : 57
                 radius: 12
                 color: "transparent"
                 border.width: 1
                 border.color: Theme.border
 
+                MouseArea {
+                    id: bluetoothHeader
+                    x: 0
+                    y: 0
+                    width: parent.width - 70
+                    height: 56
+                    cursorShape: Qt.PointingHandCursor
+                    Accessible.role: Accessible.Button
+                    Accessible.name: "Bluetooth"
+                    Accessible.onPressAction: toggle()
+                    activeFocusOnTab: true
+                    Keys.onReturnPressed: toggle()
+                    Keys.onSpacePressed: toggle()
+                    onClicked: toggle()
+
+                    function toggle(): void {
+                        surface.section = surface.bluetoothExpanded ? "" : "bluetooth"
+                    }
+                }
+
                 Text {
                     x: 14
                     y: 12
                     text: "BLUETOOTH"
-                    color: BluetoothService.enabled ? Theme.accent : Theme.subtleForeground
+                    color: bluetoothHeader.activeFocus ? Theme.foreground
+                        : BluetoothService.enabled ? Theme.accent : Theme.subtleForeground
                     font.family: "DejaVu Sans Mono"
                     font.pixelSize: 9
                     font.weight: Font.DemiBold
@@ -307,15 +385,27 @@ Item {
                 Text {
                     x: 14
                     y: 31
+                    width: parent.width - 105
                     text: BluetoothService.enabled
-                        ? (BluetoothService.devices.length > 0 ? "Known devices" : "No known devices")
+                        ? (surface.connectedBluetooth ? BluetoothService.deviceName(surface.connectedBluetooth) : "Not connected")
                         : "Controller disabled"
+                    elide: Text.ElideRight
                     color: Theme.foreground
                     font.family: "DejaVu Sans"
                     font.pixelSize: 12
                 }
 
+                Text {
+                    anchors.right: bluetoothToggle.left
+                    anchors.rightMargin: 8
+                    y: 18
+                    text: surface.bluetoothExpanded ? "⌄" : "›"
+                    color: Theme.subtleForeground
+                    font.pixelSize: 15
+                }
+
                 Rectangle {
+                    id: bluetoothToggle
                     anchors.right: parent.right
                     anchors.rightMargin: 12
                     y: 13
@@ -342,12 +432,14 @@ Item {
                 }
 
                 Column {
+                    id: bluetoothDetails
                     x: 8
-                    y: 58
+                    y: 57
                     width: parent.width - 16
+                    visible: surface.bluetoothExpanded
 
                     Repeater {
-                        model: surface.visibleBluetoothCount
+                        model: surface.bluetoothExpanded ? surface.visibleBluetoothCount : 0
 
                         Rectangle {
                             required property int index
@@ -397,103 +489,26 @@ Item {
                 }
             }
 
-            Rectangle {
+            SettingsSlider {
                 width: parent.width
-                height: 98
-                radius: 12
-                color: "transparent"
-                border.width: 1
-                border.color: Theme.border
+                label: "Volume"
+                available: AudioService.sinkReady
+                level: AudioService.volumePercent
+                maximum: Math.round(AudioService.maxVolume * 100)
+                onRequested: level => AudioService.setVolume(level / 100)
+            }
 
-                Text {
-                    x: 14
-                    y: 12
-                    text: "DISPLAY / LAPTOP"
-                    color: Theme.subtleForeground
-                    font.family: "DejaVu Sans Mono"
-                    font.pixelSize: 9
-                    font.weight: Font.DemiBold
-                    font.letterSpacing: 1
-                }
-
-                Text {
-                    anchors.right: parent.right
-                    anchors.rightMargin: 14
-                    y: 11
-                    text: BrightnessService.ready ? String(BrightnessService.percent) + "%" : "N/A"
-                    color: Theme.foreground
-                    font.family: "DejaVu Sans Mono"
-                    font.pixelSize: 10
-                    font.weight: Font.DemiBold
-                }
-
-                Rectangle {
-                    id: brightnessTrack
-                    x: 14
-                    y: 42
-                    width: parent.width - 28
-                    height: 8
-                    radius: 4
-                    color: Theme.track
-
-                    Rectangle {
-                        width: parent.width * BrightnessService.value
-                        height: parent.height
-                        radius: parent.radius
-                        color: Theme.accent
-
-                        Behavior on width { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        enabled: BrightnessService.ready
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: mouse => BrightnessService.setPercent(Math.round(mouse.x / width * 100), surface.outputName)
-                    }
-                }
-
-                Row {
-                    x: 14
-                    y: 62
-                    spacing: 8
-
-                    Repeater {
-                        model: [-10, -5, 5, 10]
-
-                        Rectangle {
-                            required property int modelData
-                            width: 48
-                            height: 24
-                            radius: 8
-                            color: stepMouse.containsMouse ? Theme.raisedSurface : Theme.surface
-                            border.width: 1
-                            border.color: Theme.border
-
-                            Text {
-                                anchors.centerIn: parent
-                                text: (parent.modelData > 0 ? "+" : "") + String(parent.modelData)
-                                color: Theme.foreground
-                                font.family: "DejaVu Sans Mono"
-                                font.pixelSize: 9
-                                font.weight: Font.DemiBold
-                            }
-
-                            MouseArea {
-                                id: stepMouse
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: BrightnessService.adjust(parent.modelData, surface.outputName)
-                            }
-                        }
-                    }
-                }
+            SettingsSlider {
+                width: parent.width
+                label: "Brightness"
+                available: BrightnessService.ready
+                level: BrightnessService.percent
+                onRequested: level => BrightnessService.setPercent(level, surface.outputName)
             }
 
             Rectangle {
                 width: parent.width
-                height: 116
+                height: 54
                 radius: 12
                 color: Theme.raisedSurface
                 border.width: 1
@@ -501,8 +516,8 @@ Item {
 
                 Text {
                     x: 14
-                    y: 12
-                    text: "POWER"
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: PowerService.battery.ready ? "POWER  " + PowerService.batteryPercent + "%" : "POWER"
                     color: Theme.subtleForeground
                     font.family: "DejaVu Sans Mono"
                     font.pixelSize: 9
@@ -510,36 +525,11 @@ Item {
                     font.letterSpacing: 1
                 }
 
-                Text {
-                    anchors.right: parent.right
-                    anchors.rightMargin: 14
-                    y: 11
-                    text: PowerService.battery.ready ? String(PowerService.batteryPercent) + "%" : "NO BATTERY"
-                    color: PowerService.batteryPercent <= 15 ? Theme.warningAccent : Theme.foreground
-                    font.family: "DejaVu Sans Mono"
-                    font.pixelSize: 10
-                    font.weight: Font.DemiBold
-                }
-
-                Text {
-                    x: 14
-                    y: 34
-                    width: parent.width - 28
-                    text: PowerService.battery.ready
-                        ? ((PowerService.externalPower
-                                ? (PowerService.charging ? "Charging" : "Plugged in")
-                                : "On battery")
-                            + (PowerService.batteryTimeLabel !== "" ? " / " + PowerService.batteryTimeLabel : ""))
-                        : "Battery state unavailable"
-                    color: Theme.foreground
-                    font.family: "DejaVu Sans"
-                    font.pixelSize: 11
-                }
-
                 Row {
-                    x: 14
-                    y: 66
-                    spacing: 6
+                    anchors.right: parent.right
+                    anchors.rightMargin: 8
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 4
 
                     Repeater {
                         model: PowerService.profiles
@@ -547,7 +537,7 @@ Item {
                         Rectangle {
                             required property string modelData
                             readonly property bool active: modelData === PowerService.profile
-                            width: modelData === "balanced" ? 82 : 70
+                            width: Math.min(modelData === "balanced" ? 72 : 60, (surface.width - 128) / PowerService.profiles.length)
                             height: 32
                             radius: 9
                             color: active ? Theme.accent : (profileMouse.containsMouse ? Theme.surface : Theme.track)
@@ -576,8 +566,8 @@ Item {
 
             Text {
                 width: parent.width
-                height: visible ? 24 : 0
                 visible: NetworkService.statusMessage !== "" || BluetoothService.statusMessage !== ""
+                wrapMode: Text.WordWrap
                 text: NetworkService.statusMessage !== "" ? NetworkService.statusMessage : BluetoothService.statusMessage
                 horizontalAlignment: Text.AlignHCenter
                 color: Theme.warningAccent

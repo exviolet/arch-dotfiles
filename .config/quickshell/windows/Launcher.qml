@@ -119,8 +119,10 @@ PanelWindow {
             }))
         }
         if (launcher.placementKind !== "") {
-            const current = PanelPlacement.edgeFor(launcher.placementKind, launcher.outputScreen.name)
-            const options = PanelPlacement.edges.map(edge => ({
+            const isDock = launcher.placementKind === "dock"
+            const current = isDock ? PanelPlacement.dockPositionFor(launcher.outputScreen.name)
+                : PanelPlacement.edgeFor("rail", launcher.outputScreen.name)
+            const options = (isDock ? PanelPlacement.dockPositions : PanelPlacement.edges).map(edge => ({
                 "kind": "placement", "edge": edge.id, "title": edge.title, "emoji": edge.icon,
                 "subtitle": edge.id === current ? "Текущее положение" : ""
             })).concat([{
@@ -525,7 +527,8 @@ PanelWindow {
         let saved = launcher.themeMode
             ? launcher.listResults.findIndex(row => row.id === Theme.savedPalette) : 0
         if (launcher.placementKind !== "") {
-            const current = PanelPlacement.edgeFor(launcher.placementKind, launcher.outputScreen.name)
+            const current = launcher.placementKind === "dock" ? PanelPlacement.dockPositionFor(launcher.outputScreen.name)
+                : PanelPlacement.edgeFor("rail", launcher.outputScreen.name)
             saved = launcher.listResults.findIndex(row => row.edge === current)
         }
         if (launcher.railBackgroundMode) {

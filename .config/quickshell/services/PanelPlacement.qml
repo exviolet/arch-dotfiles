@@ -8,12 +8,18 @@ Singleton {
     id: root
 
     readonly property int railThickness: 46
+    readonly property int islandGap: 8
+    readonly property int islandHeight: 42
+    readonly property int islandReservation: islandHeight + 2 * islandGap
     readonly property var edges: [
         { "id": "top", "title": "Сверху", "icon": "↑" },
         { "id": "bottom", "title": "Снизу", "icon": "↓" },
         { "id": "left", "title": "Слева", "icon": "←" },
         { "id": "right", "title": "Справа", "icon": "→" }
     ]
+    readonly property var dockPositions: edges.concat([
+        { "id": "island", "title": "Остров сверху", "icon": "◉" }
+    ])
     readonly property var backgrounds: [
         { "id": "solid", "title": "Сплошной", "icon": "●" },
         { "id": "transparent", "title": "Прозрачный", "icon": "○" },
@@ -30,6 +36,7 @@ Singleton {
 
     function edgeFor(kind: string, output: string): string {
         const edge = root.positions[output]?.[kind]
+        if (kind === "dock" && edge === "island") return "top"
         if (root.edges.some(option => option.id === edge)) return edge
         if (kind === "rail") return "right"
 
@@ -39,9 +46,14 @@ Singleton {
         return screens.length > 0 && screens[0].name === output ? "bottom" : ""
     }
 
+    function dockPositionFor(output: string): string {
+        return root.positions[output]?.dock === "island" ? "island" : root.edgeFor("dock", output)
+    }
+
     function setEdge(kind: string, output: string, edge: string): void {
         if ((kind !== "rail" && kind !== "dock") || output === "") return
-        if (edge !== "" && !root.edges.some(option => option.id === edge)) return
+        const options = kind === "dock" ? root.dockPositions : root.edges
+        if (edge !== "" && !options.some(option => option.id === edge)) return
         root.saveOption(output, kind, edge)
     }
 

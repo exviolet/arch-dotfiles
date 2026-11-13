@@ -17,6 +17,8 @@ PanelWindow {
     required property var mediaPlayer
 
     readonly property string edge: PanelPlacement.edgeFor("rail", outputScreen.name)
+    readonly property bool clockInIsland: edge === "top"
+        && PanelPlacement.dockPositionFor(outputScreen.name) === "island"
     readonly property bool vertical: edge === "left" || edge === "right"
     readonly property bool farEdge: edge === "right" || edge === "bottom"
     readonly property int compactWidth: PanelPlacement.railThickness
@@ -66,7 +68,7 @@ PanelWindow {
         if (showingMedia) return mediaEntry
         if (showingAudio) return audioEntry
         if (showingTray) return trayEntry
-        if (showingCalendar) return clockBlock
+        if (showingCalendar && !clockInIsland) return clockBlock
         if (showingUsage) return usageEntry
         return signal
     }
@@ -87,7 +89,7 @@ PanelWindow {
     implicitWidth: vertical ? Math.min(outputScreen.width, compactWidth + maxDrawerWidth) : outputScreen.width
     implicitHeight: vertical ? outputScreen.height : compactWidth + drawerDepth
     color: "transparent"
-    exclusiveZone: compactWidth
+    exclusiveZone: compactWidth + (clockInIsland ? PanelPlacement.islandReservation : 0)
     focusable: false
     WlrLayershell.namespace: "quickshell-rail"
     WlrLayershell.layer: WlrLayer.Top
@@ -853,6 +855,7 @@ PanelWindow {
 
         Item {
             id: clockBlock
+            visible: !rail.clockInIsland
             x: rail.vertical ? (railBase.width - width) / 2
                 : Math.max(0, Math.min((railBase.width - width) / 2, mediaEntry.x - width - 12))
             y: (railBase.height - height) / 2
