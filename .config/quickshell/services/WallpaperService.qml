@@ -67,6 +67,14 @@ Singleton {
         setter.running = true
     }
 
+    Timer {
+        interval: 5000
+        repeat: true
+        running: Quickshell.screens.some(screen => PanelPlacement.backgroundFor(screen.name) === "transparent")
+        triggeredOnStart: true
+        onTriggered: query.running = true
+    }
+
     // Lines look like:
     //   eDP-1: 1920x1080, scale: 1, currently displaying: image: /path/to.png
     Process {

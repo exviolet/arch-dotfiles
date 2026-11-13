@@ -14,6 +14,12 @@ Singleton {
         { "id": "left", "title": "Слева", "icon": "←" },
         { "id": "right", "title": "Справа", "icon": "→" }
     ]
+    readonly property var backgrounds: [
+        { "id": "solid", "title": "Сплошной", "icon": "●" },
+        { "id": "transparent", "title": "Прозрачный", "icon": "○" },
+        { "id": "matte", "title": "Матовое стекло", "icon": "◐" }
+    ]
+
     readonly property var positions: {
         try {
             return JSON.parse(store.positionsJson) || ({})
@@ -36,15 +42,37 @@ Singleton {
     function setEdge(kind: string, output: string, edge: string): void {
         if ((kind !== "rail" && kind !== "dock") || output === "") return
         if (edge !== "" && !root.edges.some(option => option.id === edge)) return
+        root.saveOption(output, kind, edge)
+    }
+
+    function backgroundFor(output: string): string {
+        const background = root.positions[output]?.background
+        return root.backgrounds.some(option => option.id === background) ? background : "solid"
+    }
+
+    function setBackground(output: string, background: string): void {
+        if (output === "" || !root.backgrounds.some(option => option.id === background)) return
+        root.saveOption(output, "background", background === "solid" ? "" : background)
+    }
+
+    function saveOption(output: string, kind: string, value: string): void {
         const next = Object.assign({}, root.positions)
         const placement = Object.assign({}, next[output])
-        if (edge === "") delete placement[kind]
-        else placement[kind] = edge
+        if (value === "") delete placement[kind]
+        else placement[kind] = value
 
         if (Object.keys(placement).length === 0) delete next[output]
         else next[output] = placement
         store.positionsJson = JSON.stringify(next)
         store.sync()
+    }
+
+    function dropEdge(x: real, y: real, width: real, height: real): string {
+        if (x < 0 || x >= width || y < 0 || y >= height) return ""
+
+        const distances = [y, height - 1 - y, x, width - 1 - x]
+        const closest = Math.min(...distances)
+        return closest <= 64 ? root.edges[distances.indexOf(closest)].id : ""
     }
 
     Settings {

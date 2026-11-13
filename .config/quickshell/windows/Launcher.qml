@@ -82,6 +82,8 @@ PanelWindow {
     readonly property string commandQuery: launcher.commandMode
         ? launcher.query.trim().slice(1).trim().toLowerCase() : ""
     readonly property bool themeMode: launcher.commandQuery === "тема" || launcher.commandQuery === "theme"
+    readonly property bool railBackgroundMode: launcher.commandQuery === "фон панели"
+        || launcher.commandQuery === "panel background"
     readonly property string placementKind: {
         if (launcher.commandQuery === "панель" || launcher.commandQuery === "panel") return "rail"
         if (launcher.commandQuery === "док" || launcher.commandQuery === "dock") return "dock"
@@ -109,15 +111,26 @@ PanelWindow {
                 "kind": "palette", "id": palette.id, "title": palette.title,
                 "subtitle": palette.subtitle, "swatch": palette.accent
             }))
+        if (launcher.railBackgroundMode) {
+            const current = PanelPlacement.backgroundFor(launcher.outputScreen.name)
+            return PanelPlacement.backgrounds.map(option => ({
+                "kind": "rail-background", "id": option.id, "title": option.title, "emoji": option.icon,
+                "subtitle": option.id === current ? "Текущий фон" : ""
+            }))
+        }
         if (launcher.placementKind !== "") {
             const current = PanelPlacement.edgeFor(launcher.placementKind, launcher.outputScreen.name)
-            return PanelPlacement.edges.map(edge => ({
+            const options = PanelPlacement.edges.map(edge => ({
                 "kind": "placement", "edge": edge.id, "title": edge.title, "emoji": edge.icon,
                 "subtitle": edge.id === current ? "Текущее положение" : ""
             })).concat([{
                 "kind": "placement", "edge": "", "title": "По умолчанию", "emoji": "↺",
                 "subtitle": current === "" ? "Док скрыт на этом мониторе" : ""
             }])
+            if (launcher.placementKind === "rail")
+                options.push({ "kind": "command", "panel": "rail-background", "emoji": "◐", "title": "Фон панели…",
+                    "subtitle": "Заливка, прозрачность или матовое стекло" })
+            return options
         }
 
         const needle = launcher.commandQuery
@@ -132,6 +145,8 @@ PanelWindow {
               "subtitle": "Предпросмотр палитр Quickshell", "aliases": "theme appearance" },
             { "kind": "command", "panel": "rail-position", "emoji": "↔", "title": "Панель",
               "subtitle": "Положение панели на этом мониторе", "aliases": "panel bar rail" },
+            { "kind": "command", "panel": "rail-background", "emoji": "◐", "title": "Фон панели",
+              "subtitle": "Заливка, прозрачность или матовое стекло", "aliases": "panel background transparency" },
             { "kind": "command", "panel": "dock-position", "emoji": "↕", "title": "Док",
               "subtitle": "Положение дока на этом мониторе", "aliases": "dock" }
         ]
@@ -423,7 +438,14 @@ PanelWindow {
             Theme.savePalette(row.id)
         } else if (row.kind === "placement") {
             PanelPlacement.setEdge(launcher.placementKind, launcher.outputScreen.name, row.edge)
+        } else if (row.kind === "rail-background") {
+            PanelPlacement.setBackground(launcher.outputScreen.name, row.id)
         } else if (row.kind === "command") {
+            if (row.panel === "rail-background") {
+                queryInput.text = ">фон панели"
+                queryInput.cursorPosition = queryInput.length
+                return
+            }
             if (row.panel === "theme" || row.panel === "rail-position" || row.panel === "dock-position") {
                 queryInput.text = row.panel === "theme" ? ">тема"
                     : row.panel === "rail-position" ? ">панель" : ">док"
@@ -501,6 +523,10 @@ PanelWindow {
         if (launcher.placementKind !== "") {
             const current = PanelPlacement.edgeFor(launcher.placementKind, launcher.outputScreen.name)
             saved = launcher.listResults.findIndex(row => row.edge === current)
+        }
+        if (launcher.railBackgroundMode) {
+            const current = PanelPlacement.backgroundFor(launcher.outputScreen.name)
+            saved = launcher.listResults.findIndex(row => row.id === current)
         }
         launcher.selectedIndex = Math.max(0, saved)
     }

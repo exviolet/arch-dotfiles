@@ -20,6 +20,24 @@ PanelWindow {
     readonly property bool vertical: edge === "left" || edge === "right"
     readonly property bool farEdge: edge === "right" || edge === "bottom"
     readonly property int compactWidth: PanelPlacement.railThickness
+    readonly property string backgroundMode: PanelPlacement.backgroundFor(outputScreen.name)
+    readonly property bool wallpaperContrast: backgroundMode === "transparent"
+    readonly property string wallpaperPath: wallpaperContrast ? String(WallpaperService.current[outputScreen.name] || "") : ""
+    readonly property string sampleKey: wallpaperPath === "" ? ""
+        : JSON.stringify([wallpaperPath, edge, outputScreen.width, outputScreen.height])
+    property string sampledKey: ""
+    property real sampledLight: -1
+    readonly property bool useThemeBackgroundAsInk: sampledLight >= 0 && wallpaperPath !== ""
+        && contrastRatio(luminance(Theme.background), sampledLight) > contrastRatio(luminance(Theme.foreground), sampledLight)
+    readonly property color stripInk: useThemeBackgroundAsInk ? Theme.background : Theme.foreground
+    readonly property color contrastBacking: useThemeBackgroundAsInk ? Theme.foreground : Theme.background
+    readonly property color stripAccent: wallpaperContrast ? stripInk : Theme.accent
+    readonly property color stripForeground: wallpaperContrast ? stripInk : Theme.foreground
+    readonly property color stripSubtle: wallpaperContrast ? stripInk : Theme.subtleForeground
+    readonly property color stripBorder: wallpaperContrast ? Qt.alpha(stripInk, 0.4) : Theme.border
+    readonly property color stripSurface: wallpaperContrast ? Qt.alpha(contrastBacking, 0.32) : Theme.surface
+    readonly property color stripHover: wallpaperContrast ? Qt.alpha(contrastBacking, 0.18) : Theme.raisedSurface
+    readonly property color stripWarning: wallpaperContrast ? stripInk : Theme.warningAccent
     readonly property int maxDrawerWidth: 394
     readonly property int drawerDepth: Math.max(0, Math.min(640, outputScreen.height - compactWidth))
     readonly property bool hasMedia: mediaPlayer !== null
@@ -55,7 +73,7 @@ PanelWindow {
     property string pendingSurface: ""
     readonly property var hoveredControl: [
         systemMouse, mediaEntryMouse, audioEntryMouse, trayEntryMouse,
-        usageEntryMouse, clockMouse, brightnessMouse, layoutMouse
+        usageEntryMouse, clockMouse, brightnessMouse, layoutMouse, stripMouse
     ].find(control => control.visible && control.containsMouse && !control.pressed) ?? null
 
     readonly property var screenWorkspaces: NiriService.workspaces.filter(workspace => workspace.output === outputScreen.name)
@@ -74,6 +92,13 @@ PanelWindow {
     WlrLayershell.namespace: "quickshell-rail"
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+    BackgroundEffect.blurRegion: backgroundMode === "matte" ? stripBlurRegion : null
+
+    Region {
+        id: stripBlurRegion
+        item: railBase
+    }
+
     mask: Region {
         item: railBase
 
@@ -114,6 +139,58 @@ PanelWindow {
     Process { id: workspaceAction }
     Process { id: rendererAction }
     Process { id: layoutAction }
+
+    onSampleKeyChanged: Qt.callLater(sampleWallpaperEdge)
+
+    function linearChannel(channel: real): real {
+        return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4
+    }
+
+    function luminance(color: color): real {
+        return 0.2126 * linearChannel(color.r) + 0.7152 * linearChannel(color.g) + 0.0722 * linearChannel(color.b)
+    }
+
+    function contrastRatio(first: real, second: real): real {
+        return (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05)
+    }
+
+    function sampleWallpaperEdge(): void {
+        if (sampleKey === "" || sampleKey === sampledKey || wallpaperSampler.running) return
+
+        const scale = Math.min(1, 480 / Math.max(outputScreen.width, outputScreen.height))
+        const width = Math.max(1, Math.round(outputScreen.width * scale))
+        const height = Math.max(1, Math.round(outputScreen.height * scale))
+        const thickness = Math.max(1, Math.round(compactWidth * scale))
+        const size = width + "x" + height
+        const strip = vertical ? Math.min(thickness, width) + "x" + height
+            : width + "x" + Math.min(thickness, height)
+        const gravity = { "left": "West", "right": "East", "top": "North", "bottom": "South" }
+
+        wallpaperSampler.key = sampleKey
+        // Match awww's centered crop, then measure only the strip behind this panel.
+        wallpaperSampler.exec(["/usr/sbin/magick", "-limit", "thread", "1", wallpaperPath + "[0]",
+            "-auto-orient", "-resize", size + "^", "-gravity", "Center", "-extent", size, "+repage",
+            "-gravity", gravity[edge], "-crop", strip + "+0+0", "+repage",
+            "-background", "black", "-alpha", "remove", "-colorspace", "sRGB",
+            "-resize", "1x1!", "-format", "%[fx:r] %[fx:g] %[fx:b]", "info:"])
+    }
+
+    Process {
+        id: wallpaperSampler
+        property string key: ""
+
+        stdout: StdioCollector { id: edgeStats }
+
+        onExited: exitCode => {
+            if (key === rail.sampleKey) {
+                const rgb = edgeStats.text.trim().split(/\s+/).map(Number)
+                rail.sampledLight = exitCode === 0 && rgb.length === 3 && rgb.every(channel => channel >= 0 && channel <= 1)
+                    ? rail.luminance(Qt.rgba(rgb[0], rgb[1], rgb[2], 1)) : -1
+                rail.sampledKey = key
+            }
+            Qt.callLater(rail.sampleWallpaperEdge)
+        }
+    }
 
     Timer {
         id: previewTimer
@@ -164,7 +241,7 @@ PanelWindow {
     }
 
     function requestSurface(surface: string): void {
-        if (railController.railPinned) return
+        if (railController.railPinned || stripMouse.pressed) return
         pendingSurface = surface
         previewTimer.restart()
     }
@@ -330,7 +407,66 @@ PanelWindow {
         y: rail.edge === "bottom" ? rail.height - height : 0
         width: rail.vertical ? rail.compactWidth : rail.width
         height: rail.vertical ? rail.height : rail.compactWidth
-        color: Theme.background
+        color: {
+            if (rail.backgroundMode === "solid") return Theme.background
+            if (rail.backgroundMode === "matte") return Qt.alpha(Theme.background, 0.35)
+            return "transparent"
+        }
+
+        MouseArea {
+            id: stripMouse
+            readonly property string hint: "Перетащить к краю экрана\nДвойной клик — сменить фон"
+            property point pressPoint
+            property bool moving: false
+            property string destination: ""
+
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: moving ? Qt.ClosedHandCursor : Qt.OpenHandCursor
+
+            function dropAt(mouse: var): string {
+                // Layer-shell anchors put the window at (0, 0) except at the far edges.
+                const point = mapToItem(railBase, mouse.x, mouse.y)
+                const screenX = point.x + (rail.edge === "right" ? rail.outputScreen.width - railBase.width : 0)
+                const screenY = point.y + (rail.edge === "bottom" ? rail.outputScreen.height - railBase.height : 0)
+                return PanelPlacement.dropEdge(screenX, screenY, rail.outputScreen.width, rail.outputScreen.height)
+            }
+
+            onPressed: mouse => {
+                pressPoint = Qt.point(mouse.x, mouse.y)
+                rail.clearSurfaceRequest()
+                rail.railController.setRailPreview(rail.outputScreen.name, false)
+            }
+            onPositionChanged: mouse => {
+                if (!pressed) return
+                if (!moving)
+                    moving = Math.hypot(mouse.x - pressPoint.x, mouse.y - pressPoint.y) >= 10
+                if (moving) destination = dropAt(mouse)
+            }
+            onReleased: mouse => {
+                const target = moving ? dropAt(mouse) : ""
+                moving = false
+                destination = ""
+                if (target !== "" && target !== rail.edge)
+                    PanelPlacement.setEdge("rail", rail.outputScreen.name, target)
+            }
+            onCanceled: {
+                moving = false
+                destination = ""
+            }
+            onDoubleClicked: {
+                const options = PanelPlacement.backgrounds
+                const index = options.findIndex(option => option.id === rail.backgroundMode)
+                PanelPlacement.setBackground(rail.outputScreen.name, options[(index + 1) % options.length].id)
+            }
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            visible: stripMouse.moving && stripMouse.destination !== "" && stripMouse.destination !== rail.edge
+            color: "transparent"
+            border.color: rail.stripAccent
+        }
 
         Item {
             id: signal
@@ -351,7 +487,7 @@ PanelWindow {
                         width: rail.expanded ? modelData + 3 : modelData
                         height: 2
                         radius: 1
-                        color: rail.NiriService.ready ? Theme.accent : Theme.warningAccent
+                        color: rail.NiriService.ready ? rail.stripAccent : rail.stripWarning
                         opacity: rail.NiriService.connected ? 1 : 0.45
 
                         Behavior on width {
@@ -410,15 +546,15 @@ PanelWindow {
                         Rectangle {
                             anchors.fill: parent
                             radius: 10
-                            color: workspaceItem.modelData.is_active ? Theme.surface : (workspaceMouse.containsMouse ? Theme.raisedSurface : "transparent")
-                            border.width: workspaceItem.modelData.is_urgent || workspaceItem.modelData.is_active ? 1 : 0
-                            border.color: workspaceItem.modelData.is_urgent ? Theme.warningAccent : Theme.border
+                            color: workspaceItem.modelData.is_active ? rail.stripSurface : (workspaceMouse.containsMouse ? rail.stripHover : "transparent")
+                            border.width: workspaceItem.modelData.is_urgent || (workspaceItem.modelData.is_active && !rail.wallpaperContrast) ? 1 : 0
+                            border.color: workspaceItem.modelData.is_urgent ? rail.stripWarning : rail.stripBorder
                         }
 
                         Text {
                             anchors.centerIn: parent
                             text: workspaceItem.modelData.name !== "" ? workspaceItem.modelData.name.slice(0, 2) : String(workspaceItem.modelData.idx)
-                            color: workspaceItem.modelData.is_active ? Theme.foreground : Theme.subtleForeground
+                            color: workspaceItem.modelData.is_active ? rail.stripForeground : rail.stripSubtle
                             font.family: "DejaVu Sans Mono"
                             font.pixelSize: 11
                             font.weight: workspaceItem.modelData.is_active ? Font.DemiBold : Font.Medium
@@ -447,18 +583,18 @@ PanelWindow {
             Rectangle {
                 anchors.fill: parent
                 radius: 10
-                color: rail.activeSurface === "media" ? Theme.surface : (mediaEntryMouse.containsMouse ? Theme.raisedSurface : "transparent")
-                border.width: rail.activeSurface === "media" ? 1 : 0
-                border.color: Theme.border
+                color: (rail.expanded || !rail.wallpaperContrast) && rail.activeSurface === "media" ? rail.stripSurface : (mediaEntryMouse.containsMouse ? rail.stripHover : "transparent")
+                border.width: !rail.wallpaperContrast && rail.activeSurface === "media" ? 1 : 0
+                border.color: rail.stripBorder
             }
 
             Rectangle {
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
                 width: 2
-                height: rail.activeSurface === "media" ? 15 : 0
+                height: !rail.wallpaperContrast && rail.activeSurface === "media" ? 15 : 0
                 radius: 1
-                color: Theme.accent
+                color: rail.stripAccent
             }
 
             Image {
@@ -475,7 +611,7 @@ PanelWindow {
                 visible: rail.mediaIconSource === ""
                 anchors.centerIn: parent
                 text: "M"
-                color: rail.activeSurface === "media" ? Theme.foreground : Theme.subtleForeground
+                color: rail.activeSurface === "media" ? rail.stripForeground : rail.stripSubtle
                 font.family: "DejaVu Sans Mono"
                 font.pixelSize: 10
                 font.weight: Font.DemiBold
@@ -504,25 +640,25 @@ PanelWindow {
             Rectangle {
                 anchors.fill: parent
                 radius: 10
-                color: rail.activeSurface === "audio" ? Theme.surface : (audioEntryMouse.containsMouse ? Theme.raisedSurface : "transparent")
-                border.width: rail.activeSurface === "audio" ? 1 : 0
-                border.color: Theme.border
+                color: (rail.expanded || !rail.wallpaperContrast) && rail.activeSurface === "audio" ? rail.stripSurface : (audioEntryMouse.containsMouse ? rail.stripHover : "transparent")
+                border.width: !rail.wallpaperContrast && rail.activeSurface === "audio" ? 1 : 0
+                border.color: rail.stripBorder
             }
 
             Rectangle {
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
                 width: 2
-                height: rail.activeSurface === "audio" ? 15 : 0
+                height: !rail.wallpaperContrast && rail.activeSurface === "audio" ? 15 : 0
                 radius: 1
-                color: Theme.accent
+                color: rail.stripAccent
             }
 
             ThemeIcon {
                 anchors.centerIn: parent
                 size: 17
                 name: AudioService.muted ? "sound-off" : "sound-high"
-                color: Theme.accent
+                color: rail.stripAccent
             }
 
             MouseArea {
@@ -561,25 +697,25 @@ PanelWindow {
             Rectangle {
                 anchors.fill: parent
                 radius: 10
-                color: rail.activeSurface === "tray" ? Theme.surface : (trayEntryMouse.containsMouse ? Theme.raisedSurface : "transparent")
-                border.width: rail.activeSurface === "tray" ? 1 : 0
-                border.color: Theme.border
+                color: (rail.expanded || !rail.wallpaperContrast) && rail.activeSurface === "tray" ? rail.stripSurface : (trayEntryMouse.containsMouse ? rail.stripHover : "transparent")
+                border.width: !rail.wallpaperContrast && rail.activeSurface === "tray" ? 1 : 0
+                border.color: rail.stripBorder
             }
 
             Rectangle {
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
                 width: 2
-                height: rail.activeSurface === "tray" ? 15 : 0
+                height: !rail.wallpaperContrast && rail.activeSurface === "tray" ? 15 : 0
                 radius: 1
-                color: Theme.accent
+                color: rail.stripAccent
             }
 
             ThemeIcon {
                 anchors.centerIn: parent
                 size: 17
                 name: "app-notification"
-                color: Theme.accent
+                color: rail.stripAccent
             }
 
             Rectangle {
@@ -589,14 +725,14 @@ PanelWindow {
                 width: 12
                 height: 12
                 radius: 6
-                color: Theme.raisedSurface
+                color: rail.stripHover
                 border.width: 1
-                border.color: Theme.border
+                border.color: rail.stripBorder
 
                 Text {
                     anchors.centerIn: parent
                     text: String(rail.TrayService.itemCount)
-                    color: Theme.foreground
+                    color: rail.stripForeground
                     font.family: "DejaVu Sans Mono"
                     font.pixelSize: 7
                     font.weight: Font.DemiBold
@@ -629,25 +765,25 @@ PanelWindow {
             Rectangle {
                 anchors.fill: parent
                 radius: 10
-                color: rail.activeSurface === "usage" ? Theme.surface : (usageEntryMouse.containsMouse ? Theme.raisedSurface : "transparent")
-                border.width: rail.activeSurface === "usage" ? 1 : 0
-                border.color: Theme.border
+                color: (rail.expanded || !rail.wallpaperContrast) && rail.activeSurface === "usage" ? rail.stripSurface : (usageEntryMouse.containsMouse ? rail.stripHover : "transparent")
+                border.width: !rail.wallpaperContrast && rail.activeSurface === "usage" ? 1 : 0
+                border.color: rail.stripBorder
             }
 
             Rectangle {
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
                 width: 2
-                height: rail.activeSurface === "usage" ? 15 : 0
+                height: !rail.wallpaperContrast && rail.activeSurface === "usage" ? 15 : 0
                 radius: 1
-                color: Theme.accent
+                color: rail.stripAccent
             }
 
             ThemeIcon {
                 anchors.centerIn: parent
                 size: 17
                 name: "asterisk"
-                color: Theme.accent
+                color: rail.stripAccent
                 opacity: rail.ClaudeUsageService.stale && !rail.hasAgents ? 0.45 : 1
             }
 
@@ -664,6 +800,8 @@ PanelWindow {
                 radius: 3
                 visible: rail.AgentService.needsAttention
                 color: Theme.alertAccent
+                border.width: rail.wallpaperContrast ? 1 : 0
+                border.color: rail.stripInk
             }
 
             // The icon says what this is; the sliver underneath says how much
@@ -676,7 +814,7 @@ PanelWindow {
                 width: 16
                 height: 2
                 radius: 1
-                color: Theme.border
+                color: rail.stripBorder
 
                 Rectangle {
                     anchors.left: parent.left
@@ -685,10 +823,10 @@ PanelWindow {
                     width: Math.max(2, parent.width * Math.min(1, usageEntry.percent / 100))
                     radius: 1
                     color: {
-                        if (rail.ClaudeUsageService.stale) return Theme.subtleForeground
-                        if (usageEntry.percent >= 80) return Theme.accent
-                        if (usageEntry.percent >= 50) return Theme.warningAccent
-                        return Theme.foreground
+                        if (rail.ClaudeUsageService.stale) return rail.stripSubtle
+                        if (usageEntry.percent >= 80) return rail.stripAccent
+                        if (usageEntry.percent >= 50) return rail.stripWarning
+                        return rail.stripForeground
                     }
 
                     Behavior on width {
@@ -724,18 +862,18 @@ PanelWindow {
             Rectangle {
                 anchors.fill: parent
                 radius: 10
-                color: rail.activeSurface === "calendar" ? Theme.surface : (clockMouse.containsMouse ? Theme.raisedSurface : "transparent")
-                border.width: rail.activeSurface === "calendar" ? 1 : 0
-                border.color: Theme.border
+                color: (rail.expanded || !rail.wallpaperContrast) && rail.activeSurface === "calendar" ? rail.stripSurface : (clockMouse.containsMouse ? rail.stripHover : "transparent")
+                border.width: !rail.wallpaperContrast && rail.activeSurface === "calendar" ? 1 : 0
+                border.color: rail.stripBorder
             }
 
             Rectangle {
                 anchors.left: parent.left
                 anchors.verticalCenter: parent.verticalCenter
                 width: 2
-                height: rail.activeSurface === "calendar" ? 15 : 0
+                height: !rail.wallpaperContrast && rail.activeSurface === "calendar" ? 15 : 0
                 radius: 1
-                color: Theme.accent
+                color: rail.stripAccent
             }
 
             Column {
@@ -747,7 +885,7 @@ PanelWindow {
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: Qt.formatDateTime(clock.date, "HH")
-                    color: Theme.foreground
+                    color: rail.stripForeground
                     font.family: "DejaVu Sans Mono"
                     font.pixelSize: 14
                     font.weight: Font.DemiBold
@@ -757,13 +895,13 @@ PanelWindow {
                     anchors.horizontalCenter: parent.horizontalCenter
                     width: 12
                     height: 1
-                    color: Theme.accent
+                    color: rail.stripAccent
                 }
 
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: Qt.formatDateTime(clock.date, "mm")
-                    color: Theme.foreground
+                    color: rail.stripForeground
                     font.family: "DejaVu Sans Mono"
                     font.pixelSize: 14
                     font.weight: Font.DemiBold
@@ -774,7 +912,7 @@ PanelWindow {
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: Qt.formatDateTime(clock.date, "dd")
-                    color: Theme.subtleForeground
+                    color: rail.stripSubtle
                     font.family: "DejaVu Sans Mono"
                     font.pixelSize: 10
                     font.weight: Font.Medium
@@ -783,7 +921,7 @@ PanelWindow {
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: Qt.formatDateTime(clock.date, "MMM").toUpperCase()
-                    color: Theme.subtleForeground
+                    color: rail.stripSubtle
                     font.family: "DejaVu Sans"
                     font.pixelSize: 8
                     font.weight: Font.DemiBold
@@ -800,7 +938,7 @@ PanelWindow {
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: Qt.formatDateTime(clock.date, "HH:mm")
-                    color: Theme.foreground
+                    color: rail.stripForeground
                     font.family: "DejaVu Sans Mono"
                     font.pixelSize: 14
                     font.weight: Font.DemiBold
@@ -809,7 +947,7 @@ PanelWindow {
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     text: Qt.formatDateTime(clock.date, "d MMM")
-                    color: Theme.subtleForeground
+                    color: rail.stripSubtle
                     font.family: "DejaVu Sans"
                     font.pixelSize: 11
                 }
@@ -841,7 +979,7 @@ PanelWindow {
                 visible: !brightnessMouse.containsMouse
                 size: 16
                 name: "brightness"
-                color: Theme.accent
+                color: rail.stripAccent
             }
 
             Text {
@@ -849,7 +987,7 @@ PanelWindow {
                 anchors.horizontalCenter: parent.horizontalCenter
                 visible: brightnessMouse.containsMouse
                 text: String(rail.BrightnessService.percent)
-                color: Theme.foreground
+                color: rail.stripForeground
                 font.family: "DejaVu Sans Mono"
                 font.pixelSize: 9
                 font.weight: Font.DemiBold
@@ -861,13 +999,13 @@ PanelWindow {
                 width: 20
                 height: 2
                 radius: 1
-                color: Theme.border
+                color: rail.stripBorder
 
                 Rectangle {
                     width: parent.width * rail.BrightnessService.value
                     height: parent.height
                     radius: 1
-                    color: Theme.accent
+                    color: rail.stripAccent
 
                     Behavior on width {
                         NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
@@ -903,14 +1041,16 @@ PanelWindow {
                 id: layoutTile
                 anchors.fill: parent
                 radius: 10
-                color: rail.keyboardLayoutColor()
+                color: rail.wallpaperContrast
+                    ? (layoutMouse.containsMouse ? rail.stripHover : "transparent")
+                    : rail.keyboardLayoutColor()
 
                 Behavior on color { ColorAnimation { duration: 140 } }
 
                 Text {
                     anchors.centerIn: parent
                     text: rail.keyboardLayoutCode()
-                    color: Theme.layoutForeground(rail.keyboardLayoutCode())
+                    color: rail.wallpaperContrast ? rail.stripForeground : Theme.layoutForeground(rail.keyboardLayoutCode())
                     font.family: "DejaVu Sans Mono"
                     font.pixelSize: 10
                     font.weight: Font.DemiBold
@@ -941,7 +1081,7 @@ PanelWindow {
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: batteryMouse.containsMouse && rail.batteryTimeLabel !== "" ? rail.batteryTimeLabel : String(rail.batteryPercentage)
-                color: rail.batteryPercentage <= 15 ? Theme.warningAccent : Theme.foreground
+                color: rail.batteryPercentage <= 15 ? rail.stripWarning : rail.stripForeground
                 font.family: "DejaVu Sans Mono"
                 font.pixelSize: 10
                 font.weight: Font.DemiBold
@@ -952,7 +1092,7 @@ PanelWindow {
                 width: rail.vertical ? 4 : 26
                 height: rail.vertical ? 25 : 3
                 radius: 2
-                color: Theme.border
+                color: rail.stripBorder
 
                 Rectangle {
                     anchors.left: parent.left
@@ -960,7 +1100,7 @@ PanelWindow {
                     width: rail.vertical ? parent.width : Math.max(2, parent.width * Math.min(1, rail.batteryPercentage / 100))
                     height: rail.vertical ? Math.max(2, parent.height * Math.min(1, rail.batteryPercentage / 100)) : parent.height
                     radius: 2
-                    color: rail.batteryPercentage <= 15 ? Theme.warningAccent : Theme.foreground
+                    color: rail.batteryPercentage <= 15 ? rail.stripWarning : rail.stripForeground
 
                     Behavior on height {
                         NumberAnimation { duration: 240; easing.type: Easing.OutCubic }
@@ -974,7 +1114,7 @@ PanelWindow {
                 width: 12
                 height: 2
                 radius: 1
-                color: Theme.accent
+                color: rail.stripAccent
             }
         }
 
@@ -993,10 +1133,10 @@ PanelWindow {
             visible: ready && control !== null
             x: rail.vertical ? (rail.farEdge ? -width - 6 : railBase.width + 6)
                 : control === null ? 0 : Math.max(8, Math.min(railBase.width - width - 8,
-                    control.parent.x + (control.width - width) / 2))
+                    control === stripMouse ? stripMouse.mouseX - width / 2 : control.parent.x + (control.width - width) / 2))
             y: !rail.vertical ? (rail.farEdge ? -height - 6 : railBase.height + 6)
                 : control === null ? 0 : Math.max(8, Math.min(railBase.height - height - 8,
-                    control.parent.y + (control.height - height) / 2))
+                    control === stripMouse ? stripMouse.mouseY - height / 2 : control.parent.y + (control.height - height) / 2))
             width: hintText.implicitWidth + 20
             height: hintText.implicitHeight + 12
             radius: 6
