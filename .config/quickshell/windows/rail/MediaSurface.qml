@@ -5,7 +5,7 @@ import QtQuick
 
 import "../../services"
 
-Item {
+Flickable {
     id: surface
 
     required property var controller
@@ -42,6 +42,11 @@ Item {
     readonly property real artTop: hasChoice ? 200 : 158
     readonly property real artSize: width - 44
     readonly property real controlsTop: artTop + artSize + 30
+    contentWidth: width
+    contentHeight: controlsTop + controls.height + 22
+    boundsBehavior: Flickable.StopAtBounds
+    clip: true
+    onExpandedChanged: if (expanded) contentY = 0
 
     // MPRIS отдаёт позицию по запросу: без периодического positionChanged
     // счётчик и полоса застывают на значении момента открытия
@@ -182,6 +187,8 @@ Item {
     }
 
     Rectangle {
+        id: controls
+
         x: 22
         y: surface.controlsTop
         width: surface.artSize

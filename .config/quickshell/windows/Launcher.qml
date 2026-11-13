@@ -82,6 +82,11 @@ PanelWindow {
     readonly property string commandQuery: launcher.commandMode
         ? launcher.query.trim().slice(1).trim().toLowerCase() : ""
     readonly property bool themeMode: launcher.commandQuery === "тема" || launcher.commandQuery === "theme"
+    readonly property string placementKind: {
+        if (launcher.commandQuery === "панель" || launcher.commandQuery === "panel") return "rail"
+        if (launcher.commandQuery === "док" || launcher.commandQuery === "dock") return "dock"
+        return ""
+    }
     readonly property var themePreviewOwner: ({})
     readonly property string palettePreview: {
         if (!launcher.visible || !launcher.themeMode) return ""
@@ -104,6 +109,17 @@ PanelWindow {
                 "kind": "palette", "id": palette.id, "title": palette.title,
                 "subtitle": palette.subtitle, "swatch": palette.accent
             }))
+        if (launcher.placementKind !== "") {
+            const current = PanelPlacement.edgeFor(launcher.placementKind, launcher.outputScreen.name)
+            return PanelPlacement.edges.map(edge => ({
+                "kind": "placement", "edge": edge.id, "title": edge.title, "emoji": edge.icon,
+                "subtitle": edge.id === current ? "Текущее положение" : ""
+            })).concat([{
+                "kind": "placement", "edge": "", "title": "По умолчанию", "emoji": "↺",
+                "subtitle": current === "" ? "Док скрыт на этом мониторе" : ""
+            }])
+        }
+
         const needle = launcher.commandQuery
         const commands = [
             { "kind": "command", "panel": "audio", "emoji": "🔊", "title": "Звук",
@@ -113,7 +129,11 @@ PanelWindow {
             { "kind": "command", "panel": "wallpaper", "emoji": "🖼", "title": "Обои",
               "subtitle": "Выбор фона рабочего стола", "aliases": "wallpaper background" },
             { "kind": "command", "panel": "theme", "emoji": "◐", "title": "Тема",
-              "subtitle": "Предпросмотр палитр Quickshell", "aliases": "theme appearance" }
+              "subtitle": "Предпросмотр палитр Quickshell", "aliases": "theme appearance" },
+            { "kind": "command", "panel": "rail-position", "emoji": "↔", "title": "Панель",
+              "subtitle": "Положение панели на этом мониторе", "aliases": "panel bar rail" },
+            { "kind": "command", "panel": "dock-position", "emoji": "↕", "title": "Док",
+              "subtitle": "Положение дока на этом мониторе", "aliases": "dock" }
         ]
         return commands.filter(command =>
             (command.panel !== "audio" || AudioService.sinkReady)
@@ -401,9 +421,12 @@ PanelWindow {
         const controller = launcher.launcherController
         if (row.kind === "palette") {
             Theme.savePalette(row.id)
+        } else if (row.kind === "placement") {
+            PanelPlacement.setEdge(launcher.placementKind, launcher.outputScreen.name, row.edge)
         } else if (row.kind === "command") {
-            if (row.panel === "theme") {
-                queryInput.text = ">тема"
+            if (row.panel === "theme" || row.panel === "rail-position" || row.panel === "dock-position") {
+                queryInput.text = row.panel === "theme" ? ">тема"
+                    : row.panel === "rail-position" ? ">панель" : ">док"
                 queryInput.cursorPosition = queryInput.length
                 return
             }
@@ -473,8 +496,12 @@ PanelWindow {
     onWindowResultsChanged: launcher.resetSelection()
     onResultsChanged: launcher.resetSelection()
     onListResultsChanged: {
-        const saved = launcher.themeMode
+        let saved = launcher.themeMode
             ? launcher.listResults.findIndex(row => row.id === Theme.savedPalette) : 0
+        if (launcher.placementKind !== "") {
+            const current = PanelPlacement.edgeFor(launcher.placementKind, launcher.outputScreen.name)
+            saved = launcher.listResults.findIndex(row => row.edge === current)
+        }
         launcher.selectedIndex = Math.max(0, saved)
     }
 
@@ -619,7 +646,7 @@ PanelWindow {
                 // would actually do something.
                 text: {
                     if (launcher.themeMode) return "⏎ применить · Esc отменить"
-
+                    if (launcher.placementKind !== "") return "⏎ переместить"
                     if (launcher.listMode)
                         return launcher.listResults.length === 0
                             ? "no matches"
@@ -665,8 +692,8 @@ PanelWindow {
             y: queryField.y + queryField.height + 12
             text: {
                 if (launcher.themeMode) return "ТЕМЫ"
-
-
+                if (launcher.placementKind === "rail") return "ПОЛОЖЕНИЕ ПАНЕЛИ · " + launcher.outputScreen.name
+                if (launcher.placementKind === "dock") return "ПОЛОЖЕНИЕ ДОКА · " + launcher.outputScreen.name
                 return launcher.commandMode ? "COMMANDS" : "QUICKLINKS"
             }
             color: Theme.subtleForeground

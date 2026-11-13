@@ -842,23 +842,24 @@ ShellRoot {
     Variants {
         model: Quickshell.screens
 
-        Rail {
+        Scope {
+            id: outputPanels
+
             required property var modelData
 
-            outputScreen: modelData
-            railController: root
-            mediaPlayer: root.mediaPlayer
-        }
-    }
+            Rail {
+                id: outputRail
 
-    Variants {
-        model: Quickshell.screens
+                outputScreen: outputPanels.modelData
+                railController: root
+                mediaPlayer: root.mediaPlayer
+            }
 
-        Dock {
-            required property var modelData
-
-            outputScreen: modelData
-            dockController: root
+            Dock {
+                outputScreen: outputPanels.modelData
+                dockController: root
+                railWindow: outputRail
+            }
         }
     }
 
@@ -902,6 +903,7 @@ ShellRoot {
             required property var modelData
 
             outputScreen: modelData
+            railVisible: root.railVisible
         }
     }
 

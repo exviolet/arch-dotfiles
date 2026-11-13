@@ -16,8 +16,12 @@ PanelWindow {
     required property var railController
     required property var mediaPlayer
 
-    readonly property int compactWidth: 46
+    readonly property string edge: PanelPlacement.edgeFor("rail", outputScreen.name)
+    readonly property bool vertical: edge === "left" || edge === "right"
+    readonly property bool farEdge: edge === "right" || edge === "bottom"
+    readonly property int compactWidth: PanelPlacement.railThickness
     readonly property int maxDrawerWidth: 394
+    readonly property int drawerDepth: Math.max(0, Math.min(640, outputScreen.height - compactWidth))
     readonly property bool hasMedia: mediaPlayer !== null
     readonly property string activeSurface: String(railController.activeSurface || "system")
     readonly property bool showingMedia: activeSurface === "media" && hasMedia
@@ -32,14 +36,22 @@ PanelWindow {
     readonly property var mediaApplication: hasMedia ? DesktopEntries.heuristicLookup(mediaDesktopEntryId || mediaIdentity) : null
     readonly property string mediaApplicationName: mediaApplication ? String(mediaApplication.name).replace(" (Launcher)", "") : mediaIdentity
     readonly property string mediaIconSource: railController.mediaIconSourceFor(mediaPlayer)
-    property real drawerWidth: showingAudio ? 394 : (showingMedia ? 360 : (showingTray ? 344 : (showingCalendar ? 336 : 394)))
+    property real drawerWidth: Math.min(showingMedia ? 360 : (showingTray ? 344 : (showingCalendar ? 336 : maxDrawerWidth)),
+        Math.max(0, outputScreen.width - (vertical ? compactWidth : 0)))
     readonly property bool externallyPinned: railController.railPinned && railController.railExpansionScreen === outputScreen.name
     readonly property bool previewing: railController.railPreviewScreen === outputScreen.name
     readonly property bool expanded: externallyPinned || previewing
     property real revealProgress: expanded ? 1 : 0
-    readonly property real interactiveWidth: compactWidth + drawerWidth * revealProgress
-    readonly property bool outputFocused: NiriService.focusedOutput === outputScreen.name
-    property real outputFocusPulse: 0
+    readonly property real drawerStart: vertical ? 0 : drawer.x
+    readonly property real drawerLength: vertical ? drawer.height : drawer.width
+    readonly property Item drawerControl: {
+        if (showingMedia) return mediaEntry
+        if (showingAudio) return audioEntry
+        if (showingTray) return trayEntry
+        if (showingCalendar) return clockBlock
+        if (showingUsage) return usageEntry
+        return signal
+    }
     property string pendingSurface: ""
     readonly property var hoveredControl: [
         systemMouse, mediaEntryMouse, audioEntryMouse, trayEntryMouse,
@@ -54,22 +66,30 @@ PanelWindow {
 
     screen: outputScreen
     visible: railController.railVisible
-    implicitWidth: compactWidth + maxDrawerWidth
+    implicitWidth: vertical ? Math.min(outputScreen.width, compactWidth + maxDrawerWidth) : outputScreen.width
+    implicitHeight: vertical ? outputScreen.height : compactWidth + drawerDepth
     color: "transparent"
     exclusiveZone: compactWidth
     focusable: false
+    WlrLayershell.namespace: "quickshell-rail"
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
     mask: Region {
-        x: Math.floor(rail.width - rail.interactiveWidth)
-        width: Math.ceil(rail.interactiveWidth)
-        height: rail.height
+        item: railBase
+
+        Region {
+            x: Math.floor(drawer.x)
+            y: Math.floor(drawer.y)
+            width: Math.ceil(drawer.width)
+            height: Math.ceil(drawer.height)
+        }
     }
 
     anchors {
-        right: true
-        top: true
-        bottom: true
+        left: !rail.vertical || rail.edge === "left"
+        right: !rail.vertical || rail.edge === "right"
+        top: rail.vertical || rail.edge === "top"
+        bottom: rail.vertical || rail.edge === "bottom"
     }
 
     Behavior on drawerWidth {
@@ -122,34 +142,6 @@ PanelWindow {
             if (!rail.externallyPinned && !railHover.hovered)
                 rail.railController.setRailPreview(rail.outputScreen.name, false)
         }
-    }
-
-    SequentialAnimation {
-        id: outputFocusPulseAnimation
-
-        NumberAnimation {
-            target: rail
-            property: "outputFocusPulse"
-            from: 0
-            to: 1
-            duration: 110
-            easing.type: Easing.OutCubic
-        }
-
-        PauseAnimation { duration: 90 }
-
-        NumberAnimation {
-            target: rail
-            property: "outputFocusPulse"
-            to: 0
-            duration: 220
-            easing.type: Easing.OutCubic
-        }
-    }
-
-    onOutputFocusedChanged: {
-        if (outputFocused)
-            outputFocusPulseAnimation.restart()
     }
 
     onExpandedChanged: if (!expanded) clearSurfaceRequest()
@@ -211,13 +203,6 @@ PanelWindow {
         return "—"
     }
 
-    function outputIdentity(): string {
-        if (outputScreen.name === "eDP-1") return "LAP"
-        if (outputScreen.name.indexOf("HDMI") === 0) return "EXT"
-        const name = String(outputScreen.name || "OUT")
-        return name.slice(0, 3).toUpperCase()
-    }
-
     function keyboardLayoutCode(): string {
         const name = String(NiriService.keyboardLayout || "")
         const normalized = name.toLowerCase()
@@ -261,24 +246,24 @@ PanelWindow {
 
     Rectangle {
         id: drawer
-        width: rail.drawerWidth * rail.revealProgress
-        x: rail.maxDrawerWidth - width
-        height: parent.height
+        x: rail.vertical
+            ? (rail.farEdge ? railBase.x - width : railBase.width)
+            : Math.round(Math.max(0, Math.min(rail.width - width,
+                rail.drawerControl.x + (rail.drawerControl.width - width) / 2)))
+        y: rail.vertical ? 0 : (rail.farEdge ? railBase.y - height : railBase.height)
+        width: rail.vertical ? rail.drawerWidth * rail.revealProgress : rail.drawerWidth
+        height: rail.vertical ? rail.height : rail.drawerDepth * rail.revealProgress
         color: Theme.surface
         clip: true
 
         Item {
             id: drawerContent
-            property real slideOffset: rail.expanded ? 0 : 14
 
             width: rail.drawerWidth
-            height: parent.height
-            x: parent.width - width + slideOffset
+            height: rail.vertical ? parent.height : rail.drawerDepth
+            x: rail.vertical && rail.farEdge ? parent.width - width : 0
+            y: !rail.vertical && rail.farEdge ? parent.height - height : 0
             opacity: rail.revealProgress
-
-            Behavior on slideOffset {
-                NumberAnimation { duration: 250; easing.type: Easing.OutCubic }
-            }
 
             Behavior on opacity {
                 NumberAnimation { duration: 155; easing.type: Easing.OutCubic }
@@ -341,16 +326,16 @@ PanelWindow {
 
     Rectangle {
         id: railBase
-        x: rail.maxDrawerWidth
-        width: rail.compactWidth
-        height: parent.height
+        x: rail.edge === "right" ? rail.width - width : 0
+        y: rail.edge === "bottom" ? rail.height - height : 0
+        width: rail.vertical ? rail.compactWidth : rail.width
+        height: rail.vertical ? rail.height : rail.compactWidth
         color: Theme.background
 
         Item {
             id: signal
-            anchors.top: parent.top
-            anchors.topMargin: 18
-            anchors.horizontalCenter: parent.horizontalCenter
+            x: rail.vertical ? (railBase.width - width) / 2 : 12
+            y: rail.vertical ? 18 : (railBase.height - height) / 2
             width: 30
             height: 38
 
@@ -395,124 +380,67 @@ PanelWindow {
             }
         }
 
-        Rectangle {
-            id: upperRule
-            anchors.top: signal.bottom
-            anchors.topMargin: 9
-            anchors.horizontalCenter: parent.horizontalCenter
-            width: 22
-            height: 1
-            color: Theme.border
-
-            Rectangle {
-                anchors.left: parent.left
-                width: 6
-                height: 1
-                color: Theme.accent
-            }
-        }
-
-        Text {
-            id: outputIdentityLabel
-            anchors.top: upperRule.bottom
-            anchors.topMargin: 8
-            anchors.horizontalCenter: parent.horizontalCenter
-            text: rail.outputIdentity()
-            color: rail.outputFocused ? Theme.accent : Theme.subtleForeground
-            opacity: rail.outputFocused ? 1 : 0.64
-            scale: 1 + rail.outputFocusPulse * 0.08
-            font.family: "DejaVu Sans Mono"
-            font.pixelSize: 8
-            font.weight: Font.DemiBold
-            font.letterSpacing: 0.8
-
-            Behavior on color { ColorAnimation { duration: 140 } }
-            Behavior on opacity { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
-        }
-
-        Column {
+        Flickable {
             id: workspaceColumn
-            anchors.top: outputIdentityLabel.bottom
-            anchors.topMargin: 10
-            anchors.horizontalCenter: parent.horizontalCenter
-            spacing: 8
+            x: rail.vertical ? (railBase.width - width) / 2 : signal.x + signal.width + 10
+            y: rail.vertical ? signal.y + signal.height + 10 : (railBase.height - height) / 2
+            width: rail.vertical ? 32 : Math.min(contentWidth, Math.max(0, clockBlock.x - x - 12))
+            height: rail.vertical ? Math.min(contentHeight, Math.max(0, clockBlock.y - y - 22
+                - 39 * [mediaEntry, audioEntry, trayEntry, usageEntry].filter(entry => entry.visible).length)) : 32
+            contentWidth: workspaceGrid.implicitWidth
+            contentHeight: workspaceGrid.implicitHeight
+            flickableDirection: rail.vertical ? Flickable.VerticalFlick : Flickable.HorizontalFlick
+            boundsBehavior: Flickable.StopAtBounds
+            clip: true
 
-            Repeater {
-                model: rail.screenWorkspaces
+            Grid {
+                id: workspaceGrid
+                columns: rail.vertical ? 1 : Math.max(1, rail.screenWorkspaces.length)
+                spacing: 8
 
-                Item {
-                    id: workspaceItem
-                    required property var modelData
-                    width: 32
-                    height: 32
-                    opacity: rail.outputFocused || modelData.is_urgent ? 1 : 0.58
+                Repeater {
+                    model: rail.screenWorkspaces
 
-                    Behavior on opacity {
-                        NumberAnimation { duration: 170; easing.type: Easing.OutCubic }
-                    }
+                    Item {
+                        id: workspaceItem
+                        required property var modelData
+                        width: 32
+                        height: 32
 
-                    Rectangle {
-                        anchors.fill: parent
-                        radius: 10
-                        color: workspaceItem.modelData.is_active ? Theme.surface : (workspaceMouse.containsMouse ? Theme.raisedSurface : "transparent")
-                        border.width: workspaceItem.modelData.is_active ? 1 : 0
-                        border.color: Theme.border
-                    }
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: 10
+                            color: workspaceItem.modelData.is_active ? Theme.surface : (workspaceMouse.containsMouse ? Theme.raisedSurface : "transparent")
+                            border.width: workspaceItem.modelData.is_urgent || workspaceItem.modelData.is_active ? 1 : 0
+                            border.color: workspaceItem.modelData.is_urgent ? Theme.warningAccent : Theme.border
+                        }
 
-                    Rectangle {
-                        anchors.left: parent.left
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: 2
-                        height: workspaceItem.modelData.is_focused ? 15 : (workspaceItem.modelData.is_urgent ? 8 : 0)
-                        radius: 1
-                        color: workspaceItem.modelData.is_urgent ? Theme.warningAccent : Theme.accent
+                        Text {
+                            anchors.centerIn: parent
+                            text: workspaceItem.modelData.name !== "" ? workspaceItem.modelData.name.slice(0, 2) : String(workspaceItem.modelData.idx)
+                            color: workspaceItem.modelData.is_active ? Theme.foreground : Theme.subtleForeground
+                            font.family: "DejaVu Sans Mono"
+                            font.pixelSize: 11
+                            font.weight: workspaceItem.modelData.is_active ? Font.DemiBold : Font.Medium
+                        }
 
-                        Behavior on height {
-                            NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
+                        MouseArea {
+                            id: workspaceMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: rail.focusWorkspace(rail.outputScreen.name, workspaceItem.modelData.idx)
                         }
                     }
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: workspaceItem.modelData.name !== "" ? workspaceItem.modelData.name.slice(0, 2) : String(workspaceItem.modelData.idx)
-                        color: workspaceItem.modelData.is_active ? Theme.foreground : Theme.subtleForeground
-                        font.family: "DejaVu Sans Mono"
-                        font.pixelSize: 11
-                        font.weight: workspaceItem.modelData.is_active ? Font.DemiBold : Font.Medium
-                    }
-
-                    MouseArea {
-                        id: workspaceMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: rail.focusWorkspace(rail.outputScreen.name, workspaceItem.modelData.idx)
-                    }
                 }
-            }
-        }
-
-        Rectangle {
-            id: outputFocusSpine
-            anchors.left: parent.left
-            y: outputIdentityLabel.y - 4
-            width: 2 + rail.outputFocusPulse
-            height: outputIdentityLabel.height + 8 + workspaceColumn.height
-            radius: 1
-            color: Theme.accent
-            opacity: rail.outputFocused ? 0.72 + rail.outputFocusPulse * 0.28 : 0
-
-            Behavior on opacity {
-                NumberAnimation { duration: 170; easing.type: Easing.OutCubic }
             }
         }
 
         Item {
             id: mediaEntry
             visible: rail.hasMedia
-            anchors.top: workspaceColumn.bottom
-            anchors.topMargin: 12
-            anchors.horizontalCenter: parent.horizontalCenter
+            x: rail.vertical ? (railBase.width - width) / 2 : audioEntry.x - (visible ? width + 7 : 0)
+            y: rail.vertical ? (workspaceColumn.y + workspaceColumn.height + 12) : (railBase.height - height) / 2
             width: 32
             height: 32
 
@@ -568,9 +496,8 @@ PanelWindow {
         Item {
             id: audioEntry
             visible: rail.AudioService.sinkReady
-            anchors.top: mediaEntry.visible ? mediaEntry.bottom : workspaceColumn.bottom
-            anchors.topMargin: mediaEntry.visible ? 7 : 12
-            anchors.horizontalCenter: parent.horizontalCenter
+            x: rail.vertical ? (railBase.width - width) / 2 : trayEntry.x - (visible ? width + 7 : 0)
+            y: rail.vertical ? (mediaEntry.visible ? mediaEntry.y + mediaEntry.height + 7 : mediaEntry.y) : (railBase.height - height) / 2
             width: 32
             height: 32
 
@@ -626,9 +553,8 @@ PanelWindow {
         Item {
             id: trayEntry
             visible: rail.TrayService.itemCount > 0
-            anchors.top: audioEntry.visible ? audioEntry.bottom : (mediaEntry.visible ? mediaEntry.bottom : workspaceColumn.bottom)
-            anchors.topMargin: 7
-            anchors.horizontalCenter: parent.horizontalCenter
+            x: rail.vertical ? (railBase.width - width) / 2 : usageEntry.x - (visible ? width + 7 : 0)
+            y: rail.vertical ? (audioEntry.y + (audioEntry.visible ? audioEntry.height + 7 : 0)) : (railBase.height - height) / 2
             width: 32
             height: 32
 
@@ -693,9 +619,8 @@ PanelWindow {
             id: usageEntry
 
             visible: rail.usageAvailable
-            anchors.top: trayEntry.visible ? trayEntry.bottom : (audioEntry.visible ? audioEntry.bottom : (mediaEntry.visible ? mediaEntry.bottom : workspaceColumn.bottom))
-            anchors.topMargin: 7
-            anchors.horizontalCenter: parent.horizontalCenter
+            x: rail.vertical ? (railBase.width - width) / 2 : brightnessBlock.x - (visible ? width + 7 : 0)
+            y: rail.vertical ? (trayEntry.y + (trayEntry.visible ? trayEntry.height + 7 : 0)) : (railBase.height - height) / 2
             width: 32
             height: 32
 
@@ -751,7 +676,7 @@ PanelWindow {
                 width: 16
                 height: 2
                 radius: 1
-                color: Theme.track
+                color: Theme.border
 
                 Rectangle {
                     anchors.left: parent.left
@@ -790,9 +715,11 @@ PanelWindow {
 
         Item {
             id: clockBlock
-            anchors.centerIn: parent
-            width: 32
-            height: clockColumn.implicitHeight + 14
+            x: rail.vertical ? (railBase.width - width) / 2
+                : Math.max(0, Math.min((railBase.width - width) / 2, mediaEntry.x - width - 12))
+            y: (railBase.height - height) / 2
+            width: rail.vertical ? 32 : horizontalClock.implicitWidth + 22
+            height: rail.vertical ? clockColumn.implicitHeight + 14 : 34
 
             Rectangle {
                 anchors.fill: parent
@@ -813,6 +740,7 @@ PanelWindow {
 
             Column {
                 id: clockColumn
+                visible: rail.vertical
                 anchors.centerIn: parent
                 spacing: -1
 
@@ -863,6 +791,30 @@ PanelWindow {
                 }
             }
 
+            Row {
+                id: horizontalClock
+                visible: !rail.vertical
+                anchors.centerIn: parent
+                spacing: 8
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: Qt.formatDateTime(clock.date, "HH:mm")
+                    color: Theme.foreground
+                    font.family: "DejaVu Sans Mono"
+                    font.pixelSize: 14
+                    font.weight: Font.DemiBold
+                }
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: Qt.formatDateTime(clock.date, "d MMM")
+                    color: Theme.subtleForeground
+                    font.family: "DejaVu Sans"
+                    font.pixelSize: 11
+                }
+            }
+
             MouseArea {
                 id: clockMouse
                 readonly property string hint: "Календарь"
@@ -878,9 +830,8 @@ PanelWindow {
         Item {
             id: brightnessBlock
             visible: rail.BrightnessService.ready
-            anchors.bottom: layoutBlock.top
-            anchors.bottomMargin: 14
-            anchors.horizontalCenter: parent.horizontalCenter
+            x: rail.vertical ? (railBase.width - width) / 2 : layoutBlock.x - (visible ? width + 7 : 0)
+            y: rail.vertical ? layoutBlock.y - height - 14 : (railBase.height - height) / 2
             width: 32
             height: 31
 
@@ -943,9 +894,8 @@ PanelWindow {
         Item {
             id: layoutBlock
             visible: rail.NiriService.keyboardLayout !== ""
-            anchors.bottom: batteryBlock.top
-            anchors.bottomMargin: 18
-            anchors.horizontalCenter: parent.horizontalCenter
+            x: rail.vertical ? (railBase.width - width) / 2 : batteryBlock.x - (visible ? width + 7 : 0)
+            y: rail.vertical ? batteryBlock.y - height - 18 : (railBase.height - height) / 2
             width: 32
             height: 31
 
@@ -982,9 +932,10 @@ PanelWindow {
         Column {
             id: batteryBlock
             visible: rail.battery.ready
-            anchors.bottom: parent.bottom
-            anchors.bottomMargin: 20
-            anchors.horizontalCenter: parent.horizontalCenter
+            width: rail.vertical ? implicitWidth : 46
+            x: rail.vertical ? (railBase.width - width) / 2 : railBase.width - 12 - (visible ? width : 0)
+            y: rail.vertical ? railBase.height - (visible ? height + 20 : 12)
+                : (railBase.height - height) / 2
             spacing: 6
 
             Text {
@@ -998,16 +949,16 @@ PanelWindow {
 
             Rectangle {
                 anchors.horizontalCenter: parent.horizontalCenter
-                width: 4
-                height: 25
+                width: rail.vertical ? 4 : 26
+                height: rail.vertical ? 25 : 3
                 radius: 2
                 color: Theme.border
 
                 Rectangle {
                     anchors.left: parent.left
-                    anchors.right: parent.right
                     anchors.bottom: parent.bottom
-                    height: Math.max(2, parent.height * Math.min(1, rail.batteryPercentage / 100))
+                    width: rail.vertical ? parent.width : Math.max(2, parent.width * Math.min(1, rail.batteryPercentage / 100))
+                    height: rail.vertical ? Math.max(2, parent.height * Math.min(1, rail.batteryPercentage / 100)) : parent.height
                     radius: 2
                     color: rail.batteryPercentage <= 15 ? Theme.warningAccent : Theme.foreground
 
@@ -1040,10 +991,12 @@ PanelWindow {
             property bool ready: false
             readonly property var control: rail.hoveredControl
             visible: ready && control !== null
-            anchors.right: parent.left
-            anchors.rightMargin: 6
-            y: control === null ? 0 : Math.max(8, Math.min(parent.height - height - 8,
-                control.parent.y + (control.height - height) / 2))
+            x: rail.vertical ? (rail.farEdge ? -width - 6 : railBase.width + 6)
+                : control === null ? 0 : Math.max(8, Math.min(railBase.width - width - 8,
+                    control.parent.x + (control.width - width) / 2))
+            y: !rail.vertical ? (rail.farEdge ? -height - 6 : railBase.height + 6)
+                : control === null ? 0 : Math.max(8, Math.min(railBase.height - height - 8,
+                    control.parent.y + (control.height - height) / 2))
             width: hintText.implicitWidth + 20
             height: hintText.implicitHeight + 12
             radius: 6
@@ -1060,12 +1013,5 @@ PanelWindow {
                 font.pixelSize: 12
             }
         }
-    }
-
-    Rectangle {
-        x: Math.floor(rail.width - rail.interactiveWidth)
-        width: 1
-        height: parent.height
-        color: Theme.border
     }
 }

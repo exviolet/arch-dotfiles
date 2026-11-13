@@ -15,13 +15,13 @@ PanelWindow {
     id: notifications
 
     required property var outputScreen
+    property bool railVisible: true
 
     readonly property int cardWidth: 392
     readonly property int cardSpacing: 10
-    readonly property int topMargin: 12
-
-    // Clears the rail's 46px compact strip with a gap of its own.
-    readonly property int rightMargin: 58
+    readonly property string railEdge: PanelPlacement.edgeFor("rail", outputScreen.name)
+    readonly property int topMargin: 12 + (railVisible && railEdge === "top" ? PanelPlacement.railThickness : 0)
+    readonly property int rightMargin: 12 + (railVisible && railEdge === "right" ? PanelPlacement.railThickness : 0)
 
     screen: outputScreen
     visible: NotificationService.hasPopups
